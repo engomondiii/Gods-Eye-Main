@@ -39,7 +39,7 @@ export const SCREENS = {
   PROFILE: 'Profile',
   SETTINGS: 'Settings',
   
-  // ✨ NEW - Attendance Screens
+  // Attendance Screens
   ATTENDANCE_DASHBOARD: 'AttendanceDashboard',
   CHECK_IN: 'CheckIn',
   ATTENDANCE_HISTORY: 'AttendanceHistory',
@@ -66,7 +66,7 @@ export const REQUEST_STATUS = {
   FINALIZED: 'finalized',
 };
 
-// ✨ NEW - Attendance Status
+// Attendance Status
 export const ATTENDANCE_STATUS = {
   PRESENT: 'present',
   ABSENT: 'absent',
@@ -75,13 +75,13 @@ export const ATTENDANCE_STATUS = {
   UNKNOWN: 'unknown',
 };
 
-// ✨ NEW - Attendance Types
+// Attendance Types
 export const ATTENDANCE_TYPES = {
   CHECK_IN: 'check_in',
   CHECK_OUT: 'check_out',
 };
 
-// ✨ NEW - Attendance Methods
+// Attendance Methods
 export const ATTENDANCE_METHODS = {
   QR_CODE: 'qr_code',
   FINGERPRINT: 'fingerprint',
@@ -90,7 +90,7 @@ export const ATTENDANCE_METHODS = {
   MANUAL: 'manual',
 };
 
-// ✨ NEW - Attendance Method Labels
+// Attendance Method Labels
 export const ATTENDANCE_METHOD_LABELS = {
   [ATTENDANCE_METHODS.QR_CODE]: 'QR Code',
   [ATTENDANCE_METHODS.FINGERPRINT]: 'Fingerprint',
@@ -99,7 +99,7 @@ export const ATTENDANCE_METHOD_LABELS = {
   [ATTENDANCE_METHODS.MANUAL]: 'Manual Entry',
 };
 
-// ✨ NEW - Attendance Method Icons
+// Attendance Method Icons
 export const ATTENDANCE_METHOD_ICONS = {
   [ATTENDANCE_METHODS.QR_CODE]: 'qrcode-scan',
   [ATTENDANCE_METHODS.FINGERPRINT]: 'fingerprint',
@@ -108,7 +108,7 @@ export const ATTENDANCE_METHOD_ICONS = {
   [ATTENDANCE_METHODS.MANUAL]: 'pencil',
 };
 
-// ✨ NEW - Attendance Method Colors
+// Attendance Method Colors
 export const ATTENDANCE_METHOD_COLORS = {
   [ATTENDANCE_METHODS.QR_CODE]: '#2196F3',
   [ATTENDANCE_METHODS.FINGERPRINT]: '#4CAF50',
@@ -117,14 +117,14 @@ export const ATTENDANCE_METHOD_COLORS = {
   [ATTENDANCE_METHODS.MANUAL]: '#757575',
 };
 
-// ✨ NEW - Biometric Types
+// Biometric Types
 export const BIOMETRIC_TYPES = {
   FINGERPRINT: 'fingerprint',
   FACE_RECOGNITION: 'face_recognition',
   IRIS: 'iris',
 };
 
-// ✨ NEW - QR Code Settings
+// QR Code Settings
 export const QR_CODE_CONFIG = {
   SIZE: 256,
   ERROR_CORRECTION_LEVEL: 'H',
@@ -133,7 +133,7 @@ export const QR_CODE_CONFIG = {
   MARGIN: 4,
 };
 
-// ✨ NEW - One-Time Code Settings
+// One-Time Code Settings
 export const OTC_CONFIG = {
   LENGTH: 6,
   EXPIRY_MINUTES: 5,
@@ -141,7 +141,7 @@ export const OTC_CONFIG = {
   MAX_ATTEMPTS: 3,
 };
 
-// ✨ NEW - Attendance Report Types
+// Attendance Report Types
 export const REPORT_TYPES = {
   DAILY: 'daily',
   WEEKLY: 'weekly',
@@ -151,14 +151,14 @@ export const REPORT_TYPES = {
   CLASS: 'class',
 };
 
-// ✨ NEW - Attendance Report Formats
+// Attendance Report Formats
 export const REPORT_FORMATS = {
   PDF: 'pdf',
   EXCEL: 'excel',
   CSV: 'csv',
 };
 
-// ✨ NEW - Attendance Time Windows
+// Attendance Time Windows
 export const ATTENDANCE_TIME_WINDOWS = {
   EARLY_CHECKIN_MINUTES: 30,
   LATE_CHECKIN_MINUTES: 15,
@@ -167,7 +167,7 @@ export const ATTENDANCE_TIME_WINDOWS = {
   DEFAULT_CHECKOUT_TIME: '15:00',
 };
 
-// ✨ NEW - Biometric Error Codes
+// Biometric Error Codes
 export const BIOMETRIC_ERROR_CODES = {
   NOT_AVAILABLE: 'BIOMETRIC_NOT_AVAILABLE',
   NOT_ENROLLED: 'BIOMETRIC_NOT_ENROLLED',
@@ -176,6 +176,258 @@ export const BIOMETRIC_ERROR_CODES = {
   TIMEOUT: 'BIOMETRIC_TIMEOUT',
   LOCKOUT: 'BIOMETRIC_LOCKOUT',
   SYSTEM_ERROR: 'BIOMETRIC_SYSTEM_ERROR',
+};
+
+// 🇰🇪 KENYA EDUCATION SYSTEM CONSTANTS
+
+// Kenya's 47 Counties (Alphabetically Ordered)
+export const KENYA_COUNTIES = [
+  'Baringo',
+  'Bomet',
+  'Bungoma',
+  'Busia',
+  'Elgeyo-Marakwet',
+  'Embu',
+  'Garissa',
+  'Homa Bay',
+  'Isiolo',
+  'Kajiado',
+  'Kakamega',
+  'Kericho',
+  'Kiambu',
+  'Kilifi',
+  'Kirinyaga',
+  'Kisii',
+  'Kisumu',
+  'Kitui',
+  'Kwale',
+  'Laikipia',
+  'Lamu',
+  'Machakos',
+  'Makueni',
+  'Mandera',
+  'Marsabit',
+  'Meru',
+  'Migori',
+  'Mombasa',
+  'Murang\'a',
+  'Nairobi',
+  'Nakuru',
+  'Nandi',
+  'Narok',
+  'Nyamira',
+  'Nyandarua',
+  'Nyeri',
+  'Samburu',
+  'Siaya',
+  'Taita-Taveta',
+  'Tana River',
+  'Tharaka-Nithi',
+  'Trans Nzoia',
+  'Turkana',
+  'Uasin Gishu',
+  'Vihiga',
+  'Wajir',
+  'West Pokot',
+];
+
+// Kenya Education Levels (CBC System)
+export const KENYA_EDUCATION_LEVELS = {
+  PRE_PRIMARY: 'pre_primary',
+  PRIMARY: 'primary',
+  JUNIOR_SECONDARY: 'junior_secondary',
+  SENIOR_SECONDARY: 'senior_secondary',
+};
+
+// Kenya Education Level Labels
+export const KENYA_EDUCATION_LEVEL_LABELS = {
+  [KENYA_EDUCATION_LEVELS.PRE_PRIMARY]: 'Pre-Primary (EYE)',
+  [KENYA_EDUCATION_LEVELS.PRIMARY]: 'Primary',
+  [KENYA_EDUCATION_LEVELS.JUNIOR_SECONDARY]: 'Junior Secondary',
+  [KENYA_EDUCATION_LEVELS.SENIOR_SECONDARY]: 'Senior Secondary',
+};
+
+// Kenya Grades (CBC System)
+export const KENYA_GRADES = {
+  // Pre-Primary (Ages 4-6)
+  PP1: 'pp1',
+  PP2: 'pp2',
+  
+  // Lower Primary (Ages 6-9)
+  GRADE_1: 'grade_1',
+  GRADE_2: 'grade_2',
+  GRADE_3: 'grade_3',
+  
+  // Upper Primary (Ages 9-12)
+  GRADE_4: 'grade_4',
+  GRADE_5: 'grade_5',
+  GRADE_6: 'grade_6',
+  
+  // Junior Secondary (Ages 12-15)
+  GRADE_7: 'grade_7',
+  GRADE_8: 'grade_8',
+  GRADE_9: 'grade_9',
+  
+  // Senior Secondary (Ages 15-18)
+  GRADE_10: 'grade_10',
+  GRADE_11: 'grade_11',
+  GRADE_12: 'grade_12',
+  
+  // 8-4-4 System (Transition)
+  FORM_1: 'form_1',
+  FORM_2: 'form_2',
+  FORM_3: 'form_3',
+  FORM_4: 'form_4',
+};
+
+// Kenya Grade Labels
+export const KENYA_GRADE_LABELS = {
+  [KENYA_GRADES.PP1]: 'PP1 (Pre-Primary 1)',
+  [KENYA_GRADES.PP2]: 'PP2 (Pre-Primary 2)',
+  [KENYA_GRADES.GRADE_1]: 'Grade 1',
+  [KENYA_GRADES.GRADE_2]: 'Grade 2',
+  [KENYA_GRADES.GRADE_3]: 'Grade 3',
+  [KENYA_GRADES.GRADE_4]: 'Grade 4',
+  [KENYA_GRADES.GRADE_5]: 'Grade 5',
+  [KENYA_GRADES.GRADE_6]: 'Grade 6',
+  [KENYA_GRADES.GRADE_7]: 'Grade 7 (Junior Secondary)',
+  [KENYA_GRADES.GRADE_8]: 'Grade 8 (Junior Secondary)',
+  [KENYA_GRADES.GRADE_9]: 'Grade 9 (Junior Secondary)',
+  [KENYA_GRADES.GRADE_10]: 'Grade 10 (Senior Secondary)',
+  [KENYA_GRADES.GRADE_11]: 'Grade 11 (Senior Secondary)',
+  [KENYA_GRADES.GRADE_12]: 'Grade 12 (Senior Secondary)',
+  [KENYA_GRADES.FORM_1]: 'Form 1 (8-4-4)',
+  [KENYA_GRADES.FORM_2]: 'Form 2 (8-4-4)',
+  [KENYA_GRADES.FORM_3]: 'Form 3 (8-4-4)',
+  [KENYA_GRADES.FORM_4]: 'Form 4 (8-4-4)',
+};
+
+// Kenya Grades by Education Level
+export const KENYA_GRADES_BY_LEVEL = {
+  [KENYA_EDUCATION_LEVELS.PRE_PRIMARY]: [
+    KENYA_GRADES.PP1,
+    KENYA_GRADES.PP2,
+  ],
+  [KENYA_EDUCATION_LEVELS.PRIMARY]: [
+    KENYA_GRADES.GRADE_1,
+    KENYA_GRADES.GRADE_2,
+    KENYA_GRADES.GRADE_3,
+    KENYA_GRADES.GRADE_4,
+    KENYA_GRADES.GRADE_5,
+    KENYA_GRADES.GRADE_6,
+  ],
+  [KENYA_EDUCATION_LEVELS.JUNIOR_SECONDARY]: [
+    KENYA_GRADES.GRADE_7,
+    KENYA_GRADES.GRADE_8,
+    KENYA_GRADES.GRADE_9,
+  ],
+  [KENYA_EDUCATION_LEVELS.SENIOR_SECONDARY]: [
+    KENYA_GRADES.GRADE_10,
+    KENYA_GRADES.GRADE_11,
+    KENYA_GRADES.GRADE_12,
+    KENYA_GRADES.FORM_1,
+    KENYA_GRADES.FORM_2,
+    KENYA_GRADES.FORM_3,
+    KENYA_GRADES.FORM_4,
+  ],
+};
+
+// Kenya Academic Terms
+export const KENYA_ACADEMIC_TERMS = {
+  TERM_1: 'term_1',
+  TERM_2: 'term_2',
+  TERM_3: 'term_3',
+};
+
+// Kenya Academic Term Labels
+export const KENYA_ACADEMIC_TERM_LABELS = {
+  [KENYA_ACADEMIC_TERMS.TERM_1]: 'Term 1 (Jan - Apr)',
+  [KENYA_ACADEMIC_TERMS.TERM_2]: 'Term 2 (May - Aug)',
+  [KENYA_ACADEMIC_TERMS.TERM_3]: 'Term 3 (Sep - Nov)',
+};
+
+// Kenya Stream/Class Naming Conventions
+export const KENYA_STREAM_TYPES = {
+  COLORS: 'colors',
+  DIRECTIONS: 'directions',
+  LETTERS: 'letters',
+  ANIMALS: 'animals',
+  PLACES: 'places',
+  CUSTOM: 'custom',
+};
+
+// Kenya Common Streams
+export const KENYA_COMMON_STREAMS = {
+  // Colors
+  colors: ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'White', 'Black'],
+  
+  // Directions
+  directions: ['East', 'West', 'North', 'South', 'Northeast', 'Northwest', 'Southeast', 'Southwest'],
+  
+  // Letters
+  letters: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+  
+  // Animals (African Wildlife)
+  animals: ['Lion', 'Leopard', 'Cheetah', 'Buffalo', 'Elephant', 'Rhino', 'Giraffe', 'Zebra'],
+  
+  // Famous Kenyan Places
+  places: ['Kilimanjaro', 'Kenya', 'Mara', 'Tsavo', 'Amboseli', 'Nakuru', 'Nairobi', 'Mombasa'],
+};
+
+// Kenya House System
+export const KENYA_COMMON_HOUSES = {
+  // Mountains
+  mountains: ['Kilimanjaro', 'Kenya', 'Elgon', 'Longonot', 'Aberdare', 'Meru'],
+  
+  // Wildlife Parks (Note: 'parks' changed to 'wildlifeParks' to match component)
+  wildlifeParks: ['Mara', 'Tsavo', 'Amboseli', 'Nakuru', 'Samburu', 'Nairobi'],
+  
+  // Historical Figures (Note: 'historical' changed to 'historicalFigures' to match component)
+  historicalFigures: ['Kenyatta', 'Odinga', 'Wangari', 'Kimathi', 'Muindi', 'Waiyaki'],
+  
+  // Colors
+  colors: ['Red', 'Blue', 'Green', 'Yellow'],
+};
+
+// Kenya House Colors (Array format for color picker component)
+export const KENYA_HOUSE_COLORS = [
+  { name: 'Red', hex: '#F44336' },
+  { name: 'Blue', hex: '#2196F3' },
+  { name: 'Green', hex: '#4CAF50' },
+  { name: 'Yellow', hex: '#FFEB3B' },
+  { name: 'Orange', hex: '#FF9800' },
+  { name: 'Purple', hex: '#9C27B0' },
+  { name: 'White', hex: '#FFFFFF' },
+  { name: 'Black', hex: '#000000' },
+];
+
+// Kenya School Types
+export const KENYA_SCHOOL_TYPES = {
+  PUBLIC: 'public',
+  PRIVATE: 'private',
+  INTERNATIONAL: 'international',
+};
+
+// Kenya School Categories (Performance-based)
+export const KENYA_SCHOOL_CATEGORIES = {
+  NATIONAL: 'national',
+  EXTRA_COUNTY: 'extra_county',
+  COUNTY: 'county',
+  SUB_COUNTY: 'sub_county',
+};
+
+// Kenya School Gender Types
+export const KENYA_SCHOOL_GENDER = {
+  BOYS: 'boys',
+  GIRLS: 'girls',
+  MIXED: 'mixed',
+};
+
+// Kenya School Boarding Status
+export const KENYA_SCHOOL_BOARDING = {
+  DAY: 'day',
+  BOARDING: 'boarding',
+  DAY_AND_BOARDING: 'day_and_boarding',
 };
 
 // Notification Types
@@ -241,6 +493,11 @@ export const VALIDATION_MESSAGES = {
   INVALID_TIME: 'Please enter a valid time',
   ATTENDANCE_IN_FUTURE: 'Attendance cannot be recorded for future dates',
   ATTENDANCE_TOO_OLD: 'Attendance cannot be recorded for dates older than 7 days',
+  INVALID_UPI: 'UPI number must be at least 10 characters',
+  INVALID_ADMISSION_NUMBER: 'Invalid admission number format',
+  INVALID_BIRTH_CERTIFICATE: 'Invalid birth certificate number',
+  INVALID_GRADE: 'Please select a valid grade',
+  INVALID_STREAM: 'Please enter a valid stream/class',
 };
 
 // App Configuration
@@ -284,7 +541,7 @@ export const ASYNC_STORAGE_KEYS = {
   OFFLINE_ATTENDANCE_QUEUE: 'offline_attendance_queue',
 };
 
-// ✨ NEW - Permission Types
+// Permission Types
 export const PERMISSION_TYPES = {
   CAMERA: 'camera',
   LOCATION: 'location',
@@ -292,7 +549,7 @@ export const PERMISSION_TYPES = {
   NOTIFICATIONS: 'notifications',
 };
 
-// ✨ NEW - Camera Settings
+// Camera Settings
 export const CAMERA_SETTINGS = {
   QUALITY: 0.8,
   ASPECT_RATIO: [4, 3],
@@ -301,7 +558,7 @@ export const CAMERA_SETTINGS = {
   FOCUS_DEPTH: 0,
 };
 
-// ✨ NEW - Attendance Status Colors
+// Attendance Status Colors
 export const ATTENDANCE_STATUS_COLORS = {
   [ATTENDANCE_STATUS.PRESENT]: '#4CAF50',
   [ATTENDANCE_STATUS.ABSENT]: '#F44336',
@@ -310,7 +567,7 @@ export const ATTENDANCE_STATUS_COLORS = {
   [ATTENDANCE_STATUS.UNKNOWN]: '#757575',
 };
 
-// ✨ NEW - Attendance Status Labels
+// Attendance Status Labels
 export const ATTENDANCE_STATUS_LABELS = {
   [ATTENDANCE_STATUS.PRESENT]: 'Present',
   [ATTENDANCE_STATUS.ABSENT]: 'Absent',
@@ -319,7 +576,7 @@ export const ATTENDANCE_STATUS_LABELS = {
   [ATTENDANCE_STATUS.UNKNOWN]: 'Unknown',
 };
 
-// ✨ NEW - Attendance Status Icons
+// Attendance Status Icons
 export const ATTENDANCE_STATUS_ICONS = {
   [ATTENDANCE_STATUS.PRESENT]: 'check-circle',
   [ATTENDANCE_STATUS.ABSENT]: 'close-circle',
@@ -328,14 +585,14 @@ export const ATTENDANCE_STATUS_ICONS = {
   [ATTENDANCE_STATUS.UNKNOWN]: 'help-circle',
 };
 
-// ✨ NEW - Export Limits
+// Export Limits
 export const EXPORT_LIMITS = {
   MAX_RECORDS_CSV: 10000,
   MAX_RECORDS_EXCEL: 50000,
   MAX_RECORDS_PDF: 1000,
 };
 
-// ✨ NEW - Attendance Analytics Periods
+// Attendance Analytics Periods
 export const ANALYTICS_PERIODS = {
   TODAY: 'today',
   YESTERDAY: 'yesterday',
@@ -347,7 +604,7 @@ export const ANALYTICS_PERIODS = {
   CUSTOM: 'custom',
 };
 
-// ✨ NEW - Default Values
+// Default Values
 export const DEFAULTS = {
   ATTENDANCE_METHOD: ATTENDANCE_METHODS.QR_CODE,
   REPORT_TYPE: REPORT_TYPES.DAILY,

@@ -3,9 +3,9 @@ import { View, StyleSheet, ScrollView, Keyboard, TouchableOpacity } from 'react-
 import { Text, TextInput, Chip } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
-import { KENYA_COUNTIES } from '../../utils/constants';
+import { KENYA_COMMON_STREAMS } from '../../utils/constants';
 
-const CountyPicker = ({ 
+const StreamPicker = ({ 
   value, 
   onChange, 
   error = false,
@@ -13,76 +13,68 @@ const CountyPicker = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredCounties, setFilteredCounties] = useState([]);
+  const [filteredStreams, setFilteredStreams] = useState([]);
+  const [allStreams, setAllStreams] = useState([]);
   const inputRef = useRef(null);
+
+  // Flatten all streams into one array on mount
+  useEffect(() => {
+    const streams = [
+      ...KENYA_COMMON_STREAMS.colors,
+      ...KENYA_COMMON_STREAMS.directions,
+      ...KENYA_COMMON_STREAMS.letters,
+      ...KENYA_COMMON_STREAMS.animals,
+      ...KENYA_COMMON_STREAMS.places,
+    ];
+    setAllStreams(streams);
+    setFilteredStreams(streams);
+  }, []);
 
   // Update search query when value changes externally
   useEffect(() => {
-    if (value?.name) {
-      setSearchQuery(value.name);
+    if (value) {
+      setSearchQuery(value);
     } else {
       setSearchQuery('');
     }
   }, [value]);
 
-  // Filter counties as user types
+  // Filter streams as user types
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredCounties(KENYA_COUNTIES);
+      setFilteredStreams(allStreams);
       setShowSuggestions(false);
     } else {
-      const filtered = KENYA_COUNTIES.filter(county =>
-        county.toLowerCase().includes(searchQuery.toLowerCase())
+      const filtered = allStreams.filter(stream =>
+        stream.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredCounties(filtered);
+      setFilteredStreams(filtered);
       setShowSuggestions(true);
     }
-  }, [searchQuery]);
+  }, [searchQuery, allStreams]);
 
   const handleInputChange = (text) => {
     setSearchQuery(text);
-    
-    // Clear the value when user is typing
-    if (value && text !== value.name) {
-      onChange(null);
-    }
+    onChange(text); // Update value in real-time
   };
 
-  const handleCountySelect = (county) => {
-    const countyObj = {
-      id: KENYA_COUNTIES.indexOf(county) + 1,
-      name: county,
-    };
-    onChange(countyObj);
-    setSearchQuery(county);
+  const handleStreamSelect = (stream) => {
+    onChange(stream);
+    setSearchQuery(stream);
     setShowSuggestions(false);
     Keyboard.dismiss();
   };
 
-  const handleManualEntry = () => {
-    if (searchQuery.trim()) {
-      // Create custom county with negative ID to indicate it's manual
-      const customCounty = {
-        id: -1,
-        name: searchQuery.trim(),
-        isCustom: true,
-      };
-      onChange(customCounty);
-      setShowSuggestions(false);
-      Keyboard.dismiss();
-    }
-  };
-
-  const handleClearCounty = () => {
-    onChange(null);
+  const handleClearStream = () => {
+    onChange('');
     setSearchQuery('');
-    setFilteredCounties(KENYA_COUNTIES);
+    setFilteredStreams(allStreams);
     setShowSuggestions(false);
   };
 
   const handleFocus = () => {
     if (searchQuery.trim() === '') {
-      setFilteredCounties(KENYA_COUNTIES);
+      setFilteredStreams(allStreams);
     }
     setShowSuggestions(true);
   };
@@ -94,15 +86,42 @@ const CountyPicker = ({
     }, 200);
   };
 
+  // Determine which category a stream belongs to
+  const getStreamCategory = (stream) => {
+    if (KENYA_COMMON_STREAMS.colors.includes(stream)) return 'Color';
+    if (KENYA_COMMON_STREAMS.directions.includes(stream)) return 'Direction';
+    if (KENYA_COMMON_STREAMS.letters.includes(stream)) return 'Letter';
+    if (KENYA_COMMON_STREAMS.animals.includes(stream)) return 'Animal';
+    if (KENYA_COMMON_STREAMS.places.includes(stream)) return 'Place';
+    return 'Custom';
+  };
+
+  const getStreamIcon = (stream) => {
+    const category = getStreamCategory(stream);
+    const icons = {
+      Color: 'palette',
+      Direction: 'compass',
+      Letter: 'alpha-a-box',
+      Animal: 'paw',
+      Place: 'map-marker',
+      Custom: 'pencil',
+    };
+    return icons[category] || 'format-list-bulleted';
+  };
+
+  const isCommonStream = (stream) => {
+    return allStreams.includes(stream);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.label}>County *</Text>
+        <Text style={styles.label}>Stream/Class *</Text>
         {value && (
           <Chip
             mode="flat"
-            onPress={handleClearCounty}
-            onClose={handleClearCounty}
+            onPress={handleClearStream}
+            onClose={handleClearStream}
             style={styles.clearChip}
             textStyle={styles.clearChipText}
             icon="close-circle"
@@ -115,7 +134,7 @@ const CountyPicker = ({
       {/* Searchable Input */}
       <TextInput
         ref={inputRef}
-        label="Type or select county"
+        label="Type or select stream/class"
         mode="outlined"
         value={searchQuery}
         onChangeText={handleInputChange}
@@ -124,14 +143,14 @@ const CountyPicker = ({
         error={error}
         disabled={disabled}
         style={styles.input}
-        placeholder="Start typing county name..."
+        placeholder="e.g., Red, East, A, Lion..."
         autoCapitalize="words"
-        left={<TextInput.Icon icon="map-marker" />}
+        left={<TextInput.Icon icon="format-list-bulleted" />}
         right={
           searchQuery ? (
             <TextInput.Icon
               icon="close"
-              onPress={handleClearCounty}
+              onPress={handleClearStream}
             />
           ) : (
             <TextInput.Icon icon="menu-down" />
@@ -142,11 +161,13 @@ const CountyPicker = ({
       {/* Suggestions Dropdown */}
       {showSuggestions && !disabled && (
         <View style={styles.suggestionsContainer}>
-          {filteredCounties.length > 0 ? (
+          {filteredStreams.length > 0 ? (
             <>
               <View style={styles.suggestionsHeader}>
                 <Text style={styles.suggestionsTitle}>
-                  {searchQuery ? `${filteredCounties.length} counties found` : 'All 47 Counties'}
+                  {searchQuery 
+                    ? `${filteredStreams.length} streams found` 
+                    : 'Common Stream Names'}
                 </Text>
               </View>
               <ScrollView
@@ -154,31 +175,38 @@ const CountyPicker = ({
                 keyboardShouldPersistTaps="handled"
                 nestedScrollEnabled={false}
               >
-                {filteredCounties.map((item, index) => {
-                  const isSelected = value?.name === item;
+                {filteredStreams.map((item, index) => {
+                  const isSelected = value === item;
+                  const category = getStreamCategory(item);
+                  
                   return (
                     <TouchableOpacity
                       key={`${item}-${index}`}
-                      onPress={() => handleCountySelect(item)}
+                      onPress={() => handleStreamSelect(item)}
                       style={[
                         styles.suggestionItem,
                         isSelected && styles.selectedSuggestionItem,
                       ]}
                     >
                       <MaterialCommunityIcons 
-                        name="map-marker" 
+                        name={getStreamIcon(item)} 
                         size={20} 
                         color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
                         style={styles.suggestionIcon}
                       />
-                      <Text
-                        style={[
-                          styles.suggestionText,
-                          isSelected && styles.selectedSuggestionText,
-                        ]}
-                      >
-                        {item}
-                      </Text>
+                      <View style={styles.suggestionTextContainer}>
+                        <Text
+                          style={[
+                            styles.suggestionText,
+                            isSelected && styles.selectedSuggestionText,
+                          ]}
+                        >
+                          {item}
+                          {category !== 'Custom' && (
+                            <Text style={styles.categoryBadge}> • {category}</Text>
+                          )}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -187,22 +215,16 @@ const CountyPicker = ({
           ) : (
             <View style={styles.noResultsContainer}>
               <MaterialCommunityIcons 
-                name="map-marker-off" 
+                name="format-list-bulleted" 
                 size={32} 
                 color={theme.colors.textSecondary} 
               />
               <Text style={styles.noResultsText}>
-                No counties found matching "{searchQuery}"
+                No common streams found
               </Text>
-              <TouchableOpacity
-                onPress={handleManualEntry}
-                style={styles.manualEntryButton}
-              >
-                <MaterialCommunityIcons name="plus" size={18} color="#FFF" />
-                <Text style={styles.manualEntryButtonText}>
-                  Add "{searchQuery}" as custom county
-                </Text>
-              </TouchableOpacity>
+              <Text style={styles.customEntryHint}>
+                Just keep typing - "{searchQuery}" will be used as your custom stream
+              </Text>
             </View>
           )}
         </View>
@@ -211,21 +233,21 @@ const CountyPicker = ({
       {/* Helper Text */}
       <Text style={styles.helperText}>
         {value 
-          ? value.isCustom 
-            ? `Custom entry: ${value.name}` 
-            : `Selected: ${value.name}` 
-          : 'Type to search from 47 Kenyan counties or enter custom county'}
+          ? isCommonStream(value)
+            ? `Selected: ${value} (${getStreamCategory(value)})`
+            : `Custom entry: ${value}`
+          : 'Type to search common streams or enter your own'}
       </Text>
 
-      {value?.isCustom && (
+      {value && !isCommonStream(value) && (
         <View style={styles.customBadge}>
           <MaterialCommunityIcons 
             name="pencil" 
             size={14} 
-            color={theme.colors.warning} 
+            color={theme.colors.success} 
           />
           <Text style={styles.customBadgeText}>
-            Custom county entry
+            Custom stream entry
           </Text>
         </View>
       )}
@@ -236,7 +258,7 @@ const CountyPicker = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: theme.spacing.sm,
-    zIndex: 1000,
+    zIndex: 999,
   },
   headerRow: {
     flexDirection: 'row',
@@ -269,7 +291,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.sm,
     ...theme.shadows.medium,
     maxHeight: 300,
-    zIndex: 1000,
+    zIndex: 999,
     elevation: 5,
   },
   suggestionsHeader: {
@@ -301,14 +323,21 @@ const styles = StyleSheet.create({
   suggestionIcon: {
     marginRight: theme.spacing.sm,
   },
+  suggestionTextContainer: {
+    flex: 1,
+  },
   suggestionText: {
     fontSize: theme.fontSizes.md,
     color: theme.colors.text,
-    flex: 1,
   },
   selectedSuggestionText: {
     color: theme.colors.primary,
     fontWeight: 'bold',
+  },
+  categoryBadge: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
   },
   noResultsContainer: {
     padding: theme.spacing.xl,
@@ -320,21 +349,14 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
   },
-  manualEntryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.success,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
-    gap: theme.spacing.xs,
-  },
-  manualEntryButtonText: {
-    color: '#FFF',
-    fontSize: theme.fontSizes.sm,
+  customEntryHint: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.success,
+    textAlign: 'center',
     fontWeight: '500',
+    marginTop: theme.spacing.xs,
   },
   helperText: {
     fontSize: theme.fontSizes.xs,
@@ -347,16 +369,16 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
-    backgroundColor: theme.colors.warningLight || theme.colors.warning + '20',
+    backgroundColor: theme.colors.successLight || theme.colors.success + '20',
     borderRadius: theme.borderRadius.xs,
     alignSelf: 'flex-start',
   },
   customBadgeText: {
     fontSize: theme.fontSizes.xs,
-    color: theme.colors.warning,
+    color: theme.colors.success,
     marginLeft: theme.spacing.xs,
     fontWeight: '500',
   },
 });
 
-export default CountyPicker;
+export default StreamPicker;

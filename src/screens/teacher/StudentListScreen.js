@@ -4,16 +4,15 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  TouchableOpacity,
-  Text,
 } from 'react-native';
-import { Searchbar, FAB, Chip } from 'react-native-paper';
+import { Searchbar, FAB, Chip, Menu, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import StudentCard from '../../components/student/StudentCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
-import { SCREENS } from '../../utils/constants';
+import { SCREENS, KENYA_EDUCATION_LEVELS } from '../../utils/constants';
+import theme from '../../styles/theme';
 
 const StudentListScreen = ({ navigation }) => {
   const [students, setStudents] = useState([]);
@@ -22,7 +21,21 @@ const StudentListScreen = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Filter states
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedGrade, setSelectedGrade] = useState(null);
+  const [selectedStream, setSelectedStream] = useState(null);
+  const [selectedHouse, setSelectedHouse] = useState(null);
+  
+  // Menu visibility
+  const [gradeMenuVisible, setGradeMenuVisible] = useState(false);
+  const [streamMenuVisible, setStreamMenuVisible] = useState(false);
+  const [houseMenuVisible, setHouseMenuVisible] = useState(false);
+
+  // Get unique streams and houses from students
+  const [availableStreams, setAvailableStreams] = useState([]);
+  const [availableHouses, setAvailableHouses] = useState([]);
 
   // Fetch students
   const fetchStudents = async () => {
@@ -31,46 +44,106 @@ const StudentListScreen = ({ navigation }) => {
       // TODO: Replace with actual API call
       // const response = await studentService.getStudents();
       
-      // Mock data for development
+      // Mock data for development with Kenya-specific fields
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const mockStudents = [
         {
           id: 1,
           first_name: 'John',
-          last_name: 'Doe',
-          admission_number: 'NPS001',
+          middle_name: 'Kamau',
+          last_name: 'Mwangi',
+          admission_number: 'ADM/2020/001',
           school: { name: 'Nairobi Primary School' },
+          education_level: 'primary',
+          current_grade: 'grade_5',
+          stream: 'Red',
+          house_name: 'Kilimanjaro',
+          house_color: 'Red',
           guardians: [
-            { id: 1, first_name: 'Jane', last_name: 'Doe' },
-            { id: 2, first_name: 'Michael', last_name: 'Doe' },
+            { id: 1, first_name: 'Jane', last_name: 'Mwangi' },
+            { id: 2, first_name: 'Michael', last_name: 'Mwangi' },
           ],
+          attendance_percentage: 92,
         },
         {
           id: 2,
           first_name: 'Sarah',
-          last_name: 'Smith',
-          admission_number: 'NPS002',
+          middle_name: 'Akinyi',
+          last_name: 'Odhiambo',
+          admission_number: 'ADM/2020/002',
           school: { name: 'Nairobi Primary School' },
+          education_level: 'primary',
+          current_grade: 'grade_5',
+          stream: 'Blue',
+          house_name: 'Mara',
+          house_color: 'Blue',
           guardians: [
-            { id: 3, first_name: 'Emily', last_name: 'Smith' },
+            { id: 3, first_name: 'Emily', last_name: 'Odhiambo' },
           ],
+          attendance_percentage: 88,
         },
         {
           id: 3,
           first_name: 'David',
-          last_name: 'Johnson',
-          admission_number: 'NPS003',
+          middle_name: 'Kipchoge',
+          last_name: 'Kibet',
+          admission_number: 'ADM/2021/003',
           school: { name: 'Nairobi Primary School' },
+          education_level: 'primary',
+          current_grade: 'grade_4',
+          stream: 'Red',
+          house_name: 'Kilimanjaro',
+          house_color: 'Red',
           guardians: [
-            { id: 4, first_name: 'Robert', last_name: 'Johnson' },
-            { id: 5, first_name: 'Linda', last_name: 'Johnson' },
+            { id: 4, first_name: 'Robert', last_name: 'Kibet' },
+            { id: 5, first_name: 'Linda', last_name: 'Kibet' },
           ],
+          attendance_percentage: 95,
+        },
+        {
+          id: 4,
+          first_name: 'Grace',
+          middle_name: 'Wanjiru',
+          last_name: 'Njoroge',
+          admission_number: 'ADM/2021/004',
+          school: { name: 'Nairobi Primary School' },
+          education_level: 'junior_secondary',
+          current_grade: 'grade_7',
+          stream: 'East',
+          house_name: 'Tsavo',
+          house_color: 'Green',
+          guardians: [],
+          attendance_percentage: 90,
+        },
+        {
+          id: 5,
+          first_name: 'James',
+          middle_name: 'Otieno',
+          last_name: 'Ouma',
+          admission_number: 'ADM/2019/005',
+          school: { name: 'Nairobi Primary School' },
+          education_level: 'primary',
+          current_grade: 'grade_6',
+          stream: 'Blue',
+          house_name: 'Mara',
+          house_color: 'Blue',
+          guardians: [
+            { id: 6, first_name: 'Mary', last_name: 'Ouma' },
+          ],
+          attendance_percentage: 85,
         },
       ];
       
       setStudents(mockStudents);
       setFilteredStudents(mockStudents);
+      
+      // Extract unique streams and houses
+      const streams = [...new Set(mockStudents.map(s => s.stream))].filter(Boolean);
+      const houses = [...new Set(mockStudents.map(s => s.house_name))].filter(Boolean);
+      setAvailableStreams(streams);
+      setAvailableHouses(houses);
+      
     } catch (err) {
       setError('Failed to load students. Please try again.');
       console.error('Fetch students error:', err);
@@ -89,39 +162,62 @@ const StudentListScreen = ({ navigation }) => {
     fetchStudents();
   }, []);
 
+  // Apply all filters
+  const applyFilters = useCallback(() => {
+    let filtered = [...students];
+
+    // Search filter
+    if (searchQuery.trim() !== '') {
+      const searchLower = searchQuery.toLowerCase();
+      filtered = filtered.filter((student) => {
+        const fullName = `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.toLowerCase();
+        const admissionNumber = student.admission_number.toLowerCase();
+        return fullName.includes(searchLower) || admissionNumber.includes(searchLower);
+      });
+    }
+
+    // Guardian filter
+    if (selectedFilter === 'with_guardians') {
+      filtered = filtered.filter(s => s.guardians.length > 0);
+    } else if (selectedFilter === 'without_guardians') {
+      filtered = filtered.filter(s => s.guardians.length === 0);
+    }
+
+    // Grade filter
+    if (selectedGrade) {
+      filtered = filtered.filter(s => s.current_grade === selectedGrade);
+    }
+
+    // Stream filter
+    if (selectedStream) {
+      filtered = filtered.filter(s => s.stream === selectedStream);
+    }
+
+    // House filter
+    if (selectedHouse) {
+      filtered = filtered.filter(s => s.house_name === selectedHouse);
+    }
+
+    setFilteredStudents(filtered);
+  }, [students, searchQuery, selectedFilter, selectedGrade, selectedStream, selectedHouse]);
+
+  // Apply filters whenever dependencies change
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
   // Search functionality
   const handleSearch = (query) => {
     setSearchQuery(query);
-    
-    if (query.trim() === '') {
-      setFilteredStudents(students);
-      return;
-    }
-    
-    const filtered = students.filter((student) => {
-      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-      const admissionNumber = student.admission_number.toLowerCase();
-      const searchLower = query.toLowerCase();
-      
-      return fullName.includes(searchLower) || admissionNumber.includes(searchLower);
-    });
-    
-    setFilteredStudents(filtered);
   };
 
-  // Filter functionality
-  const handleFilter = (filter) => {
-    setSelectedFilter(filter);
-    
-    if (filter === 'all') {
-      setFilteredStudents(students);
-    } else if (filter === 'with_guardians') {
-      const filtered = students.filter(s => s.guardians.length > 0);
-      setFilteredStudents(filtered);
-    } else if (filter === 'without_guardians') {
-      const filtered = students.filter(s => s.guardians.length === 0);
-      setFilteredStudents(filtered);
-    }
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedFilter('all');
+    setSelectedGrade(null);
+    setSelectedStream(null);
+    setSelectedHouse(null);
+    setSearchQuery('');
   };
 
   const handleStudentPress = (student) => {
@@ -132,9 +228,43 @@ const StudentListScreen = ({ navigation }) => {
     <StudentCard student={item} onPress={() => handleStudentPress(item)} />
   );
 
+  // Helper function to get grade label
+  const getGradeLabel = (grade) => {
+    const gradeLabels = {
+      pp1: 'PP1',
+      pp2: 'PP2',
+      grade_1: 'Grade 1',
+      grade_2: 'Grade 2',
+      grade_3: 'Grade 3',
+      grade_4: 'Grade 4',
+      grade_5: 'Grade 5',
+      grade_6: 'Grade 6',
+      grade_7: 'Grade 7',
+      grade_8: 'Grade 8',
+      grade_9: 'Grade 9',
+      grade_10: 'Grade 10',
+      grade_11: 'Grade 11',
+      grade_12: 'Grade 12',
+      form_1: 'Form 1',
+      form_2: 'Form 2',
+      form_3: 'Form 3',
+      form_4: 'Form 4',
+    };
+    return gradeLabels[grade] || grade;
+  };
+
+  // Get unique grades from current students
+  const availableGrades = [...new Set(students.map(s => s.current_grade))].filter(Boolean);
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
+
+  const activeFiltersCount = 
+    (selectedFilter !== 'all' ? 1 : 0) + 
+    (selectedGrade ? 1 : 0) + 
+    (selectedStream ? 1 : 0) + 
+    (selectedHouse ? 1 : 0);
 
   return (
     <View style={styles.container}>
@@ -148,30 +278,134 @@ const StudentListScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Filter Chips */}
+      {/* Filter Chips - Row 1: Guardian & Grade */}
       <View style={styles.filterContainer}>
         <Chip
           selected={selectedFilter === 'all'}
-          onPress={() => handleFilter('all')}
+          onPress={() => setSelectedFilter('all')}
           style={styles.filterChip}
+          icon="account-group"
         >
           All ({students.length})
         </Chip>
         <Chip
           selected={selectedFilter === 'with_guardians'}
-          onPress={() => handleFilter('with_guardians')}
+          onPress={() => setSelectedFilter('with_guardians')}
           style={styles.filterChip}
+          icon="account-check"
         >
           With Guardians
         </Chip>
         <Chip
           selected={selectedFilter === 'without_guardians'}
-          onPress={() => handleFilter('without_guardians')}
+          onPress={() => setSelectedFilter('without_guardians')}
           style={styles.filterChip}
+          icon="account-alert"
         >
           No Guardians
         </Chip>
       </View>
+
+      {/* Filter Chips - Row 2: Kenya-specific filters */}
+      <View style={styles.filterContainer}>
+        {/* Grade Filter */}
+        <Menu
+          visible={gradeMenuVisible}
+          onDismiss={() => setGradeMenuVisible(false)}
+          anchor={
+            <Chip
+              selected={!!selectedGrade}
+              onPress={() => setGradeMenuVisible(true)}
+              style={styles.filterChip}
+              icon="book-open-variant"
+              onClose={selectedGrade ? () => setSelectedGrade(null) : undefined}
+            >
+              {selectedGrade ? getGradeLabel(selectedGrade) : 'Grade'}
+            </Chip>
+          }
+        >
+          {availableGrades.map((grade) => (
+            <Menu.Item
+              key={grade}
+              onPress={() => {
+                setSelectedGrade(grade);
+                setGradeMenuVisible(false);
+              }}
+              title={getGradeLabel(grade)}
+            />
+          ))}
+        </Menu>
+
+        {/* Stream Filter */}
+        <Menu
+          visible={streamMenuVisible}
+          onDismiss={() => setStreamMenuVisible(false)}
+          anchor={
+            <Chip
+              selected={!!selectedStream}
+              onPress={() => setStreamMenuVisible(true)}
+              style={styles.filterChip}
+              icon="format-list-bulleted"
+              onClose={selectedStream ? () => setSelectedStream(null) : undefined}
+            >
+              {selectedStream ? selectedStream : 'Stream'}
+            </Chip>
+          }
+        >
+          {availableStreams.map((stream) => (
+            <Menu.Item
+              key={stream}
+              onPress={() => {
+                setSelectedStream(stream);
+                setStreamMenuVisible(false);
+              }}
+              title={stream}
+            />
+          ))}
+        </Menu>
+
+        {/* House Filter */}
+        <Menu
+          visible={houseMenuVisible}
+          onDismiss={() => setHouseMenuVisible(false)}
+          anchor={
+            <Chip
+              selected={!!selectedHouse}
+              onPress={() => setHouseMenuVisible(true)}
+              style={styles.filterChip}
+              icon="home-group"
+              onClose={selectedHouse ? () => setSelectedHouse(null) : undefined}
+            >
+              {selectedHouse ? selectedHouse : 'House'}
+            </Chip>
+          }
+        >
+          {availableHouses.map((house) => (
+            <Menu.Item
+              key={house}
+              onPress={() => {
+                setSelectedHouse(house);
+                setHouseMenuVisible(false);
+              }}
+              title={house}
+            />
+          ))}
+        </Menu>
+      </View>
+
+      {/* Clear Filters Button */}
+      {activeFiltersCount > 0 && (
+        <View style={styles.clearFiltersContainer}>
+          <Button
+            mode="text"
+            onPress={clearAllFilters}
+            icon="filter-remove"
+            compact
+          >
+            Clear {activeFiltersCount} Filter{activeFiltersCount > 1 ? 's' : ''}
+          </Button>
+        </View>
+      )}
 
       {/* Error Message */}
       {error ? <ErrorMessage message={error} onRetry={fetchStudents} /> : null}
@@ -193,10 +427,12 @@ const StudentListScreen = ({ navigation }) => {
           icon="account-search"
           title="No Students Found"
           message={
-            searchQuery
-              ? 'No students match your search criteria'
+            searchQuery || activeFiltersCount > 0
+              ? 'No students match your search or filter criteria'
               : 'Start by adding your first student'
           }
+          action={activeFiltersCount > 0 ? clearAllFilters : undefined}
+          actionLabel={activeFiltersCount > 0 ? 'Clear Filters' : undefined}
         />
       )}
 
@@ -214,36 +450,45 @@ const StudentListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background,
   },
   searchContainer: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    ...theme.shadows.small,
   },
   searchBar: {
     elevation: 0,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background,
   },
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    flexWrap: 'wrap',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.colors.border,
+    gap: theme.spacing.sm,
   },
   filterChip: {
-    marginRight: 8,
+    marginRight: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
+  },
+  clearFiltersContainer: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'flex-start',
   },
   listContent: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
   fab: {
     position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#6200EE',
+    right: theme.spacing.md,
+    bottom: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
   },
 });
 

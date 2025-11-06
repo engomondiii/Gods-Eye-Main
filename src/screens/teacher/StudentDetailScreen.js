@@ -3,17 +3,21 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Text,
   Alert,
 } from 'react-native';
-import { Card, Title, Paragraph, Button, Divider, Chip } from 'react-native-paper';
+import { Card, Title, Paragraph, Button, Divider, Chip, Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import GuardianListItem from '../../components/student/GuardianListItem';
-import { SCREENS, MAX_GUARDIANS_PER_STUDENT } from '../../utils/constants';
+import { 
+  SCREENS, 
+  MAX_GUARDIANS_PER_STUDENT,
+  KENYA_EDUCATION_LEVELS,
+  KENYA_ACADEMIC_TERMS,
+} from '../../utils/constants';
 import { formatDate } from '../../utils/formatters';
+import theme from '../../styles/theme';
 
 const StudentDetailScreen = ({ route, navigation }) => {
   const { studentId } = route.params;
@@ -33,20 +37,45 @@ const StudentDetailScreen = ({ route, navigation }) => {
       
       const mockStudent = {
         id: studentId,
+        // Personal Information
         first_name: 'John',
-        last_name: 'Doe',
+        middle_name: 'Kamau',
+        last_name: 'Mwangi',
         date_of_birth: '2010-05-15',
-        admission_number: 'NPS001',
+        gender: 'Male',
+        birth_certificate_number: '123456789',
+        
+        // School Information
         school: {
           id: 1,
           name: 'Nairobi Primary School',
+          nemis_code: '001234567',
           county: { name: 'Nairobi' },
         },
+        
+        // Academic Information
+        education_level: 'primary',
+        current_grade: 'grade_5',
+        stream: 'Red',
+        admission_number: 'ADM/2020/0045',
+        upi_number: 'UPI1234567890',
+        year_of_admission: 2020,
+        current_term: 'term_1',
+        
+        // House System
+        house_name: 'Kilimanjaro',
+        house_color: 'Red',
+        
+        // Special Needs
+        has_special_needs: false,
+        special_needs_description: null,
+        
+        // Guardians
         guardians: [
           {
             id: 1,
             first_name: 'Jane',
-            last_name: 'Doe',
+            last_name: 'Mwangi',
             phone: '+254712345678',
             relationship: 'Mother',
             is_primary: true,
@@ -54,15 +83,18 @@ const StudentDetailScreen = ({ route, navigation }) => {
           {
             id: 2,
             first_name: 'Michael',
-            last_name: 'Doe',
+            last_name: 'Mwangi',
             phone: '+254723456789',
             relationship: 'Father',
             is_primary: false,
           },
         ],
+        
+        // Payment Summary
         pending_payments: 2,
         total_payments: 5,
-        // ✨ NEW - Biometric & QR Status
+        
+        // Attendance & Biometric
         qr_code_generated: true,
         biometric_enrolled: {
           fingerprint: true,
@@ -101,17 +133,14 @@ const StudentDetailScreen = ({ route, navigation }) => {
     navigation.navigate(SCREENS.CREATE_PAYMENT_REQUEST, { student });
   };
 
-  // ✨ NEW - Navigate to QR Code Screen
   const handleViewQRCode = () => {
     navigation.navigate(SCREENS.STUDENT_QR_CODE, { student });
   };
 
-  // ✨ NEW - Navigate to Biometric Setup
   const handleBiometricSetup = () => {
     navigation.navigate(SCREENS.BIOMETRIC_SETUP, { student });
   };
 
-  // ✨ NEW - Navigate to Attendance History
   const handleViewAttendance = () => {
     navigation.navigate(SCREENS.ATTENDANCE_HISTORY, { 
       studentId: student.id,
@@ -120,7 +149,6 @@ const StudentDetailScreen = ({ route, navigation }) => {
   };
 
   const handleEditStudent = () => {
-    // TODO: Navigate to edit screen
     Alert.alert('Edit Student', 'Edit functionality coming soon!');
   };
 
@@ -134,12 +162,57 @@ const StudentDetailScreen = ({ route, navigation }) => {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            // TODO: Implement delete functionality
             console.log('Delete student:', studentId);
           },
         },
       ]
     );
+  };
+
+  // Helper function to get grade label
+  const getGradeLabel = (grade) => {
+    const gradeLabels = {
+      pp1: 'PP1 (Pre-Primary 1)',
+      pp2: 'PP2 (Pre-Primary 2)',
+      grade_1: 'Grade 1',
+      grade_2: 'Grade 2',
+      grade_3: 'Grade 3',
+      grade_4: 'Grade 4',
+      grade_5: 'Grade 5',
+      grade_6: 'Grade 6',
+      grade_7: 'Grade 7',
+      grade_8: 'Grade 8',
+      grade_9: 'Grade 9',
+      grade_10: 'Grade 10',
+      grade_11: 'Grade 11',
+      grade_12: 'Grade 12',
+      form_1: 'Form 1',
+      form_2: 'Form 2',
+      form_3: 'Form 3',
+      form_4: 'Form 4',
+    };
+    return gradeLabels[grade] || grade;
+  };
+
+  // Helper function to get education level label
+  const getEducationLevelLabel = (level) => {
+    const levelLabels = {
+      pre_primary: 'Pre-Primary',
+      primary: 'Primary',
+      junior_secondary: 'Junior Secondary',
+      senior_secondary: 'Senior Secondary',
+    };
+    return levelLabels[level] || level;
+  };
+
+  // Helper function to get term label
+  const getTermLabel = (term) => {
+    const termLabels = {
+      term_1: 'Term 1',
+      term_2: 'Term 2',
+      term_3: 'Term 3',
+    };
+    return termLabels[term] || term;
   };
 
   if (isLoading) {
@@ -169,42 +242,162 @@ const StudentDetailScreen = ({ route, navigation }) => {
         <Card.Content>
           <View style={styles.headerContainer}>
             <View style={styles.avatarContainer}>
-              <MaterialCommunityIcons name="account-circle" size={80} color="#6200EE" />
+              <MaterialCommunityIcons name="account-circle" size={80} color={theme.colors.primary} />
             </View>
             <View style={styles.headerTextContainer}>
               <Title style={styles.studentName}>
-                {student.first_name} {student.last_name}
+                {student.first_name} {student.middle_name} {student.last_name}
               </Title>
               <Paragraph style={styles.admissionNumber}>
                 {student.admission_number}
               </Paragraph>
+              {student.gender && (
+                <Chip mode="flat" style={styles.genderChip} textStyle={styles.chipText}>
+                  {student.gender}
+                </Chip>
+              )}
             </View>
           </View>
 
           <Divider style={styles.divider} />
 
           {/* Basic Information */}
+          <Text style={styles.subsectionTitle}>Personal Information</Text>
+          
           <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="calendar" size={20} color="#757575" />
+            <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.textSecondary} />
             <Text style={styles.infoLabel}>Date of Birth:</Text>
             <Text style={styles.infoValue}>{formatDate(student.date_of_birth)}</Text>
           </View>
 
+          {student.birth_certificate_number && (
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="card-account-details" size={20} color={theme.colors.textSecondary} />
+              <Text style={styles.infoLabel}>Birth Certificate:</Text>
+              <Text style={styles.infoValue}>{student.birth_certificate_number}</Text>
+            </View>
+          )}
+
+          {student.upi_number && (
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="identifier" size={20} color={theme.colors.textSecondary} />
+              <Text style={styles.infoLabel}>UPI Number:</Text>
+              <Text style={styles.infoValue}>{student.upi_number}</Text>
+            </View>
+          )}
+        </Card.Content>
+      </Card>
+
+      {/* School Information Card */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text style={styles.subsectionTitle}>School Information</Text>
+          
           <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="school" size={20} color="#757575" />
+            <MaterialCommunityIcons name="school" size={20} color={theme.colors.textSecondary} />
             <Text style={styles.infoLabel}>School:</Text>
             <Text style={styles.infoValue}>{student.school.name}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="map-marker" size={20} color="#757575" />
+            <MaterialCommunityIcons name="map-marker" size={20} color={theme.colors.textSecondary} />
             <Text style={styles.infoLabel}>County:</Text>
             <Text style={styles.infoValue}>{student.school.county.name}</Text>
+          </View>
+
+          {student.school.nemis_code && (
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="barcode" size={20} color={theme.colors.textSecondary} />
+              <Text style={styles.infoLabel}>NEMIS Code:</Text>
+              <Text style={styles.infoValue}>{student.school.nemis_code}</Text>
+            </View>
+          )}
+        </Card.Content>
+      </Card>
+
+      {/* Academic Information Card */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text style={styles.subsectionTitle}>Academic Information (CBC)</Text>
+          
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="school-outline" size={20} color={theme.colors.textSecondary} />
+            <Text style={styles.infoLabel}>Education Level:</Text>
+            <Text style={styles.infoValue}>{getEducationLevelLabel(student.education_level)}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="book-open-variant" size={20} color={theme.colors.textSecondary} />
+            <Text style={styles.infoLabel}>Grade/Class:</Text>
+            <Text style={styles.infoValue}>{getGradeLabel(student.current_grade)}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="format-list-bulleted" size={20} color={theme.colors.textSecondary} />
+            <Text style={styles.infoLabel}>Stream/Class:</Text>
+            <Text style={styles.infoValue}>{student.stream}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="calendar-range" size={20} color={theme.colors.textSecondary} />
+            <Text style={styles.infoLabel}>Year of Admission:</Text>
+            <Text style={styles.infoValue}>{student.year_of_admission}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <MaterialCommunityIcons name="calendar-today" size={20} color={theme.colors.textSecondary} />
+            <Text style={styles.infoLabel}>Current Term:</Text>
+            <Text style={styles.infoValue}>{getTermLabel(student.current_term)}</Text>
           </View>
         </Card.Content>
       </Card>
 
-      {/* ✨ NEW - Attendance & Identification Section */}
+      {/* House System Card (if applicable) */}
+      {(student.house_name || student.house_color) && (
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text style={styles.subsectionTitle}>House System</Text>
+            
+            {student.house_name && (
+              <View style={styles.infoRow}>
+                <MaterialCommunityIcons name="home-group" size={20} color={theme.colors.textSecondary} />
+                <Text style={styles.infoLabel}>House Name:</Text>
+                <Text style={styles.infoValue}>{student.house_name} House</Text>
+              </View>
+            )}
+
+            {student.house_color && (
+              <View style={styles.infoRow}>
+                <MaterialCommunityIcons name="palette" size={20} color={theme.colors.textSecondary} />
+                <Text style={styles.infoLabel}>House Color:</Text>
+                <View style={styles.colorIndicatorContainer}>
+                  <View style={[styles.colorIndicator, { backgroundColor: student.house_color }]} />
+                  <Text style={styles.infoValue}>{student.house_color}</Text>
+                </View>
+              </View>
+            )}
+          </Card.Content>
+        </Card>
+      )}
+
+      {/* Special Needs Card (if applicable) */}
+      {student.has_special_needs && (
+        <Card style={[styles.card, styles.specialNeedsCard]}>
+          <Card.Content>
+            <View style={styles.specialNeedsHeader}>
+              <MaterialCommunityIcons name="alert-circle" size={24} color={theme.colors.warning} />
+              <Text style={styles.specialNeedsTitle}>Special Needs</Text>
+            </View>
+            {student.special_needs_description && (
+              <Text style={styles.specialNeedsText}>
+                {student.special_needs_description}
+              </Text>
+            )}
+          </Card.Content>
+        </Card>
+      )}
+
+      {/* Attendance & Identification Section */}
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.sectionTitle}>Attendance & Identification</Title>
@@ -236,7 +429,7 @@ const StudentDetailScreen = ({ route, navigation }) => {
               <MaterialCommunityIcons 
                 name="qrcode" 
                 size={32} 
-                color={student.qr_code_generated ? '#4CAF50' : '#757575'} 
+                color={student.qr_code_generated ? theme.colors.success : theme.colors.textSecondary} 
               />
               <View style={styles.identificationText}>
                 <Text style={styles.identificationTitle}>QR Code</Text>
@@ -265,8 +458,8 @@ const StudentDetailScreen = ({ route, navigation }) => {
                 size={32} 
                 color={
                   student.biometric_enrolled.fingerprint || student.biometric_enrolled.face_recognition 
-                    ? '#4CAF50' 
-                    : '#757575'
+                    ? theme.colors.success
+                    : theme.colors.textSecondary
                 } 
               />
               <View style={styles.identificationText}>
@@ -379,7 +572,7 @@ const StudentDetailScreen = ({ route, navigation }) => {
           onPress={handleDeleteStudent}
           style={[styles.actionButton, styles.deleteButton]}
           icon="delete"
-          textColor="#F44336"
+          textColor={theme.colors.error}
         >
           Delete Student
         </Button>
@@ -391,107 +584,157 @@ const StudentDetailScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background,
   },
   contentContainer: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
   card: {
-    marginBottom: 16,
-    elevation: 2,
+    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    ...theme.shadows.medium,
   },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   avatarContainer: {
-    marginRight: 16,
+    marginRight: theme.spacing.md,
   },
   headerTextContainer: {
     flex: 1,
   },
   studentName: {
-    fontSize: 22,
+    fontSize: theme.fontSizes.h3,
     fontWeight: 'bold',
-    color: '#212121',
-    marginBottom: 4,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
   },
   admissionNumber: {
-    fontSize: 14,
-    color: '#757575',
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+  },
+  genderChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primary + '20',
+    marginTop: theme.spacing.xs,
+  },
+  chipText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
   },
   divider: {
-    marginVertical: 16,
+    marginVertical: theme.spacing.md,
+    backgroundColor: theme.colors.border,
   },
   miniDivider: {
-    marginVertical: 12,
+    marginVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.border,
+  },
+  subsectionTitle: {
+    fontSize: theme.fontSizes.lg,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.md,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.sm,
   },
   infoLabel: {
-    fontSize: 14,
-    color: '#757575',
-    marginLeft: 8,
-    marginRight: 8,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.sm,
+    marginRight: theme.spacing.sm,
+    minWidth: 120,
   },
   infoValue: {
-    fontSize: 14,
-    color: '#212121',
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.text,
     fontWeight: '500',
     flex: 1,
+  },
+  colorIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  colorIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  specialNeedsCard: {
+    backgroundColor: theme.colors.warningLight,
+  },
+  specialNeedsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  specialNeedsTitle: {
+    fontSize: theme.fontSizes.lg,
+    fontWeight: 'bold',
+    color: theme.colors.warning,
+    marginLeft: theme.spacing.sm,
+  },
+  specialNeedsText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.text,
+    lineHeight: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: theme.fontSizes.lg,
     fontWeight: 'bold',
-    color: '#212121',
+    color: theme.colors.text,
   },
   noDataText: {
-    fontSize: 14,
-    color: '#757575',
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginVertical: 16,
+    marginVertical: theme.spacing.md,
   },
-  // ✨ NEW - Attendance Styles
   attendanceContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
   },
   attendanceItem: {
     alignItems: 'flex-start',
   },
   attendancePercentage: {
-    fontSize: 28,
+    fontSize: theme.fontSizes.h2,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: theme.colors.success,
   },
   attendanceLabel: {
-    fontSize: 12,
-    color: '#757575',
-    marginTop: 4,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
   },
   attendanceButton: {
-    marginLeft: 8,
+    marginLeft: theme.spacing.sm,
   },
-  // ✨ NEW - Identification Styles
   identificationRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: theme.spacing.sm,
   },
   identificationLeft: {
     flexDirection: 'row',
@@ -499,39 +742,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   identificationText: {
-    marginLeft: 12,
+    marginLeft: theme.spacing.sm,
     flex: 1,
   },
   identificationTitle: {
-    fontSize: 16,
+    fontSize: theme.fontSizes.md,
     fontWeight: '600',
-    color: '#212121',
-    marginBottom: 4,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
   },
   identificationStatus: {
-    fontSize: 12,
-    color: '#757575',
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
   },
   biometricChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 4,
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs,
   },
   biometricChip: {
     height: 24,
-    backgroundColor: '#E8F5E9',
-    marginRight: 4,
+    backgroundColor: theme.colors.successLight,
+    marginRight: theme.spacing.xs,
   },
   biometricChipText: {
-    fontSize: 10,
-    color: '#4CAF50',
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.success,
   },
   paymentSummaryContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 16,
-    marginBottom: 16,
+    paddingVertical: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   paymentStatItem: {
     alignItems: 'center',
@@ -539,29 +782,29 @@ const styles = StyleSheet.create({
   },
   paymentStatDivider: {
     width: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.colors.border,
   },
   paymentStatNumber: {
-    fontSize: 32,
+    fontSize: theme.fontSizes.h2,
     fontWeight: 'bold',
-    color: '#6200EE',
-    marginBottom: 4,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.xs,
   },
   paymentStatLabel: {
-    fontSize: 14,
-    color: '#757575',
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
   },
   paymentButton: {
-    backgroundColor: '#6200EE',
+    backgroundColor: theme.colors.primary,
   },
   actionButtonsContainer: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   actionButton: {
-    marginBottom: 12,
+    marginBottom: theme.spacing.sm,
   },
   deleteButton: {
-    borderColor: '#F44336',
+    borderColor: theme.colors.error,
   },
 });
 
