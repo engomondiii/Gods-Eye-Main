@@ -10,7 +10,7 @@ import OTCInput from '../../components/attendance/OTCInput';
 import AttendanceMethodSelector from '../../components/attendance/AttendanceMethodSelector';
 
 const CheckInScreen = ({ route, navigation }) => {
-  const preSelectedMethod = route.params?.method || null;
+  const preSelectedMethod = route?.params?.method || null;
   const [selectedMethod, setSelectedMethod] = useState(preSelectedMethod);
   const [checkInType, setCheckInType] = useState('check_in');
 
@@ -24,7 +24,11 @@ const CheckInScreen = ({ route, navigation }) => {
       // await attendanceService.checkIn(data);
       
       console.log('Check-in successful:', data);
-      navigation.goBack();
+      
+      // ✅ FIXED: Safe navigation check
+      if (navigation && navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (error) {
       console.error('Check-in error:', error);
     }
@@ -32,6 +36,17 @@ const CheckInScreen = ({ route, navigation }) => {
 
   const handleCheckInFail = (error) => {
     console.error('Check-in failed:', error);
+  };
+
+  // ✅ FIXED: Safe cancel handler
+  const handleCancel = () => {
+    if (selectedMethod) {
+      // If a method is selected, go back to method selector
+      setSelectedMethod(null);
+    } else if (navigation && navigation.canGoBack()) {
+      // If no method selected, go back to previous screen
+      navigation.goBack();
+    }
   };
 
   const handleQRScan = async (qrCode) => {
@@ -45,7 +60,7 @@ const CheckInScreen = ({ route, navigation }) => {
   const handleOTCSubmit = async (code) => {
     await handleCheckInSuccess({
       code,
-      method: ATTENDANCE_METHODS.OTC,
+      method: ATTENDANCE_METHODS.ONE_TIME_CODE, // ✅ FIXED: Use correct constant name
       type: checkInType,
     });
   };
@@ -64,7 +79,7 @@ const CheckInScreen = ({ route, navigation }) => {
         return (
           <QRCodeScanner
             onScan={handleQRScan}
-            onCancel={() => setSelectedMethod(null)}
+            onCancel={handleCancel} // ✅ FIXED: Use safe cancel handler
           />
         );
       
@@ -73,7 +88,7 @@ const CheckInScreen = ({ route, navigation }) => {
           <FingerprintScanner
             onSuccess={handleCheckInSuccess}
             onFail={handleCheckInFail}
-            onCancel={() => setSelectedMethod(null)}
+            onCancel={handleCancel} // ✅ FIXED: Use safe cancel handler
           />
         );
       
@@ -81,15 +96,15 @@ const CheckInScreen = ({ route, navigation }) => {
         return (
           <FaceRecognitionCamera
             onCapture={handleFaceCapture}
-            onCancel={() => setSelectedMethod(null)}
+            onCancel={handleCancel} // ✅ FIXED: Use safe cancel handler
           />
         );
       
-      case ATTENDANCE_METHODS.OTC:
+      case ATTENDANCE_METHODS.ONE_TIME_CODE: // ✅ FIXED: Use correct constant name
         return (
           <OTCInput
             onSubmit={handleOTCSubmit}
-            onCancel={() => setSelectedMethod(null)}
+            onCancel={handleCancel} // ✅ FIXED: Use safe cancel handler
           />
         );
       

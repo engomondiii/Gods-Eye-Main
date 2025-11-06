@@ -5,8 +5,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
 import { 
   ATTENDANCE_TYPES, 
-  METHOD_ICONS, 
-  METHOD_COLORS 
+  ATTENDANCE_METHOD_ICONS,  // ✅ FIXED: Correct import name
+  ATTENDANCE_METHOD_COLORS, // ✅ FIXED: Correct import name
 } from '../../utils/constants';
 import { formatRelativeTime } from '../../utils/formatters';
 
@@ -14,15 +14,15 @@ const AttendanceCard = ({ record, onPress, showStudent = true }) => {
   if (!record) return null;
 
   const isCheckIn = record.attendance_type === ATTENDANCE_TYPES.CHECK_IN;
-  const methodIcon = METHOD_ICONS[record.method] || 'help-circle';
-  const methodColor = METHOD_COLORS[record.method] || theme.colors.textSecondary;
+  const methodIcon = ATTENDANCE_METHOD_ICONS[record.method] || 'help-circle';
+  const methodColor = ATTENDANCE_METHOD_COLORS[record.method] || theme.colors.textSecondary;
 
   const getMethodLabel = (method) => {
     const labels = {
       qr_code: 'QR Code',
       fingerprint: 'Fingerprint',
       face_recognition: 'Face Recognition',
-      otc: 'One-Time Code',
+      one_time_code: 'One-Time Code',
       manual: 'Manual Entry',
     };
     return labels[method] || method;

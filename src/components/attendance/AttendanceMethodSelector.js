@@ -3,7 +3,11 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
-import { ATTENDANCE_METHODS, METHOD_ICONS, METHOD_COLORS } from '../../utils/constants';
+import { 
+  ATTENDANCE_METHODS, 
+  ATTENDANCE_METHOD_ICONS,  // ✅ FIXED: Correct import name
+  ATTENDANCE_METHOD_COLORS, // ✅ FIXED: Correct import name
+} from '../../utils/constants';
 
 const AttendanceMethodSelector = ({ 
   onMethodSelect, 
@@ -15,36 +19,36 @@ const AttendanceMethodSelector = ({
       key: ATTENDANCE_METHODS.QR_CODE,
       label: 'QR Code',
       description: 'Scan student QR code',
-      icon: METHOD_ICONS[ATTENDANCE_METHODS.QR_CODE],
-      color: METHOD_COLORS[ATTENDANCE_METHODS.QR_CODE],
+      icon: ATTENDANCE_METHOD_ICONS[ATTENDANCE_METHODS.QR_CODE], // ✅ FIXED
+      color: ATTENDANCE_METHOD_COLORS[ATTENDANCE_METHODS.QR_CODE], // ✅ FIXED
     },
     {
       key: ATTENDANCE_METHODS.FINGERPRINT,
       label: 'Fingerprint',
       description: 'Biometric scan',
-      icon: METHOD_ICONS[ATTENDANCE_METHODS.FINGERPRINT],
-      color: METHOD_COLORS[ATTENDANCE_METHODS.FINGERPRINT],
+      icon: ATTENDANCE_METHOD_ICONS[ATTENDANCE_METHODS.FINGERPRINT], // ✅ FIXED
+      color: ATTENDANCE_METHOD_COLORS[ATTENDANCE_METHODS.FINGERPRINT], // ✅ FIXED
     },
     {
       key: ATTENDANCE_METHODS.FACE_RECOGNITION,
       label: 'Face Recognition',
       description: 'AI-powered ID',
-      icon: METHOD_ICONS[ATTENDANCE_METHODS.FACE_RECOGNITION],
-      color: METHOD_COLORS[ATTENDANCE_METHODS.FACE_RECOGNITION],
+      icon: ATTENDANCE_METHOD_ICONS[ATTENDANCE_METHODS.FACE_RECOGNITION], // ✅ FIXED
+      color: ATTENDANCE_METHOD_COLORS[ATTENDANCE_METHODS.FACE_RECOGNITION], // ✅ FIXED
     },
     {
-      key: ATTENDANCE_METHODS.OTC,
+      key: ATTENDANCE_METHODS.ONE_TIME_CODE, // ✅ FIXED: Use correct constant name
       label: 'One-Time Code',
       description: '6-digit code',
-      icon: METHOD_ICONS[ATTENDANCE_METHODS.OTC],
-      color: METHOD_COLORS[ATTENDANCE_METHODS.OTC],
+      icon: ATTENDANCE_METHOD_ICONS[ATTENDANCE_METHODS.ONE_TIME_CODE], // ✅ FIXED
+      color: ATTENDANCE_METHOD_COLORS[ATTENDANCE_METHODS.ONE_TIME_CODE], // ✅ FIXED
     },
     {
       key: ATTENDANCE_METHODS.MANUAL,
       label: 'Manual Entry',
       description: 'Search student',
-      icon: METHOD_ICONS[ATTENDANCE_METHODS.MANUAL],
-      color: METHOD_COLORS[ATTENDANCE_METHODS.MANUAL],
+      icon: ATTENDANCE_METHOD_ICONS[ATTENDANCE_METHODS.MANUAL], // ✅ FIXED
+      color: ATTENDANCE_METHOD_COLORS[ATTENDANCE_METHODS.MANUAL], // ✅ FIXED
     },
   ];
 
