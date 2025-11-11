@@ -1,11 +1,36 @@
-// User Roles
+// User Roles - UPDATED with SCHOOL_ADMIN
 export const USER_ROLES = {
   SUPER_ADMIN: 'super_admin',
+  SCHOOL_ADMIN: 'school_admin',
   TEACHER: 'teacher',
   GUARDIAN: 'guardian',
 };
 
-// Screen Names
+// Role Labels
+export const USER_ROLE_LABELS = {
+  [USER_ROLES.SUPER_ADMIN]: 'Super Administrator',
+  [USER_ROLES.SCHOOL_ADMIN]: 'School Administrator',
+  [USER_ROLES.TEACHER]: 'Teacher',
+  [USER_ROLES.GUARDIAN]: 'Guardian',
+};
+
+// Role Icons
+export const USER_ROLE_ICONS = {
+  [USER_ROLES.SUPER_ADMIN]: 'shield-crown',
+  [USER_ROLES.SCHOOL_ADMIN]: 'shield-account',
+  [USER_ROLES.TEACHER]: 'account-tie',
+  [USER_ROLES.GUARDIAN]: 'account-heart',
+};
+
+// Role Colors
+export const USER_ROLE_COLORS = {
+  [USER_ROLES.SUPER_ADMIN]: '#F44336',
+  [USER_ROLES.SCHOOL_ADMIN]: '#FF9800',
+  [USER_ROLES.TEACHER]: '#2196F3',
+  [USER_ROLES.GUARDIAN]: '#4CAF50',
+};
+
+// Screen Names - UPDATED with School Admin screens
 export const SCREENS = {
   // Auth
   SPLASH: 'Splash',
@@ -27,7 +52,14 @@ export const SCREENS = {
   PENDING_APPROVALS: 'PendingApprovals',
   PAYMENT_REQUESTS: 'PaymentRequests',
   
-  // Admin
+  // School Admin
+  SCHOOL_ADMIN_DASHBOARD: 'SchoolAdminDashboard',
+  SCHOOL_TEACHERS_MANAGEMENT: 'SchoolTeachersManagement',
+  SCHOOL_STUDENTS_OVERVIEW: 'SchoolStudentsOverview',
+  SCHOOL_SETTINGS: 'SchoolSettings',
+  SCHOOL_REPORTS: 'SchoolReports',
+  
+  // Super Admin
   ADMIN_DASHBOARD: 'AdminDashboard',
   SCHOOLS_LIST: 'SchoolsList',
   SCHOOL_DETAIL: 'SchoolDetail',
@@ -49,12 +81,68 @@ export const SCREENS = {
   MANUAL_ATTENDANCE: 'ManualAttendance',
 };
 
-// Payment Status
+// Payment Status - 🆕 UPDATED with partial payment statuses
 export const PAYMENT_STATUS = {
   PENDING: 'pending',
   APPROVED: 'approved',
   PAID: 'paid',
+  PARTIALLY_PAID: 'partially_paid',  // 🆕 NEW
   REJECTED: 'rejected',
+  OVERDUE: 'overdue',  // 🆕 NEW
+};
+
+// 🆕 NEW - Payment Status Labels
+export const PAYMENT_STATUS_LABELS = {
+  [PAYMENT_STATUS.PENDING]: 'Pending',
+  [PAYMENT_STATUS.APPROVED]: 'Approved',
+  [PAYMENT_STATUS.PAID]: 'Paid',
+  [PAYMENT_STATUS.PARTIALLY_PAID]: 'Partially Paid',
+  [PAYMENT_STATUS.REJECTED]: 'Rejected',
+  [PAYMENT_STATUS.OVERDUE]: 'Overdue',
+};
+
+// 🆕 NEW - Payment Status Colors
+export const PAYMENT_STATUS_COLORS = {
+  [PAYMENT_STATUS.PENDING]: '#FF9800',
+  [PAYMENT_STATUS.APPROVED]: '#2196F3',
+  [PAYMENT_STATUS.PAID]: '#4CAF50',
+  [PAYMENT_STATUS.PARTIALLY_PAID]: '#9C27B0',
+  [PAYMENT_STATUS.REJECTED]: '#F44336',
+  [PAYMENT_STATUS.OVERDUE]: '#D32F2F',
+};
+
+// 🆕 NEW - Payment Status Icons
+export const PAYMENT_STATUS_ICONS = {
+  [PAYMENT_STATUS.PENDING]: 'clock-outline',
+  [PAYMENT_STATUS.APPROVED]: 'check-circle-outline',
+  [PAYMENT_STATUS.PAID]: 'check-circle',
+  [PAYMENT_STATUS.PARTIALLY_PAID]: 'progress-check',
+  [PAYMENT_STATUS.REJECTED]: 'close-circle',
+  [PAYMENT_STATUS.OVERDUE]: 'alert-circle',
+};
+
+// 🆕 NEW - Payment Flexibility Types
+export const PAYMENT_FLEXIBILITY = {
+  FULL_ONLY: 'full_only',              // Must pay full amount
+  PARTIAL_ALLOWED: 'partial_allowed',  // Can pay any amount >= minimum
+  INSTALLMENTS: 'installments',        // Fixed installment plan
+};
+
+// 🆕 NEW - Payment Flexibility Labels
+export const PAYMENT_FLEXIBILITY_LABELS = {
+  [PAYMENT_FLEXIBILITY.FULL_ONLY]: 'Full Payment Only',
+  [PAYMENT_FLEXIBILITY.PARTIAL_ALLOWED]: 'Partial Payments Allowed',
+  [PAYMENT_FLEXIBILITY.INSTALLMENTS]: 'Installment Plan',
+};
+
+// 🆕 NEW - Payment Configuration
+export const PAYMENT_CONFIG = {
+  MIN_PAYMENT_AMOUNT: 100,              // Minimum KES 100
+  MAX_INSTALLMENTS: 12,                 // Maximum 12 installments
+  DEFAULT_MINIMUM_PERCENTAGE: 20,       // 20% minimum payment
+  ALLOW_OVERPAYMENT: false,            // Don't allow paying more than owed
+  CURRENCY: 'KES',
+  CURRENCY_SYMBOL: 'KES',
 };
 
 // Request Status
@@ -379,10 +467,10 @@ export const KENYA_COMMON_HOUSES = {
   // Mountains
   mountains: ['Kilimanjaro', 'Kenya', 'Elgon', 'Longonot', 'Aberdare', 'Meru'],
   
-  // Wildlife Parks (Note: 'parks' changed to 'wildlifeParks' to match component)
+  // Wildlife Parks
   wildlifeParks: ['Mara', 'Tsavo', 'Amboseli', 'Nakuru', 'Samburu', 'Nairobi'],
   
-  // Historical Figures (Note: 'historical' changed to 'historicalFigures' to match component)
+  // Historical Figures
   historicalFigures: ['Kenyatta', 'Odinga', 'Wangari', 'Kimathi', 'Muindi', 'Waiyaki'],
   
   // Colors
@@ -437,6 +525,8 @@ export const NOTIFICATION_TYPES = {
   APPROVAL_REJECTED: 'approval_rejected',
   PAYMENT_REQUEST: 'payment_request',
   PAYMENT_RECEIVED: 'payment_received',
+  PAYMENT_PARTIAL: 'payment_partial',  // 🆕 NEW
+  PAYMENT_REMINDER: 'payment_reminder',  // 🆕 NEW
   SCHOOL_APPROVED: 'school_approved',
   SCHOOL_REJECTED: 'school_rejected',
   SYSTEM: 'system',
@@ -477,6 +567,9 @@ export const API_ERRORS = {
   ATTENDANCE_WINDOW_CLOSED: 'Attendance window is closed.',
   OTC_INVALID: 'Invalid one-time code.',
   OTC_EXPIRED: 'One-time code has expired.',
+  PAYMENT_AMOUNT_INVALID: 'Invalid payment amount.',  // 🆕 NEW
+  PAYMENT_AMOUNT_TOO_LOW: 'Payment amount is below minimum required.',  // 🆕 NEW
+  PAYMENT_AMOUNT_TOO_HIGH: 'Payment amount exceeds remaining balance.',  // 🆕 NEW
 };
 
 // Form Validation Messages
@@ -498,6 +591,9 @@ export const VALIDATION_MESSAGES = {
   INVALID_BIRTH_CERTIFICATE: 'Invalid birth certificate number',
   INVALID_GRADE: 'Please select a valid grade',
   INVALID_STREAM: 'Please enter a valid stream/class',
+  PAYMENT_AMOUNT_BELOW_MINIMUM: 'Amount must be at least',  // 🆕 NEW
+  PAYMENT_AMOUNT_ABOVE_MAXIMUM: 'Amount cannot exceed',  // 🆕 NEW
+  PAYMENT_AMOUNT_REQUIRED: 'Payment amount is required',  // 🆕 NEW
 };
 
 // App Configuration

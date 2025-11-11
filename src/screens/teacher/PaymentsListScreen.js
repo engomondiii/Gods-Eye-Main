@@ -29,7 +29,7 @@ const PaymentsListScreen = ({ navigation }) => {
       // TODO: Replace with actual API call
       // const response = await paymentService.getPaymentRequests();
       
-      // Mock data for development
+      // Mock data for development - 🆕 UPDATED with partial payment examples
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const mockPayments = [
@@ -47,6 +47,13 @@ const PaymentsListScreen = ({ navigation }) => {
           due_date: '2025-11-15',
           status: PAYMENT_STATUS.PENDING,
           mpesa_ref: null,
+          // 🆕 NEW - Partial payment fields
+          allow_partial: true,
+          minimum_amount: 1000.00,
+          paid_amount: 0.00,
+          remaining_amount: 5000.00,
+          installment_count: 0,
+          payment_history: [],
         },
         {
           id: 2,
@@ -60,8 +67,22 @@ const PaymentsListScreen = ({ navigation }) => {
           purpose: 'Exam fees for November 2025',
           created_at: '2025-10-24T14:30:00Z',
           due_date: '2025-11-10',
-          status: PAYMENT_STATUS.APPROVED,
+          status: PAYMENT_STATUS.PARTIALLY_PAID,  // 🆕 NEW
           mpesa_ref: null,
+          // 🆕 NEW - Partial payment fields
+          allow_partial: true,
+          minimum_amount: 1000.00,
+          paid_amount: 1500.00,
+          remaining_amount: 2000.00,
+          installment_count: 1,
+          payment_history: [
+            {
+              id: 1,
+              amount: 1500.00,
+              payment_date: '2025-10-26T10:30:00Z',
+              mpesa_ref: 'QJK789ABC456',
+            },
+          ],
         },
         {
           id: 3,
@@ -77,6 +98,20 @@ const PaymentsListScreen = ({ navigation }) => {
           due_date: '2025-11-05',
           status: PAYMENT_STATUS.PAID,
           mpesa_ref: 'RKJ123XYZ789',
+          // 🆕 NEW - Partial payment fields
+          allow_partial: false,
+          minimum_amount: 2000.00,
+          paid_amount: 2000.00,
+          remaining_amount: 0.00,
+          installment_count: 1,
+          payment_history: [
+            {
+              id: 2,
+              amount: 2000.00,
+              payment_date: '2025-10-22T15:30:00Z',
+              mpesa_ref: 'RKJ123XYZ789',
+            },
+          ],
         },
       ];
       
@@ -165,6 +200,7 @@ const PaymentsListScreen = ({ navigation }) => {
       payment={item}
       onPress={() => handlePaymentPress(item)}
       showActions={false}
+      userRole="teacher"  // 🆕 NEW
     />
   );
 
@@ -184,7 +220,7 @@ const PaymentsListScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Filter Chips */}
+      {/* Filter Chips - 🆕 UPDATED with partial paid */}
       <View style={styles.filterContainer}>
         <Chip
           selected={selectedFilter === 'all'}
@@ -199,6 +235,13 @@ const PaymentsListScreen = ({ navigation }) => {
           style={styles.filterChip}
         >
           Pending
+        </Chip>
+        <Chip
+          selected={selectedFilter === PAYMENT_STATUS.PARTIALLY_PAID}
+          onPress={() => applyFilter(PAYMENT_STATUS.PARTIALLY_PAID)}
+          style={styles.filterChip}
+        >
+          Partial
         </Chip>
         <Chip
           selected={selectedFilter === PAYMENT_STATUS.APPROVED}
@@ -277,9 +320,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+    flexWrap: 'wrap',  // 🆕 NEW - Allow wrapping
   },
   filterChip: {
     marginRight: 8,
+    marginBottom: 8,  // 🆕 NEW
   },
   listContent: {
     padding: 16,

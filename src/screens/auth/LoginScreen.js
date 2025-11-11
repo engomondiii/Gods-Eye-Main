@@ -118,11 +118,14 @@ const LoginScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* Development Mode Hint */}
+        {/* Development Mode Hint - UPDATED with 4 roles */}
         <View style={styles.devModeContainer}>
-          <Text style={styles.devModeText}>Development Mode</Text>
+          <Text style={styles.devModeText}>Development Mode - Test Users</Text>
           <Text style={styles.devModeSubtext}>
-            Use: teacher, guardian, or admin as username
+            🔑 Super Admin: admin / password{'\n'}
+            🏫 School Admin: schooladmin / password{'\n'}
+            👨‍🏫 Teacher: teacher / password{'\n'}
+            👨‍👩‍👧 Guardian: guardian / password
           </Text>
         </View>
 
@@ -295,6 +298,7 @@ const styles = StyleSheet.create({
   devModeSubtext: {
     fontSize: 11,
     color: '#388E3C',
+    lineHeight: 16,
   },
   formSection: {
     marginBottom: 24,

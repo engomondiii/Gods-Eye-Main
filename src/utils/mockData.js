@@ -1,6 +1,6 @@
-import { USER_ROLES, PAYMENT_STATUS, REQUEST_STATUS, KENYA_GRADES, KENYA_EDUCATION_LEVELS, KENYA_ACADEMIC_TERMS } from './constants';
+import { USER_ROLES, PAYMENT_STATUS, REQUEST_STATUS, KENYA_GRADES, KENYA_EDUCATION_LEVELS, KENYA_ACADEMIC_TERMS, PAYMENT_FLEXIBILITY } from './constants';
 
-// Mock Users
+// Mock Users - UPDATED with School Admin
 export const mockUsers = {
   superAdmin: {
     id: 1,
@@ -10,20 +10,44 @@ export const mockUsers = {
     last_name: 'Admin',
     phone: '+254712345678',
     is_superadmin: true,
+    is_school_admin: false,
     is_teacher: false,
     is_guardian: false,
+    role: USER_ROLES.SUPER_ADMIN,
   },
-  teacher: {
+  // School Admin
+  schoolAdmin: {
     id: 2,
-    username: 'teacher1',
-    email: 'teacher@school.com',
+    username: 'schooladmin',
+    email: 'admin@nairobiprimary.ac.ke',
     first_name: 'John',
     middle_name: 'Kamau',
     last_name: 'Mwangi',
     phone: '+254723456789',
     is_superadmin: false,
+    is_school_admin: true,
+    is_teacher: false,
+    is_guardian: false,
+    role: USER_ROLES.SCHOOL_ADMIN,
+    school: {
+      id: 1,
+      name: 'Nairobi Primary School',
+      nemis_code: '001234567',
+    },
+  },
+  teacher: {
+    id: 3,
+    username: 'teacher',
+    email: 'teacher@school.com',
+    first_name: 'Mary',
+    middle_name: 'Wanjiru',
+    last_name: 'Ochieng',
+    phone: '+254734567890',
+    is_superadmin: false,
+    is_school_admin: false,
     is_teacher: true,
     is_guardian: false,
+    role: USER_ROLES.TEACHER,
     school: {
       id: 1,
       name: 'Nairobi Primary School',
@@ -31,16 +55,18 @@ export const mockUsers = {
     },
   },
   guardian: {
-    id: 3,
-    username: 'guardian1',
+    id: 4,
+    username: 'guardian',
     email: 'guardian@email.com',
     first_name: 'Jane',
-    middle_name: 'Wanjiru',
-    last_name: 'Ochieng',
-    phone: '+254734567890',
+    middle_name: 'Akinyi',
+    last_name: 'Odhiambo',
+    phone: '+254745678901',
     is_superadmin: false,
+    is_school_admin: false,
     is_teacher: false,
     is_guardian: true,
+    role: USER_ROLES.GUARDIAN,
   },
 };
 
@@ -109,7 +135,7 @@ export const mockSchools = [
     name: 'Nairobi Primary School',
     nemis_code: '001234567',
     country: mockCountries[0],
-    county: mockCounties[29], // Nairobi - index 29 (id 30)
+    county: mockCounties[29],
     address: '123 Education Road, Nairobi',
     school_type: 'public',
     school_category: 'county',
@@ -126,7 +152,7 @@ export const mockSchools = [
     name: 'Mombasa Secondary School',
     nemis_code: '002345678',
     country: mockCountries[0],
-    county: mockCounties[27], // Mombasa - index 27 (id 28)
+    county: mockCounties[27],
     address: '456 Learning Street, Mombasa',
     school_type: 'public',
     school_category: 'extra_county',
@@ -143,7 +169,7 @@ export const mockSchools = [
     name: 'Alliance High School',
     nemis_code: '003456789',
     country: mockCountries[0],
-    county: mockCounties[12], // Kiambu - index 12 (id 13)
+    county: mockCounties[12],
     address: 'Kikuyu, Kiambu County',
     school_type: 'public',
     school_category: 'national',
@@ -161,35 +187,24 @@ export const mockSchools = [
 export const mockStudents = [
   {
     id: 1,
-    // Personal Information
     first_name: 'John',
     middle_name: 'Kamau',
     last_name: 'Mwangi',
     date_of_birth: '2010-05-15',
     gender: 'Male',
     birth_certificate_number: '123456789',
-    
-    // School Information
     school: mockSchools[0],
     admission_number: 'ADM/2020/001',
-    
-    // Academic Information (CBC)
     education_level: KENYA_EDUCATION_LEVELS.PRIMARY,
     current_grade: KENYA_GRADES.GRADE_5,
     stream: 'Red',
     upi_number: 'UPI1234567890',
     year_of_admission: 2020,
     current_term: KENYA_ACADEMIC_TERMS.TERM_1,
-    
-    // House System
     house_name: 'Kilimanjaro',
     house_color: '#F44336',
-    
-    // Special Needs
     has_special_needs: false,
     special_needs_description: null,
-    
-    // Guardians
     guardians: [
       {
         id: 1,
@@ -212,8 +227,6 @@ export const mockStudents = [
         is_primary: false,
       },
     ],
-    
-    // Attendance & Biometric
     qr_code_generated: true,
     qr_code: 'GE-STU-001-2020',
     biometric_enrolled: {
@@ -221,42 +234,29 @@ export const mockStudents = [
       face_recognition: false,
     },
     attendance_percentage: 92,
-    
-    // Payment Summary
     pending_payments: 2,
     total_payments: 5,
   },
   {
     id: 2,
-    // Personal Information
     first_name: 'Sarah',
     middle_name: 'Akinyi',
     last_name: 'Odhiambo',
     date_of_birth: '2011-08-22',
     gender: 'Female',
     birth_certificate_number: '234567890',
-    
-    // School Information
     school: mockSchools[0],
     admission_number: 'ADM/2020/002',
-    
-    // Academic Information (CBC)
     education_level: KENYA_EDUCATION_LEVELS.PRIMARY,
     current_grade: KENYA_GRADES.GRADE_5,
     stream: 'Blue',
     upi_number: 'UPI2345678901',
     year_of_admission: 2020,
     current_term: KENYA_ACADEMIC_TERMS.TERM_1,
-    
-    // House System
     house_name: 'Mara',
     house_color: '#2196F3',
-    
-    // Special Needs
     has_special_needs: false,
     special_needs_description: null,
-    
-    // Guardians
     guardians: [
       {
         id: 3,
@@ -269,8 +269,6 @@ export const mockStudents = [
         is_primary: true,
       },
     ],
-    
-    // Attendance & Biometric
     qr_code_generated: true,
     qr_code: 'GE-STU-002-2020',
     biometric_enrolled: {
@@ -278,42 +276,29 @@ export const mockStudents = [
       face_recognition: true,
     },
     attendance_percentage: 88,
-    
-    // Payment Summary
     pending_payments: 1,
     total_payments: 3,
   },
   {
     id: 3,
-    // Personal Information
     first_name: 'David',
     middle_name: 'Kipchoge',
     last_name: 'Kibet',
     date_of_birth: '2012-03-10',
     gender: 'Male',
     birth_certificate_number: '345678901',
-    
-    // School Information
     school: mockSchools[0],
     admission_number: 'ADM/2021/003',
-    
-    // Academic Information (CBC)
     education_level: KENYA_EDUCATION_LEVELS.PRIMARY,
     current_grade: KENYA_GRADES.GRADE_4,
     stream: 'Red',
     upi_number: 'UPI3456789012',
     year_of_admission: 2021,
     current_term: KENYA_ACADEMIC_TERMS.TERM_1,
-    
-    // House System
     house_name: 'Kilimanjaro',
     house_color: '#F44336',
-    
-    // Special Needs
     has_special_needs: false,
     special_needs_description: null,
-    
-    // Guardians
     guardians: [
       {
         id: 4,
@@ -336,8 +321,6 @@ export const mockStudents = [
         is_primary: false,
       },
     ],
-    
-    // Attendance & Biometric
     qr_code_generated: true,
     qr_code: 'GE-STU-003-2021',
     biometric_enrolled: {
@@ -345,45 +328,30 @@ export const mockStudents = [
       face_recognition: true,
     },
     attendance_percentage: 95,
-    
-    // Payment Summary
     pending_payments: 0,
     total_payments: 4,
   },
   {
     id: 4,
-    // Personal Information
     first_name: 'Grace',
     middle_name: 'Wanjiru',
     last_name: 'Njoroge',
     date_of_birth: '2009-11-18',
     gender: 'Female',
     birth_certificate_number: '456789012',
-    
-    // School Information
     school: mockSchools[1],
     admission_number: 'ADM/2019/004',
-    
-    // Academic Information (CBC)
     education_level: KENYA_EDUCATION_LEVELS.JUNIOR_SECONDARY,
     current_grade: KENYA_GRADES.GRADE_7,
     stream: 'East',
     upi_number: 'UPI4567890123',
     year_of_admission: 2019,
     current_term: KENYA_ACADEMIC_TERMS.TERM_1,
-    
-    // House System
     house_name: 'Tsavo',
     house_color: '#4CAF50',
-    
-    // Special Needs
     has_special_needs: false,
     special_needs_description: null,
-    
-    // Guardians
     guardians: [],
-    
-    // Attendance & Biometric
     qr_code_generated: false,
     qr_code: null,
     biometric_enrolled: {
@@ -391,42 +359,29 @@ export const mockStudents = [
       face_recognition: false,
     },
     attendance_percentage: 90,
-    
-    // Payment Summary
     pending_payments: 3,
     total_payments: 7,
   },
   {
     id: 5,
-    // Personal Information
     first_name: 'James',
     middle_name: 'Otieno',
     last_name: 'Ouma',
     date_of_birth: '2010-07-25',
     gender: 'Male',
     birth_certificate_number: '567890123',
-    
-    // School Information
     school: mockSchools[0],
     admission_number: 'ADM/2019/005',
-    
-    // Academic Information (CBC)
     education_level: KENYA_EDUCATION_LEVELS.PRIMARY,
     current_grade: KENYA_GRADES.GRADE_6,
     stream: 'Blue',
     upi_number: 'UPI5678901234',
     year_of_admission: 2019,
     current_term: KENYA_ACADEMIC_TERMS.TERM_1,
-    
-    // House System
     house_name: 'Mara',
     house_color: '#2196F3',
-    
-    // Special Needs
     has_special_needs: true,
     special_needs_description: 'Requires reading glasses for visual impairment',
-    
-    // Guardians
     guardians: [
       {
         id: 6,
@@ -439,8 +394,6 @@ export const mockStudents = [
         is_primary: true,
       },
     ],
-    
-    // Attendance & Biometric
     qr_code_generated: true,
     qr_code: 'GE-STU-005-2019',
     biometric_enrolled: {
@@ -448,42 +401,29 @@ export const mockStudents = [
       face_recognition: false,
     },
     attendance_percentage: 85,
-    
-    // Payment Summary
     pending_payments: 1,
     total_payments: 6,
   },
   {
     id: 6,
-    // Personal Information
     first_name: 'Faith',
     middle_name: 'Nyambura',
     last_name: 'Kariuki',
     date_of_birth: '2013-01-30',
     gender: 'Female',
     birth_certificate_number: '678901234',
-    
-    // School Information
     school: mockSchools[0],
     admission_number: 'ADM/2022/006',
-    
-    // Academic Information (CBC)
     education_level: KENYA_EDUCATION_LEVELS.PRIMARY,
     current_grade: KENYA_GRADES.GRADE_3,
     stream: 'Green',
     upi_number: 'UPI6789012345',
     year_of_admission: 2022,
     current_term: KENYA_ACADEMIC_TERMS.TERM_1,
-    
-    // House System
     house_name: 'Amboseli',
     house_color: '#FF9800',
-    
-    // Special Needs
     has_special_needs: false,
     special_needs_description: null,
-    
-    // Guardians
     guardians: [
       {
         id: 7,
@@ -496,8 +436,6 @@ export const mockStudents = [
         is_primary: true,
       },
     ],
-    
-    // Attendance & Biometric
     qr_code_generated: true,
     qr_code: 'GE-STU-006-2022',
     biometric_enrolled: {
@@ -505,42 +443,29 @@ export const mockStudents = [
       face_recognition: false,
     },
     attendance_percentage: 97,
-    
-    // Payment Summary
     pending_payments: 0,
     total_payments: 2,
   },
   {
     id: 7,
-    // Personal Information
     first_name: 'Brian',
     middle_name: 'Omondi',
     last_name: 'Onyango',
     date_of_birth: '2008-09-14',
     gender: 'Male',
     birth_certificate_number: '789012345',
-    
-    // School Information
     school: mockSchools[2],
     admission_number: 'ADM/2023/007',
-    
-    // Academic Information (8-4-4 Transition)
     education_level: KENYA_EDUCATION_LEVELS.SENIOR_SECONDARY,
     current_grade: KENYA_GRADES.FORM_3,
     stream: 'North',
     upi_number: 'UPI7890123456',
     year_of_admission: 2021,
     current_term: KENYA_ACADEMIC_TERMS.TERM_1,
-    
-    // House System
     house_name: 'Kenyatta',
     house_color: '#9C27B0',
-    
-    // Special Needs
     has_special_needs: false,
     special_needs_description: null,
-    
-    // Guardians
     guardians: [
       {
         id: 8,
@@ -553,8 +478,6 @@ export const mockStudents = [
         is_primary: true,
       },
     ],
-    
-    // Attendance & Biometric
     qr_code_generated: true,
     qr_code: 'GE-STU-007-2023',
     biometric_enrolled: {
@@ -562,8 +485,6 @@ export const mockStudents = [
       face_recognition: true,
     },
     attendance_percentage: 89,
-    
-    // Payment Summary
     pending_payments: 2,
     total_payments: 8,
   },
@@ -590,16 +511,17 @@ export const mockGuardianLinkRequests = [
     teacher_approved: false,
     total_guardians: 2,
     teacher: {
-      first_name: 'John',
-      middle_name: 'Kamau',
-      last_name: 'Mwangi',
+      first_name: 'Mary',
+      middle_name: 'Wanjiru',
+      last_name: 'Ochieng',
     },
     status: REQUEST_STATUS.PENDING,
   },
 ];
 
-// Mock Payment Requests
+// 🆕 UPDATED - Mock Payment Requests with Partial Payment Support
 export const mockPaymentRequests = [
+  // Example 1: Pending payment with partial allowed
   {
     id: 1,
     student: mockStudents[0],
@@ -609,11 +531,21 @@ export const mockPaymentRequests = [
     due_date: '2025-11-15',
     status: PAYMENT_STATUS.PENDING,
     requested_by: {
-      first_name: 'John',
-      middle_name: 'Kamau',
-      last_name: 'Mwangi',
+      first_name: 'Mary',
+      middle_name: 'Wanjiru',
+      last_name: 'Ochieng',
     },
+    // 🆕 NEW - Partial payment fields
+    allow_partial: true,
+    payment_flexibility: PAYMENT_FLEXIBILITY.PARTIAL_ALLOWED,
+    minimum_amount: 1000.00,
+    paid_amount: 0.00,
+    remaining_amount: 5000.00,
+    installment_count: 0,
+    payment_history: [],
   },
+  
+  // Example 2: Partially paid
   {
     id: 2,
     student: mockStudents[1],
@@ -621,13 +553,35 @@ export const mockPaymentRequests = [
     purpose: 'Exam fees for November 2025',
     created_at: '2025-10-24T14:30:00Z',
     due_date: '2025-11-10',
-    status: PAYMENT_STATUS.APPROVED,
+    status: PAYMENT_STATUS.PARTIALLY_PAID,
     requested_by: {
-      first_name: 'John',
-      middle_name: 'Kamau',
-      last_name: 'Mwangi',
+      first_name: 'Mary',
+      middle_name: 'Wanjiru',
+      last_name: 'Ochieng',
     },
+    // 🆕 NEW - Partial payment fields
+    allow_partial: true,
+    payment_flexibility: PAYMENT_FLEXIBILITY.PARTIAL_ALLOWED,
+    minimum_amount: 1000.00,
+    paid_amount: 1500.00,
+    remaining_amount: 2000.00,
+    installment_count: 1,
+    payment_history: [
+      {
+        id: 1,
+        amount: 1500.00,
+        payment_date: '2025-10-26T10:30:00Z',
+        mpesa_ref: 'QJK789ABC456',
+        payment_method: 'M-Pesa',
+        guardian: {
+          first_name: 'Emily',
+          last_name: 'Odhiambo',
+        },
+      },
+    ],
   },
+  
+  // Example 3: Fully paid
   {
     id: 3,
     student: mockStudents[0],
@@ -639,14 +593,152 @@ export const mockPaymentRequests = [
     status: PAYMENT_STATUS.PAID,
     mpesa_ref: 'RKJ123XYZ789',
     requested_by: {
-      first_name: 'John',
-      middle_name: 'Kamau',
-      last_name: 'Mwangi',
+      first_name: 'Mary',
+      middle_name: 'Wanjiru',
+      last_name: 'Ochieng',
     },
+    // 🆕 NEW - Partial payment fields
+    allow_partial: false,
+    payment_flexibility: PAYMENT_FLEXIBILITY.FULL_ONLY,
+    minimum_amount: 2000.00,
+    paid_amount: 2000.00,
+    remaining_amount: 0.00,
+    installment_count: 1,
+    payment_history: [
+      {
+        id: 2,
+        amount: 2000.00,
+        payment_date: '2025-10-22T15:30:00Z',
+        mpesa_ref: 'RKJ123XYZ789',
+        payment_method: 'M-Pesa',
+        guardian: {
+          first_name: 'Jane',
+          last_name: 'Mwangi',
+        },
+      },
+    ],
+  },
+  
+  // Example 4: Multiple partial payments
+  {
+    id: 4,
+    student: mockStudents[0],
+    amount: 10000.00,
+    purpose: 'Annual Sports Day & Equipment Fee',
+    created_at: '2025-10-15T08:00:00Z',
+    due_date: '2025-11-30',
+    status: PAYMENT_STATUS.PARTIALLY_PAID,
+    requested_by: {
+      first_name: 'Mary',
+      middle_name: 'Wanjiru',
+      last_name: 'Ochieng',
+    },
+    // 🆕 NEW - Partial payment fields
+    allow_partial: true,
+    payment_flexibility: PAYMENT_FLEXIBILITY.PARTIAL_ALLOWED,
+    minimum_amount: 2000.00,
+    paid_amount: 6000.00,
+    remaining_amount: 4000.00,
+    installment_count: 3,
+    payment_history: [
+      {
+        id: 3,
+        amount: 2000.00,
+        payment_date: '2025-10-16T14:20:00Z',
+        mpesa_ref: 'ABC123DEF456',
+        payment_method: 'M-Pesa',
+        guardian: {
+          first_name: 'Jane',
+          last_name: 'Mwangi',
+        },
+      },
+      {
+        id: 4,
+        amount: 2500.00,
+        payment_date: '2025-10-23T11:15:00Z',
+        mpesa_ref: 'XYZ789GHI012',
+        payment_method: 'M-Pesa',
+        guardian: {
+          first_name: 'Michael',
+          last_name: 'Mwangi',
+        },
+      },
+      {
+        id: 5,
+        amount: 1500.00,
+        payment_date: '2025-10-30T09:45:00Z',
+        mpesa_ref: 'LMN345OPQ678',
+        payment_method: 'M-Pesa',
+        guardian: {
+          first_name: 'Jane',
+          last_name: 'Mwangi',
+        },
+      },
+    ],
+  },
+  
+  // Example 5: Full payment only (no partial allowed)
+  {
+    id: 5,
+    student: mockStudents[1],
+    amount: 1200.00,
+    purpose: 'School Uniform - Full Set',
+    created_at: '2025-11-01T10:00:00Z',
+    due_date: '2025-11-20',
+    status: PAYMENT_STATUS.PENDING,
+    requested_by: {
+      first_name: 'Mary',
+      middle_name: 'Wanjiru',
+      last_name: 'Ochieng',
+    },
+    // 🆕 NEW - Partial payment fields
+    allow_partial: false,
+    payment_flexibility: PAYMENT_FLEXIBILITY.FULL_ONLY,
+    minimum_amount: 1200.00,
+    paid_amount: 0.00,
+    remaining_amount: 1200.00,
+    installment_count: 0,
+    payment_history: [],
+  },
+  
+  // Example 6: Overdue with partial payment
+  {
+    id: 6,
+    student: mockStudents[2],
+    amount: 4500.00,
+    purpose: 'Library Books & Learning Materials',
+    created_at: '2025-10-01T09:00:00Z',
+    due_date: '2025-10-31',
+    status: PAYMENT_STATUS.OVERDUE,
+    requested_by: {
+      first_name: 'Mary',
+      middle_name: 'Wanjiru',
+      last_name: 'Ochieng',
+    },
+    // 🆕 NEW - Partial payment fields
+    allow_partial: true,
+    payment_flexibility: PAYMENT_FLEXIBILITY.PARTIAL_ALLOWED,
+    minimum_amount: 1500.00,
+    paid_amount: 1000.00,
+    remaining_amount: 3500.00,
+    installment_count: 1,
+    payment_history: [
+      {
+        id: 6,
+        amount: 1000.00,
+        payment_date: '2025-10-10T13:45:00Z',
+        mpesa_ref: 'PQR456STU789',
+        payment_method: 'M-Pesa',
+        guardian: {
+          first_name: 'Robert',
+          last_name: 'Kibet',
+        },
+      },
+    ],
   },
 ];
 
-// Mock Notifications
+// 🆕 UPDATED - Mock Notifications with partial payment notifications
 export const mockNotifications = [
   {
     id: 1,
@@ -668,6 +760,15 @@ export const mockNotifications = [
   },
   {
     id: 3,
+    type: 'payment_partial',
+    title: 'Partial Payment Received',
+    message: 'KES 1,500 received for Exam fees. Remaining balance: KES 2,000',
+    created_at: '2025-10-26T10:35:00Z',
+    read: true,
+    priority: 'medium',
+  },
+  {
+    id: 4,
     type: 'approval_approved',
     title: 'Request Approved',
     message: 'Your guardian link request has been approved',
@@ -676,13 +777,22 @@ export const mockNotifications = [
     priority: 'low',
   },
   {
-    id: 4,
+    id: 5,
     type: 'attendance_late',
     title: 'Late Arrival',
     message: 'John Kamau Mwangi checked in late today',
     created_at: '2025-11-06T08:30:00Z',
     read: false,
     priority: 'medium',
+  },
+  {
+    id: 6,
+    type: 'payment_reminder',
+    title: 'Payment Reminder',
+    message: 'Outstanding balance of KES 3,500 for Library Books due in 3 days',
+    created_at: '2025-11-03T08:00:00Z',
+    read: false,
+    priority: 'high',
   },
 ];
 

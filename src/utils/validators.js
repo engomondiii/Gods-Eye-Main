@@ -6,65 +6,57 @@ export const validateEmail = (email) => {
 
 // Phone number validation (Kenyan format)
 export const validatePhone = (phone) => {
-  // Accepts formats: +254712345678, 0712345678, 712345678
   const phoneRegex = /^(\+254|0)?[17]\d{8}$/;
   return phoneRegex.test(phone.replace(/\s/g, ''));
 };
 
 // Password validation
 export const validatePassword = (password) => {
-  // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
   return passwordRegex.test(password);
 };
 
 // Username validation
 export const validateUsername = (username) => {
-  // 3-20 characters, alphanumeric and underscore only
   const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
   return usernameRegex.test(username);
 };
 
 // Name validation
 export const validateName = (name) => {
-  // At least 2 characters, letters only (including spaces)
   const nameRegex = /^[a-zA-Z\s]{2,}$/;
   return nameRegex.test(name);
 };
 
 // Admission number validation
 export const validateAdmissionNumber = (number) => {
-  // At least 3 characters, alphanumeric with optional slashes
   const admissionRegex = /^[a-zA-Z0-9/]{3,}$/;
   return admissionRegex.test(number);
 };
 
-// 🇰🇪 UPI Number validation (Kenya Unique Personal Identifier)
+// 🇰🇪 UPI Number validation
 export const validateUPINumber = (upi) => {
   if (!upi || upi.trim() === '') {
-    return true; // UPI is optional
+    return true;
   }
-  // UPI format: At least 10 alphanumeric characters
   const upiRegex = /^[A-Z0-9]{10,}$/i;
   return upiRegex.test(upi);
 };
 
-// 🇰🇪 Birth Certificate Number validation (Kenya)
+// 🇰🇪 Birth Certificate Number validation
 export const validateBirthCertificateNumber = (certNumber) => {
   if (!certNumber || certNumber.trim() === '') {
-    return true; // Birth certificate is optional
+    return true;
   }
-  // Kenya birth certificate: numeric, 6-10 digits
   const certRegex = /^\d{6,10}$/;
   return certRegex.test(certNumber);
 };
 
-// 🇰🇪 NEMIS Code validation (National Education Management Information System)
+// 🇰🇪 NEMIS Code validation
 export const validateNEMISCode = (nemis) => {
   if (!nemis || nemis.trim() === '') {
-    return true; // NEMIS is optional
+    return true;
   }
-  // NEMIS format: 9-digit number
   const nemisRegex = /^\d{9}$/;
   return nemisRegex.test(nemis);
 };
@@ -86,7 +78,6 @@ export const validateStream = (stream) => {
   if (!stream || stream.trim() === '') {
     return false;
   }
-  // Stream should be 1-20 characters, letters and numbers
   const streamRegex = /^[a-zA-Z0-9\s]{1,20}$/;
   return streamRegex.test(stream);
 };
@@ -94,9 +85,8 @@ export const validateStream = (stream) => {
 // 🇰🇪 Validate House name
 export const validateHouseName = (house) => {
   if (!house || house.trim() === '') {
-    return true; // House is optional
+    return true;
   }
-  // House should be 2-30 characters, letters and spaces
   const houseRegex = /^[a-zA-Z\s]{2,30}$/;
   return houseRegex.test(house);
 };
@@ -110,7 +100,6 @@ export const validateYearOfAdmission = (year) => {
     return false;
   }
   
-  // Year should be between 1990 and current year + 1
   return yearNum >= 1990 && yearNum <= currentYear + 1;
 };
 
@@ -126,17 +115,15 @@ export const validateDate = (date) => {
   return dateObj instanceof Date && !isNaN(dateObj);
 };
 
-// Date of birth validation (must be at least 3 years old, max 25 years old)
+// Date of birth validation
 export const validateDateOfBirth = (dob) => {
   const date = new Date(dob);
   const today = new Date();
   
-  // Check if date is valid
   if (!(date instanceof Date && !isNaN(date))) {
     return false;
   }
   
-  // Check if date is not in the future
   if (date > today) {
     return false;
   }
@@ -171,7 +158,194 @@ export const validateMaxLength = (value, maxLength) => {
   return value.toString().length <= maxLength;
 };
 
-// 🇰🇪 Validate complete student data (Kenya-specific)
+// 🆕 NEW - Payment Amount Validation
+export const validatePaymentAmount = (amount, minAmount = 100, maxAmount = null) => {
+  const numAmount = parseFloat(amount);
+  
+  // Check if amount is a valid number
+  if (isNaN(numAmount) || numAmount <= 0) {
+    return {
+      isValid: false,
+      message: 'Please enter a valid amount',
+    };
+  }
+  
+  // Check minimum amount
+  if (numAmount < minAmount) {
+    return {
+      isValid: false,
+      message: `Amount must be at least KES ${minAmount.toLocaleString()}`,
+    };
+  }
+  
+  // Check maximum amount if provided
+  if (maxAmount && numAmount > maxAmount) {
+    return {
+      isValid: false,
+      message: `Amount cannot exceed KES ${maxAmount.toLocaleString()}`,
+    };
+  }
+  
+  return {
+    isValid: true,
+    message: null,
+  };
+};
+
+// 🆕 NEW - Validate Partial Payment
+export const validatePartialPayment = (paymentRequest, proposedAmount) => {
+  const amount = parseFloat(proposedAmount);
+  const minAmount = parseFloat(paymentRequest.minimum_amount || 100);
+  const remaining = parseFloat(paymentRequest.remaining_amount || paymentRequest.amount);
+  
+  // Basic amount validation
+  if (isNaN(amount) || amount <= 0) {
+    return {
+      isValid: false,
+      message: 'Please enter a valid amount',
+    };
+  }
+  
+  // Check if partial payments are allowed
+  if (!paymentRequest.allow_partial) {
+    if (amount !== remaining) {
+      return {
+        isValid: false,
+        message: `Full payment of KES ${remaining.toLocaleString()} is required`,
+      };
+    }
+  }
+  
+  // Check minimum payment
+  if (amount < minAmount) {
+    return {
+      isValid: false,
+      message: `Minimum payment is KES ${minAmount.toLocaleString()}`,
+    };
+  }
+  
+  // Check if amount exceeds remaining balance
+  if (amount > remaining) {
+    return {
+      isValid: false,
+      message: `Amount cannot exceed remaining balance of KES ${remaining.toLocaleString()}`,
+    };
+  }
+  
+  return {
+    isValid: true,
+    message: null,
+  };
+};
+
+// 🆕 NEW - Validate Minimum Payment Amount
+export const validateMinimumPaymentAmount = (amount, originalAmount) => {
+  const numAmount = parseFloat(amount);
+  const numOriginal = parseFloat(originalAmount);
+  
+  if (isNaN(numAmount) || isNaN(numOriginal)) {
+    return {
+      isValid: false,
+      message: 'Invalid amount',
+    };
+  }
+  
+  // Minimum should be at least KES 100
+  if (numAmount < 100) {
+    return {
+      isValid: false,
+      message: 'Minimum payment must be at least KES 100',
+    };
+  }
+  
+  // Minimum cannot be more than the original amount
+  if (numAmount > numOriginal) {
+    return {
+      isValid: false,
+      message: 'Minimum payment cannot exceed the total amount',
+    };
+  }
+  
+  // Minimum should be at least 10% of original amount
+  const tenPercent = numOriginal * 0.1;
+  if (numAmount < tenPercent) {
+    return {
+      isValid: false,
+      message: `Minimum payment should be at least 10% (KES ${Math.ceil(tenPercent).toLocaleString()})`,
+    };
+  }
+  
+  return {
+    isValid: true,
+    message: null,
+  };
+};
+
+// 🆕 NEW - Calculate Payment Percentage
+export const calculatePaymentPercentage = (paidAmount, totalAmount) => {
+  const paid = parseFloat(paidAmount);
+  const total = parseFloat(totalAmount);
+  
+  if (isNaN(paid) || isNaN(total) || total === 0) {
+    return 0;
+  }
+  
+  return Math.round((paid / total) * 100);
+};
+
+// 🆕 NEW - Validate Payment Request Creation
+export const validatePaymentRequestCreation = (data) => {
+  const errors = {};
+  
+  // Validate student
+  if (!data.student_id) {
+    errors.student = 'Please select a student';
+  }
+  
+  // Validate amount
+  if (!data.amount || parseFloat(data.amount) <= 0) {
+    errors.amount = 'Please enter a valid amount';
+  }
+  
+  // Validate purpose
+  if (!data.purpose || data.purpose.trim() === '') {
+    errors.purpose = 'Please enter the purpose of payment';
+  } else if (data.purpose.length < 10) {
+    errors.purpose = 'Purpose must be at least 10 characters';
+  }
+  
+  // Validate due date
+  if (!data.due_date) {
+    errors.due_date = 'Please select a due date';
+  } else {
+    const dueDate = new Date(data.due_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (dueDate < today) {
+      errors.due_date = 'Due date cannot be in the past';
+    }
+  }
+  
+  // Validate minimum amount if partial payments are allowed
+  if (data.allow_partial) {
+    if (!data.minimum_amount) {
+      errors.minimum_amount = 'Please enter minimum payment amount';
+    } else {
+      const validation = validateMinimumPaymentAmount(data.minimum_amount, data.amount);
+      if (!validation.isValid) {
+        errors.minimum_amount = validation.message;
+      }
+    }
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+
+// 🇰🇪 Validate complete student data
 export const validateStudentData = (studentData) => {
   const errors = {};
   
@@ -354,6 +528,11 @@ export default {
   validateRequired,
   validateMinLength,
   validateMaxLength,
+  validatePaymentAmount,  // 🆕 NEW
+  validatePartialPayment,  // 🆕 NEW
+  validateMinimumPaymentAmount,  // 🆕 NEW
+  calculatePaymentPercentage,  // 🆕 NEW
+  validatePaymentRequestCreation,  // 🆕 NEW
   validateStudentData,
   validateForm,
 };

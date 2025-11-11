@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import AuthNavigator from './AuthNavigator';
 import TeacherNavigator from './TeacherNavigator';
 import GuardianNavigator from './GuardianNavigator';
+import SchoolAdminNavigator from './SchoolAdminNavigator'; // 🆕 NEW
 import AdminNavigator from './AdminNavigator';
 import { USER_ROLES } from '../utils/constants';
 
@@ -43,8 +44,13 @@ const AppNavigator = () => {
             {userRole === USER_ROLES.GUARDIAN && (
               <Stack.Screen name="Guardian" component={GuardianNavigator} />
             )}
+            {/* 🆕 NEW - School Admin */}
+            {userRole === USER_ROLES.SCHOOL_ADMIN && (
+              <Stack.Screen name="SchoolAdmin" component={SchoolAdminNavigator} />
+            )}
+            {/* Super Admin */}
             {userRole === USER_ROLES.SUPER_ADMIN && (
-              <Stack.Screen name="Admin" component={AdminNavigator} />
+              <Stack.Screen name="SuperAdmin" component={AdminNavigator} />
             )}
             {/* Fallback in case role is not recognized */}
             {!userRole && (
