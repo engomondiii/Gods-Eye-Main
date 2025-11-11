@@ -8,17 +8,18 @@ export const AuthContext = createContext();
 // Enable mock mode for development (set to false when backend is ready)
 const MOCK_MODE = true;
 
-// Mock users for testing different roles
+// 🆕 UPDATED - Mock users for testing different roles (INCLUDING SCHOOL ADMIN)
 const MOCK_USERS = {
   teacher: {
     id: 1,
     username: 'teacher',
     email: 'teacher@school.com',
-    first_name: 'John',
-    last_name: 'Smith',
+    first_name: 'Mary',
+    last_name: 'Ochieng',
     is_teacher: true,
     is_guardian: false,
     is_superadmin: false,
+    is_school_admin: false,  // 🆕 NEW
   },
   guardian: {
     id: 2,
@@ -29,16 +30,37 @@ const MOCK_USERS = {
     is_teacher: false,
     is_guardian: true,
     is_superadmin: false,
+    is_school_admin: false,  // 🆕 NEW
   },
-  admin: {
+  // 🆕 NEW - School Admin
+  schooladmin: {
     id: 3,
+    username: 'schooladmin',
+    email: 'admin@nairobiprimary.ac.ke',
+    first_name: 'John',
+    middle_name: 'Kamau',
+    last_name: 'Mwangi',
+    is_teacher: false,
+    is_guardian: false,
+    is_superadmin: false,
+    is_school_admin: true,  // 🆕 NEW
+    school: {
+      id: 1,
+      name: 'Nairobi Primary School',
+      nemis_code: '001234567',
+    },
+  },
+  // Super Admin
+  admin: {
+    id: 4,
     username: 'admin',
-    email: 'admin@system.com',
-    first_name: 'Admin',
-    last_name: 'User',
+    email: 'admin@godseye.com',
+    first_name: 'Super',
+    last_name: 'Admin',
     is_teacher: false,
     is_guardian: false,
     is_superadmin: true,
+    is_school_admin: false,  // 🆕 NEW
   },
 };
 
@@ -77,8 +99,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 🆕 UPDATED - Get user role with school admin support
   const getUserRole = (userData) => {
     if (userData.is_superadmin) return USER_ROLES.SUPER_ADMIN;
+    if (userData.is_school_admin) return USER_ROLES.SCHOOL_ADMIN;  // 🆕 NEW - Check BEFORE teacher
     if (userData.is_teacher) return USER_ROLES.TEACHER;
     if (userData.is_guardian) return USER_ROLES.GUARDIAN;
     return null;
@@ -114,6 +138,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 🆕 UPDATED - Mock login with proper role detection
   const mockLogin = async (username, password) => {
     try {
       // Simulate network delay
@@ -123,11 +148,13 @@ export const AuthProvider = ({ children }) => {
       let mockUser;
       const lowerUsername = username.toLowerCase();
 
-      if (lowerUsername.includes('teacher') || lowerUsername === 'teacher') {
+      if (lowerUsername === 'teacher' || lowerUsername.includes('teacher')) {
         mockUser = MOCK_USERS.teacher;
-      } else if (lowerUsername.includes('guardian') || lowerUsername === 'guardian') {
+      } else if (lowerUsername === 'guardian' || lowerUsername.includes('guardian')) {
         mockUser = MOCK_USERS.guardian;
-      } else if (lowerUsername.includes('admin') || lowerUsername === 'admin') {
+      } else if (lowerUsername === 'schooladmin' || lowerUsername.includes('schooladmin')) {
+        mockUser = MOCK_USERS.schooladmin;  // 🆕 NEW
+      } else if (lowerUsername === 'admin' || lowerUsername.includes('admin')) {
         mockUser = MOCK_USERS.admin;
       } else {
         // Default to teacher for any other username
@@ -144,10 +171,18 @@ export const AuthProvider = ({ children }) => {
       await storage.setUserData(mockUser);
 
       setUser(mockUser);
-      setUserRole(getUserRole(mockUser));
+      const role = getUserRole(mockUser);
+      setUserRole(role);
       setIsAuthenticated(true);
 
-      console.log('Mock login successful:', { username, role: getUserRole(mockUser) });
+      console.log('Mock login successful:', { 
+        username, 
+        role,
+        is_superadmin: mockUser.is_superadmin,
+        is_school_admin: mockUser.is_school_admin,
+        is_teacher: mockUser.is_teacher,
+        is_guardian: mockUser.is_guardian,
+      });
 
       return { success: true };
     } catch (error) {

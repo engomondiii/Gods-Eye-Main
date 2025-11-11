@@ -30,7 +30,7 @@ export const USER_ROLE_COLORS = {
   [USER_ROLES.GUARDIAN]: '#4CAF50',
 };
 
-// Screen Names - UPDATED with School Admin screens
+// Screen Names - 🆕 UPDATED with all School Admin screens
 export const SCREENS = {
   // Auth
   SPLASH: 'Splash',
@@ -52,12 +52,21 @@ export const SCREENS = {
   PENDING_APPROVALS: 'PendingApprovals',
   PAYMENT_REQUESTS: 'PaymentRequests',
   
-  // School Admin
+  // School Admin - Existing
   SCHOOL_ADMIN_DASHBOARD: 'SchoolAdminDashboard',
   SCHOOL_TEACHERS_MANAGEMENT: 'SchoolTeachersManagement',
   SCHOOL_STUDENTS_OVERVIEW: 'SchoolStudentsOverview',
   SCHOOL_SETTINGS: 'SchoolSettings',
   SCHOOL_REPORTS: 'SchoolReports',
+  
+  // 🆕 NEW - School Admin Management Screens
+  MANAGE_TEACHERS: 'ManageTeachers',
+  ADD_TEACHER: 'AddTeacher',
+  MANAGE_STUDENTS: 'ManageStudents',
+  ADD_STUDENT: 'AddStudent',
+  MANAGE_GUARDIANS: 'ManageGuardians',
+  ADD_GUARDIAN: 'AddGuardian',
+  SCHOOL_ADMIN_PROFILE: 'SchoolAdminProfile',
   
   // Super Admin
   ADMIN_DASHBOARD: 'AdminDashboard',

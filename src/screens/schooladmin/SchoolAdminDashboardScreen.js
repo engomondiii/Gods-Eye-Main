@@ -14,7 +14,6 @@ import { SCREENS } from '../../utils/constants';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import StatCard from '../../components/admin/StatCard';
-import theme from '../../styles/theme';
 
 const SchoolAdminDashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -103,7 +102,7 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
     fetchDashboardData();
   }, []);
 
-  // School statistics data
+  // 🆕 UPDATED - School statistics data with proper navigation
   const schoolStats = [
     {
       id: 1,
@@ -113,7 +112,7 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
       color: '#2196F3',
       bgColor: '#E3F2FD',
       onPress: () => navigation.navigate('StudentsTab', {
-        screen: SCREENS.SCHOOL_STUDENTS_OVERVIEW,
+        screen: SCREENS.MANAGE_STUDENTS,
       }),
     },
     {
@@ -124,16 +123,19 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
       color: '#4CAF50',
       bgColor: '#E8F5E9',
       onPress: () => navigation.navigate('TeachersTab', {
-        screen: SCREENS.SCHOOL_TEACHERS_MANAGEMENT,
+        screen: SCREENS.MANAGE_TEACHERS,
       }),
     },
     {
       id: 3,
       title: 'Guardians',
       value: dashboardData.totalGuardians,
-      icon: 'account-group',
+      icon: 'account-supervisor',
       color: '#9C27B0',
       bgColor: '#F3E5F5',
+      onPress: () => navigation.navigate('GuardiansTab', {
+        screen: SCREENS.MANAGE_GUARDIANS,
+      }),
     },
     {
       id: 4,
@@ -155,43 +157,77 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
     },
   ];
 
-  // Quick action cards
+  // 🆕 UPDATED - Quick action cards with proper navigation
   const quickActions = [
     {
       id: 1,
       title: 'Add Teacher',
       icon: 'account-plus',
       color: '#4CAF50',
-      onPress: () => {
-        // TODO: Navigate to add teacher screen
-        console.log('Add teacher');
-      },
+      onPress: () => navigation.navigate('TeachersTab', {
+        screen: SCREENS.ADD_TEACHER,
+      }),
     },
     {
       id: 2,
+      title: 'Add Student',
+      icon: 'account-school-outline',
+      color: '#2196F3',
+      onPress: () => navigation.navigate('StudentsTab', {
+        screen: SCREENS.ADD_STUDENT,
+      }),
+    },
+    {
+      id: 3,
+      title: 'Add Guardian',
+      icon: 'account-heart-outline',
+      color: '#9C27B0',
+      onPress: () => navigation.navigate('GuardiansTab', {
+        screen: SCREENS.ADD_GUARDIAN,
+      }),
+    },
+    {
+      id: 4,
       title: 'View Reports',
       icon: 'chart-bar',
-      color: '#2196F3',
+      color: '#FF9800',
       onPress: () => navigation.navigate('ReportsTab', {
         screen: SCREENS.SCHOOL_REPORTS,
       }),
     },
     {
-      id: 3,
-      title: 'Attendance',
-      icon: 'clipboard-check',
-      color: '#FF9800',
-      onPress: () => {
-        // TODO: Navigate to attendance overview
-        console.log('Attendance');
-      },
+      id: 5,
+      title: 'Manage Teachers',
+      icon: 'account-tie',
+      color: '#00BCD4',
+      onPress: () => navigation.navigate('TeachersTab', {
+        screen: SCREENS.MANAGE_TEACHERS,
+      }),
     },
     {
-      id: 4,
+      id: 6,
+      title: 'Manage Students',
+      icon: 'account-group',
+      color: '#673AB7',
+      onPress: () => navigation.navigate('StudentsTab', {
+        screen: SCREENS.MANAGE_STUDENTS,
+      }),
+    },
+    {
+      id: 7,
+      title: 'Manage Guardians',
+      icon: 'account-supervisor',
+      color: '#E91E63',
+      onPress: () => navigation.navigate('GuardiansTab', {
+        screen: SCREENS.MANAGE_GUARDIANS,
+      }),
+    },
+    {
+      id: 8,
       title: 'School Settings',
       icon: 'cog',
-      color: '#9C27B0',
-      onPress: () => navigation.navigate('SettingsTab', {
+      color: '#607D8B',
+      onPress: () => navigation.navigate('ProfileTab', {
         screen: SCREENS.SCHOOL_SETTINGS,
       }),
     },
@@ -319,7 +355,7 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - 🆕 UPDATED with 4x2 grid */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickActionsContainer}>
@@ -337,7 +373,7 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
               >
                 <MaterialCommunityIcons
                   name={action.icon}
-                  size={28}
+                  size={24}
                   color={action.color}
                 />
               </View>
@@ -377,6 +413,74 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
           <Text style={styles.noDataText}>No recent activities</Text>
         )}
       </View>
+
+      {/* 🆕 NEW - Management Summary Section */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Management Summary</Text>
+        
+        <TouchableOpacity 
+          style={styles.managementCard}
+          onPress={() => navigation.navigate('TeachersTab', {
+            screen: SCREENS.MANAGE_TEACHERS,
+          })}
+        >
+          <View style={styles.managementCardLeft}>
+            <MaterialCommunityIcons name="account-tie" size={32} color="#4CAF50" />
+            <View style={styles.managementCardText}>
+              <Text style={styles.managementCardTitle}>Teachers</Text>
+              <Text style={styles.managementCardSubtitle}>
+                View and manage all teachers
+              </Text>
+            </View>
+          </View>
+          <View style={styles.managementCardRight}>
+            <Text style={styles.managementCardValue}>{dashboardData.totalTeachers}</Text>
+            <MaterialCommunityIcons name="chevron-right" size={24} color="#757575" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.managementCard}
+          onPress={() => navigation.navigate('StudentsTab', {
+            screen: SCREENS.MANAGE_STUDENTS,
+          })}
+        >
+          <View style={styles.managementCardLeft}>
+            <MaterialCommunityIcons name="account-school" size={32} color="#2196F3" />
+            <View style={styles.managementCardText}>
+              <Text style={styles.managementCardTitle}>Students</Text>
+              <Text style={styles.managementCardSubtitle}>
+                View and manage all students
+              </Text>
+            </View>
+          </View>
+          <View style={styles.managementCardRight}>
+            <Text style={styles.managementCardValue}>{dashboardData.totalStudents}</Text>
+            <MaterialCommunityIcons name="chevron-right" size={24} color="#757575" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.managementCard}
+          onPress={() => navigation.navigate('GuardiansTab', {
+            screen: SCREENS.MANAGE_GUARDIANS,
+          })}
+        >
+          <View style={styles.managementCardLeft}>
+            <MaterialCommunityIcons name="account-supervisor" size={32} color="#9C27B0" />
+            <View style={styles.managementCardText}>
+              <Text style={styles.managementCardTitle}>Guardians</Text>
+              <Text style={styles.managementCardSubtitle}>
+                View and manage all guardians
+              </Text>
+            </View>
+          </View>
+          <View style={styles.managementCardRight}>
+            <Text style={styles.managementCardValue}>{dashboardData.totalGuardians}</Text>
+            <MaterialCommunityIcons name="chevron-right" size={24} color="#757575" />
+          </View>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
@@ -388,6 +492,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
   welcomeSection: {
     flexDirection: 'row',
@@ -426,6 +531,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     backgroundColor: '#FFFFFF',
     elevation: 2,
+    borderRadius: 12,
   },
   attendanceHeader: {
     flexDirection: 'row',
@@ -492,6 +598,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+  // 🆕 UPDATED - Quick Actions with better layout for 8 items
   quickActionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -501,21 +608,21 @@ const styles = StyleSheet.create({
     width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     marginBottom: 12,
     alignItems: 'center',
     elevation: 2,
   },
   quickActionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   quickActionTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#212121',
     textAlign: 'center',
@@ -523,6 +630,7 @@ const styles = StyleSheet.create({
   activityCard: {
     marginBottom: 12,
     elevation: 1,
+    borderRadius: 12,
   },
   activityCardContent: {
     flexDirection: 'row',
@@ -553,6 +661,46 @@ const styles = StyleSheet.create({
     color: '#757575',
     textAlign: 'center',
     marginTop: 16,
+  },
+  // 🆕 NEW - Management Summary Cards
+  managementCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  managementCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  managementCardText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  managementCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#212121',
+    marginBottom: 4,
+  },
+  managementCardSubtitle: {
+    fontSize: 12,
+    color: '#757575',
+  },
+  managementCardRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  managementCardValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FF9800',
+    marginRight: 8,
   },
 });
 

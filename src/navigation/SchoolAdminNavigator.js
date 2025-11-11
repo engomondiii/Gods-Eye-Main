@@ -3,12 +3,21 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// 🆕 School Admin Screens
+// 🆕 School Admin Screens - Existing
 import SchoolAdminDashboardScreen from '../screens/schooladmin/SchoolAdminDashboardScreen';
 import SchoolTeachersManagementScreen from '../screens/schooladmin/SchoolTeachersManagementScreen';
 import SchoolStudentsOverviewScreen from '../screens/schooladmin/SchoolStudentsOverviewScreen';
 import SchoolReportsScreen from '../screens/schooladmin/SchoolReportsScreen';
 import SchoolSettingsScreen from '../screens/schooladmin/SchoolSettingsScreen';
+
+// 🆕 NEW - Management Screens
+import ManageTeachersScreen from '../screens/schooladmin/ManageTeachersScreen';
+import AddTeacherScreen from '../screens/schooladmin/AddTeacherScreen';
+import ManageStudentsScreen from '../screens/schooladmin/ManageStudentsScreen';
+import AddStudentScreen from '../screens/schooladmin/AddStudentScreen';
+import ManageGuardiansScreen from '../screens/schooladmin/ManageGuardiansScreen';
+import AddGuardianScreen from '../screens/schooladmin/AddGuardianScreen';
+import SchoolAdminProfileScreen from '../screens/schooladmin/SchoolAdminProfileScreen';
 
 // Reuse existing screens
 import StudentDetailScreen from '../screens/teacher/StudentDetailScreen';
@@ -49,7 +58,7 @@ const DashboardStack = () => {
   );
 };
 
-// Teachers Stack
+// Teachers Stack - 🆕 UPDATED with new management screens
 const TeachersStack = () => {
   return (
     <Stack.Navigator
@@ -63,16 +72,27 @@ const TeachersStack = () => {
         },
       }}
     >
+      {/* 🔧 FIXED - Set ManageTeachers as initial route */}
+      <Stack.Screen 
+        name={SCREENS.MANAGE_TEACHERS} 
+        component={ManageTeachersScreen}
+        options={{ title: 'Manage Teachers' }}
+      />
       <Stack.Screen 
         name={SCREENS.SCHOOL_TEACHERS_MANAGEMENT} 
         component={SchoolTeachersManagementScreen}
         options={{ title: 'Teachers Management' }}
       />
+      <Stack.Screen 
+        name={SCREENS.ADD_TEACHER} 
+        component={AddTeacherScreen}
+        options={{ title: 'Add Teacher' }}
+      />
     </Stack.Navigator>
   );
 };
 
-// Students Stack
+// Students Stack - 🆕 UPDATED with new management screens
 const StudentsStack = () => {
   return (
     <Stack.Navigator
@@ -86,6 +106,12 @@ const StudentsStack = () => {
         },
       }}
     >
+      {/* 🔧 FIXED - Set ManageStudents as initial route */}
+      <Stack.Screen 
+        name={SCREENS.MANAGE_STUDENTS} 
+        component={ManageStudentsScreen}
+        options={{ title: 'Manage Students' }}
+      />
       <Stack.Screen 
         name={SCREENS.SCHOOL_STUDENTS_OVERVIEW} 
         component={SchoolStudentsOverviewScreen}
@@ -95,6 +121,39 @@ const StudentsStack = () => {
         name={SCREENS.STUDENT_DETAIL} 
         component={StudentDetailScreen}
         options={{ title: 'Student Details' }}
+      />
+      <Stack.Screen 
+        name={SCREENS.ADD_STUDENT} 
+        component={AddStudentScreen}
+        options={{ title: 'Add Student' }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+// 🆕 NEW - Guardians Stack
+const GuardiansStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#FF9800',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
+      <Stack.Screen 
+        name={SCREENS.MANAGE_GUARDIANS} 
+        component={ManageGuardiansScreen}
+        options={{ title: 'Guardians Management' }}
+      />
+      <Stack.Screen 
+        name={SCREENS.ADD_GUARDIAN} 
+        component={AddGuardianScreen}
+        options={{ title: 'Add Guardian' }}
       />
     </Stack.Navigator>
   );
@@ -123,8 +182,8 @@ const ReportsStack = () => {
   );
 };
 
-// Settings Stack
-const SettingsStackNav = () => {
+// 🔧 FIXED - Profile Stack with correct initial screen
+const ProfileStack = () => {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -137,6 +196,12 @@ const SettingsStackNav = () => {
         },
       }}
     >
+      {/* 🔧 FIXED - School Admin Profile is now the FIRST/INITIAL screen */}
+      <Stack.Screen 
+        name={SCREENS.SCHOOL_ADMIN_PROFILE} 
+        component={SchoolAdminProfileScreen}
+        options={{ title: 'My Profile' }}
+      />
       <Stack.Screen 
         name={SCREENS.SCHOOL_SETTINGS} 
         component={SchoolSettingsScreen}
@@ -208,23 +273,25 @@ const SchoolAdminNavigator = () => {
           ),
         }}
       />
+      {/* 🆕 NEW - Guardians Tab */}
       <Tab.Screen 
-        name="ReportsTab" 
-        component={ReportsStack}
+        name="GuardiansTab" 
+        component={GuardiansStack}
         options={{
-          tabBarLabel: 'Reports',
+          tabBarLabel: 'Guardians',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="chart-bar" size={size} color={color} />
+            <MaterialCommunityIcons name="account-supervisor" size={size} color={color} />
           ),
         }}
       />
+      {/* 🔧 FIXED - Profile Tab now goes to ProfileStack (which starts with SchoolAdminProfile) */}
       <Tab.Screen 
-        name="SettingsTab" 
-        component={SettingsStackNav}
+        name="ProfileTab" 
+        component={ProfileStack}
         options={{
-          tabBarLabel: 'Settings',
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cog" size={size} color={color} />
+            <MaterialCommunityIcons name="account" size={size} color={color} />
           ),
         }}
       />

@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Searchbar, Chip, Card, Title } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vec-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import StudentCard from '../../components/student/StudentCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';

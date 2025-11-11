@@ -28,7 +28,7 @@ const PaymentRequestsScreen = ({ navigation }) => {
       // TODO: Replace with actual API call
       // const response = await guardianService.getPaymentRequests();
       
-      // Mock data for development
+      // Mock data for development - 🆕 UPDATED with partial payment examples
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const mockPayments = [
@@ -49,6 +49,13 @@ const PaymentRequestsScreen = ({ navigation }) => {
             first_name: 'Mrs.',
             last_name: 'Teacher',
           },
+          // 🆕 NEW - Partial payment fields
+          allow_partial: true,
+          minimum_amount: 1000.00,
+          paid_amount: 0.00,
+          remaining_amount: 5000.00,
+          installment_count: 0,
+          payment_history: [],
         },
         {
           id: 2,
@@ -62,11 +69,29 @@ const PaymentRequestsScreen = ({ navigation }) => {
           purpose: 'Exam fees for November 2025',
           created_at: '2025-10-24T14:30:00Z',
           due_date: '2025-11-10',
-          status: PAYMENT_STATUS.APPROVED,
+          status: PAYMENT_STATUS.PARTIALLY_PAID,
           requested_by: {
             first_name: 'Mr.',
             last_name: 'Johnson',
           },
+          // 🆕 NEW - Partial payment fields
+          allow_partial: true,
+          minimum_amount: 1000.00,
+          paid_amount: 1500.00,
+          remaining_amount: 2000.00,
+          installment_count: 1,
+          payment_history: [
+            {
+              id: 1,
+              amount: 1500.00,
+              payment_date: '2025-10-26T10:30:00Z',
+              mpesa_ref: 'QJK789ABC456',
+              guardian: {
+                first_name: 'Jane',
+                last_name: 'Doe',
+              },
+            },
+          ],
         },
         {
           id: 3,
@@ -86,6 +111,49 @@ const PaymentRequestsScreen = ({ navigation }) => {
             first_name: 'Mrs.',
             last_name: 'Teacher',
           },
+          // 🆕 NEW - Partial payment fields
+          allow_partial: false,
+          minimum_amount: 2000.00,
+          paid_amount: 2000.00,
+          remaining_amount: 0.00,
+          installment_count: 1,
+          payment_history: [
+            {
+              id: 2,
+              amount: 2000.00,
+              payment_date: '2025-10-22T15:30:00Z',
+              mpesa_ref: 'RKJ123XYZ789',
+              guardian: {
+                first_name: 'Jane',
+                last_name: 'Doe',
+              },
+            },
+          ],
+        },
+        {
+          id: 4,
+          student: {
+            id: 1,
+            first_name: 'John',
+            last_name: 'Doe',
+            admission_number: 'NPS001',
+          },
+          amount: 1200.00,
+          purpose: 'School Uniform - Full Set',
+          created_at: '2025-11-01T10:00:00Z',
+          due_date: '2025-11-20',
+          status: PAYMENT_STATUS.PENDING,
+          requested_by: {
+            first_name: 'Mrs.',
+            last_name: 'Teacher',
+          },
+          // 🆕 NEW - Full payment only example
+          allow_partial: false,
+          minimum_amount: 1200.00,
+          paid_amount: 0.00,
+          remaining_amount: 1200.00,
+          installment_count: 0,
+          payment_history: [],
         },
       ];
       
@@ -121,10 +189,26 @@ const PaymentRequestsScreen = ({ navigation }) => {
     }
   };
 
-  const handlePay = async (payment) => {
+  // 🆕 UPDATED - Handle pay with custom amount support
+  const handlePay = async (payment, customAmount = null) => {
+    const amountToPay = customAmount || payment.remaining_amount;
+    
+    // Build payment confirmation message
+    let confirmMessage = `Pay KES ${amountToPay.toFixed(2)} for ${payment.purpose}?`;
+    
+    if (payment.allow_partial && customAmount) {
+      const remainingAfterPayment = payment.remaining_amount - amountToPay;
+      confirmMessage += `\n\n✓ Partial payment\n`;
+      confirmMessage += `✓ Remaining balance: KES ${remainingAfterPayment.toFixed(2)}`;
+    } else if (payment.allow_partial && !customAmount) {
+      confirmMessage += `\n\n✓ Full remaining balance`;
+    }
+    
+    confirmMessage += `\n\nThis will redirect you to M-Pesa payment.`;
+    
     Alert.alert(
       'Make Payment',
-      `Pay KES ${payment.amount.toFixed(2)} for ${payment.purpose}?\n\nThis will redirect you to M-Pesa payment.`,
+      confirmMessage,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -132,14 +216,19 @@ const PaymentRequestsScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               // TODO: Replace with actual M-Pesa integration
-              // await paymentService.initiatePayment(payment.id);
+              // await paymentService.submitPartialPayment(payment.id, amountToPay);
               
               // Mock payment
               await new Promise(resolve => setTimeout(resolve, 2000));
               
+              const remainingAfterPayment = payment.remaining_amount - amountToPay;
+              const isFullyPaid = remainingAfterPayment <= 0;
+              
               Alert.alert(
                 'Payment Initiated',
-                'Please complete the payment on your phone. You will receive an M-Pesa prompt shortly.'
+                isFullyPaid
+                  ? 'Please complete the payment on your phone. Payment will be marked as fully paid once confirmed.'
+                  : `Please complete the payment on your phone.\n\nRemaining balance: KES ${remainingAfterPayment.toFixed(2)}`
               );
               fetchPayments();
             } catch (error) {
@@ -155,8 +244,13 @@ const PaymentRequestsScreen = ({ navigation }) => {
   const renderPayment = ({ item }) => (
     <PaymentRequestCard
       payment={item}
-      onPay={() => handlePay(item)}
-      showActions={item.status === PAYMENT_STATUS.PENDING || item.status === PAYMENT_STATUS.APPROVED}
+      onPay={handlePay}  // 🆕 UPDATED - Now supports custom amounts
+      showActions={
+        item.status === PAYMENT_STATUS.PENDING || 
+        item.status === PAYMENT_STATUS.APPROVED ||
+        item.status === PAYMENT_STATUS.PARTIALLY_PAID  // 🆕 NEW
+      }
+      userRole="guardian"  // 🆕 NEW
     />
   );
 
@@ -166,7 +260,7 @@ const PaymentRequestsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Filter Chips */}
+      {/* Filter Chips - 🆕 UPDATED with partial paid */}
       <View style={styles.filterContainer}>
         <Chip
           selected={selectedFilter === 'pending'}
@@ -174,6 +268,13 @@ const PaymentRequestsScreen = ({ navigation }) => {
           style={styles.filterChip}
         >
           Pending
+        </Chip>
+        <Chip
+          selected={selectedFilter === PAYMENT_STATUS.PARTIALLY_PAID}
+          onPress={() => applyFilter(PAYMENT_STATUS.PARTIALLY_PAID)}
+          style={styles.filterChip}
+        >
+          Partial
         </Chip>
         <Chip
           selected={selectedFilter === 'approved'}
