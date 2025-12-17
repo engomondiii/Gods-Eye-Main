@@ -1,114 +1,70 @@
-import React, { useState, useEffect } from 'react';
+// ========================================
+// GOD'S EYE EDTECH - STUDENT DETAIL SCREEN
+// ========================================
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
-import { Card, Title, Paragraph, Button, Divider, Chip, Text } from 'react-native-paper';
+import {
+  Card,
+  Title,
+  Text,
+  Button,
+  Chip,
+  Divider,
+  List,
+  Avatar,
+  IconButton,
+} from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
-import GuardianListItem from '../../components/student/GuardianListItem';
-import { 
-  SCREENS, 
-  MAX_GUARDIANS_PER_STUDENT,
-  KENYA_EDUCATION_LEVELS,
-  KENYA_ACADEMIC_TERMS,
-} from '../../utils/constants';
-import { formatDate } from '../../utils/formatters';
+import { SCREENS, KENYA_GRADE_LABELS } from '../../utils/constants';
+import * as studentService from '../../services/studentService';
 import theme from '../../styles/theme';
 
 const StudentDetailScreen = ({ route, navigation }) => {
   const { studentId } = route.params;
+
   const [student, setStudent] = useState(null);
+  const [guardians, setGuardians] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   // Fetch student details
   const fetchStudentDetails = async () => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await studentService.getStudentById(studentId);
+
+      // Fetch student details
+      const studentResponse = await studentService.getStudentById(studentId);
       
-      // Mock data for development
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!studentResponse.success) {
+        throw new Error(studentResponse.message || 'Failed to load student');
+      }
+
+      setStudent(studentResponse.data);
+
+      // Fetch guardians
+      const guardiansResponse = await studentService.getStudentGuardians(studentId);
       
-      const mockStudent = {
-        id: studentId,
-        // Personal Information
-        first_name: 'John',
-        middle_name: 'Kamau',
-        last_name: 'Mwangi',
-        date_of_birth: '2010-05-15',
-        gender: 'Male',
-        birth_certificate_number: '123456789',
-        
-        // School Information
-        school: {
-          id: 1,
-          name: 'Nairobi Primary School',
-          nemis_code: '001234567',
-          county: { name: 'Nairobi' },
-        },
-        
-        // Academic Information
-        education_level: 'primary',
-        current_grade: 'grade_5',
-        stream: 'Red',
-        admission_number: 'ADM/2020/0045',
-        upi_number: 'UPI1234567890',
-        year_of_admission: 2020,
-        current_term: 'term_1',
-        
-        // House System
-        house_name: 'Kilimanjaro',
-        house_color: 'Red',
-        
-        // Special Needs
-        has_special_needs: false,
-        special_needs_description: null,
-        
-        // Guardians
-        guardians: [
-          {
-            id: 1,
-            first_name: 'Jane',
-            last_name: 'Mwangi',
-            phone: '+254712345678',
-            relationship: 'Mother',
-            is_primary: true,
-          },
-          {
-            id: 2,
-            first_name: 'Michael',
-            last_name: 'Mwangi',
-            phone: '+254723456789',
-            relationship: 'Father',
-            is_primary: false,
-          },
-        ],
-        
-        // Payment Summary
-        pending_payments: 2,
-        total_payments: 5,
-        
-        // Attendance & Biometric
-        qr_code_generated: true,
-        biometric_enrolled: {
-          fingerprint: true,
-          face_recognition: false,
-        },
-        attendance_percentage: 92,
-      };
-      
-      setStudent(mockStudent);
+      if (guardiansResponse.success) {
+        setGuardians(guardiansResponse.data.guardians || []);
+      }
+
     } catch (err) {
-      setError('Failed to load student details. Please try again.');
-      console.error('Fetch student error:', err);
+      console.error('Fetch student details error:', err);
+      setError(err.message || 'Failed to load student details. Please try again.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -116,107 +72,70 @@ const StudentDetailScreen = ({ route, navigation }) => {
     fetchStudentDetails();
   }, [studentId]);
 
-  const handleLinkGuardian = () => {
-    if (student.guardians.length >= MAX_GUARDIANS_PER_STUDENT) {
-      Alert.alert(
-        'Maximum Guardians Reached',
-        `A student can have a maximum of ${MAX_GUARDIANS_PER_STUDENT} guardians.`,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    
-    navigation.navigate(SCREENS.CREATE_GUARDIAN_LINK, { student });
-  };
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchStudentDetails();
+  }, [studentId]);
 
-  const handleCreatePayment = () => {
-    navigation.navigate(SCREENS.CREATE_PAYMENT_REQUEST, { student });
-  };
-
-  const handleViewQRCode = () => {
-    navigation.navigate(SCREENS.STUDENT_QR_CODE, { student });
-  };
-
-  const handleBiometricSetup = () => {
-    navigation.navigate(SCREENS.BIOMETRIC_SETUP, { student });
-  };
-
-  const handleViewAttendance = () => {
-    navigation.navigate(SCREENS.ATTENDANCE_HISTORY, { 
-      studentId: student.id,
-      studentName: `${student.first_name} ${student.last_name}`,
-    });
-  };
-
-  const handleEditStudent = () => {
-    Alert.alert('Edit Student', 'Edit functionality coming soon!');
-  };
-
+  // Handle delete student
   const handleDeleteStudent = () => {
     Alert.alert(
       'Delete Student',
-      `Are you sure you want to delete ${student.first_name} ${student.last_name}? This action cannot be undone.`,
+      `Are you sure you want to delete ${student.full_name}? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            console.log('Delete student:', studentId);
+            try {
+              setIsLoading(true);
+              const response = await studentService.deleteStudent(studentId);
+              
+              if (response.success) {
+                Alert.alert('Success', 'Student deleted successfully', [
+                  { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+              } else {
+                throw new Error(response.message || 'Failed to delete student');
+              }
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to delete student');
+              setIsLoading(false);
+            }
           },
         },
       ]
     );
   };
 
-  // Helper function to get grade label
-  const getGradeLabel = (grade) => {
-    const gradeLabels = {
-      pp1: 'PP1 (Pre-Primary 1)',
-      pp2: 'PP2 (Pre-Primary 2)',
-      grade_1: 'Grade 1',
-      grade_2: 'Grade 2',
-      grade_3: 'Grade 3',
-      grade_4: 'Grade 4',
-      grade_5: 'Grade 5',
-      grade_6: 'Grade 6',
-      grade_7: 'Grade 7',
-      grade_8: 'Grade 8',
-      grade_9: 'Grade 9',
-      grade_10: 'Grade 10',
-      grade_11: 'Grade 11',
-      grade_12: 'Grade 12',
-      form_1: 'Form 1',
-      form_2: 'Form 2',
-      form_3: 'Form 3',
-      form_4: 'Form 4',
-    };
-    return gradeLabels[grade] || grade;
+  // Calculate age
+  const calculateAge = (dateOfBirth) => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
   };
 
-  // Helper function to get education level label
-  const getEducationLevelLabel = (level) => {
-    const levelLabels = {
-      pre_primary: 'Pre-Primary',
-      primary: 'Primary',
-      junior_secondary: 'Junior Secondary',
-      senior_secondary: 'Senior Secondary',
-    };
-    return levelLabels[level] || level;
-  };
-
-  // Helper function to get term label
-  const getTermLabel = (term) => {
-    const termLabels = {
-      term_1: 'Term 1',
-      term_2: 'Term 2',
-      term_3: 'Term 3',
-    };
-    return termLabels[term] || term;
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner message="Loading student details..." />;
   }
 
   if (error && !student) {
@@ -236,142 +155,125 @@ const StudentDetailScreen = ({ route, navigation }) => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Student Info Card */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.headerContainer}>
-            <View style={styles.avatarContainer}>
-              <MaterialCommunityIcons name="account-circle" size={80} color={theme.colors.primary} />
-            </View>
-            <View style={styles.headerTextContainer}>
-              <Title style={styles.studentName}>
-                {student.first_name} {student.middle_name} {student.last_name}
-              </Title>
-              <Paragraph style={styles.admissionNumber}>
-                {student.admission_number}
-              </Paragraph>
-              {student.gender && (
-                <Chip mode="flat" style={styles.genderChip} textStyle={styles.chipText}>
-                  {student.gender}
-                </Chip>
-              )}
-            </View>
-          </View>
-
-          <Divider style={styles.divider} />
-
-          {/* Basic Information */}
-          <Text style={styles.subsectionTitle}>Personal Information</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+      }
+      showsVerticalScrollIndicator={false}
+    >
+      {/* HEADER CARD - Profile Photo & Name */}
+      <Card style={styles.headerCard}>
+        <Card.Content style={styles.headerContent}>
+          {student.photo ? (
+            <Image source={{ uri: student.photo }} style={styles.profilePhoto} />
+          ) : (
+            <Avatar.Text
+              size={100}
+              label={`${student.first_name[0]}${student.last_name[0]}`}
+              style={styles.avatarFallback}
+            />
+          )}
           
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.infoLabel}>Date of Birth:</Text>
-            <Text style={styles.infoValue}>{formatDate(student.date_of_birth)}</Text>
+          <View style={styles.headerInfo}>
+            <Title style={styles.studentName}>{student.full_name}</Title>
+            <Text style={styles.admissionNumber}>
+              Admission: {student.admission_number}
+            </Text>
+            <Text style={styles.schoolName}>{student.school_name}</Text>
+            
+            <View style={styles.statusRow}>
+              <Chip
+                icon="school"
+                mode="outlined"
+                style={styles.infoChip}
+                textStyle={styles.chipText}
+              >
+                {student.grade_and_stream}
+              </Chip>
+              <Chip
+                icon={student.is_active ? 'check-circle' : 'close-circle'}
+                mode="outlined"
+                style={[
+                  styles.statusChip,
+                  { borderColor: student.is_active ? theme.colors.success : theme.colors.error },
+                ]}
+                textStyle={[
+                  styles.chipText,
+                  { color: student.is_active ? theme.colors.success : theme.colors.error },
+                ]}
+              >
+                {student.is_active ? 'Active' : 'Inactive'}
+              </Chip>
+            </View>
           </View>
+        </Card.Content>
+      </Card>
 
+      {/* PERSONAL INFORMATION */}
+      <Card style={styles.card}>
+        <Card.Title
+          title="Personal Information"
+          left={(props) => <List.Icon {...props} icon="account" />}
+        />
+        <Card.Content>
+          <InfoRow label="Full Name" value={student.full_name} />
+          <InfoRow label="Date of Birth" value={formatDate(student.date_of_birth)} />
+          <InfoRow label="Age" value={`${student.age} years`} />
+          <InfoRow label="Gender" value={student.gender_display} />
           {student.birth_certificate_number && (
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="card-account-details" size={20} color={theme.colors.textSecondary} />
-              <Text style={styles.infoLabel}>Birth Certificate:</Text>
-              <Text style={styles.infoValue}>{student.birth_certificate_number}</Text>
-            </View>
+            <InfoRow
+              label="Birth Certificate"
+              value={student.birth_certificate_number}
+            />
           )}
+        </Card.Content>
+      </Card>
 
+      {/* ACADEMIC INFORMATION */}
+      <Card style={styles.card}>
+        <Card.Title
+          title="Academic Information"
+          left={(props) => <List.Icon {...props} icon="book-open-variant" />}
+        />
+        <Card.Content>
+          <InfoRow label="School" value={student.school_name} />
+          <InfoRow label="County" value={student.county_name} />
+          <InfoRow label="Education Level" value={student.education_level_display} />
+          <InfoRow
+            label="Current Grade"
+            value={KENYA_GRADE_LABELS[student.current_grade] || student.current_grade}
+          />
+          <InfoRow label="Stream/Class" value={student.stream || 'N/A'} />
+          <InfoRow label="Admission Number" value={student.admission_number} />
           {student.upi_number && (
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="identifier" size={20} color={theme.colors.textSecondary} />
-              <Text style={styles.infoLabel}>UPI Number:</Text>
-              <Text style={styles.infoValue}>{student.upi_number}</Text>
-            </View>
+            <InfoRow label="UPI Number" value={student.upi_number} />
           )}
+          <InfoRow label="Year of Admission" value={student.year_of_admission} />
+          <InfoRow label="Current Term" value={student.term_display} />
         </Card.Content>
       </Card>
 
-      {/* School Information Card */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text style={styles.subsectionTitle}>School Information</Text>
-          
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="school" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.infoLabel}>School:</Text>
-            <Text style={styles.infoValue}>{student.school.name}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="map-marker" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.infoLabel}>County:</Text>
-            <Text style={styles.infoValue}>{student.school.county.name}</Text>
-          </View>
-
-          {student.school.nemis_code && (
-            <View style={styles.infoRow}>
-              <MaterialCommunityIcons name="barcode" size={20} color={theme.colors.textSecondary} />
-              <Text style={styles.infoLabel}>NEMIS Code:</Text>
-              <Text style={styles.infoValue}>{student.school.nemis_code}</Text>
-            </View>
-          )}
-        </Card.Content>
-      </Card>
-
-      {/* Academic Information Card */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text style={styles.subsectionTitle}>Academic Information (CBC)</Text>
-          
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="school-outline" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.infoLabel}>Education Level:</Text>
-            <Text style={styles.infoValue}>{getEducationLevelLabel(student.education_level)}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="book-open-variant" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.infoLabel}>Grade/Class:</Text>
-            <Text style={styles.infoValue}>{getGradeLabel(student.current_grade)}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="format-list-bulleted" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.infoLabel}>Stream/Class:</Text>
-            <Text style={styles.infoValue}>{student.stream}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="calendar-range" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.infoLabel}>Year of Admission:</Text>
-            <Text style={styles.infoValue}>{student.year_of_admission}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="calendar-today" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.infoLabel}>Current Term:</Text>
-            <Text style={styles.infoValue}>{getTermLabel(student.current_term)}</Text>
-          </View>
-        </Card.Content>
-      </Card>
-
-      {/* House System Card (if applicable) */}
+      {/* HOUSE SYSTEM */}
       {(student.house_name || student.house_color) && (
         <Card style={styles.card}>
+          <Card.Title
+            title="House System"
+            left={(props) => <List.Icon {...props} icon="home-group" />}
+          />
           <Card.Content>
-            <Text style={styles.subsectionTitle}>House System</Text>
-            
-            {student.house_name && (
-              <View style={styles.infoRow}>
-                <MaterialCommunityIcons name="home-group" size={20} color={theme.colors.textSecondary} />
-                <Text style={styles.infoLabel}>House Name:</Text>
-                <Text style={styles.infoValue}>{student.house_name} House</Text>
-              </View>
-            )}
-
+            {student.house_name && <InfoRow label="House Name" value={student.house_name} />}
             {student.house_color && (
-              <View style={styles.infoRow}>
-                <MaterialCommunityIcons name="palette" size={20} color={theme.colors.textSecondary} />
+              <View style={styles.colorRow}>
                 <Text style={styles.infoLabel}>House Color:</Text>
-                <View style={styles.colorIndicatorContainer}>
-                  <View style={[styles.colorIndicator, { backgroundColor: student.house_color }]} />
+                <View style={styles.colorInfo}>
+                  <View
+                    style={[
+                      styles.colorIndicator,
+                      { backgroundColor: student.house_color },
+                    ]}
+                  />
                   <Text style={styles.infoValue}>{student.house_color}</Text>
                 </View>
               </View>
@@ -380,235 +282,257 @@ const StudentDetailScreen = ({ route, navigation }) => {
         </Card>
       )}
 
-      {/* Special Needs Card (if applicable) */}
+      {/* SPECIAL NEEDS */}
       {student.has_special_needs && (
-        <Card style={[styles.card, styles.specialNeedsCard]}>
+        <Card style={styles.card}>
+          <Card.Title
+            title="Special Needs"
+            left={(props) => <List.Icon {...props} icon="medical-bag" color={theme.colors.warning} />}
+          />
           <Card.Content>
-            <View style={styles.specialNeedsHeader}>
-              <MaterialCommunityIcons name="alert-circle" size={24} color={theme.colors.warning} />
-              <Text style={styles.specialNeedsTitle}>Special Needs</Text>
-            </View>
-            {student.special_needs_description && (
-              <Text style={styles.specialNeedsText}>
-                {student.special_needs_description}
-              </Text>
-            )}
+            <Text style={styles.specialNeedsText}>
+              {student.special_needs_description || 'No description provided'}
+            </Text>
           </Card.Content>
         </Card>
       )}
 
-      {/* Attendance & Identification Section */}
+      {/* GUARDIANS */}
       <Card style={styles.card}>
+        <Card.Title
+          title={`Guardians (${guardians.length})`}
+          left={(props) => <List.Icon {...props} icon="account-heart" />}
+          right={(props) =>
+            guardians.length < 5 && (
+              <IconButton
+                {...props}
+                icon="plus"
+                onPress={() =>
+                  navigation.navigate(SCREENS.CREATE_GUARDIAN_LINK, {
+                    studentId: student.id,
+                  })
+                }
+              />
+            )
+          }
+        />
         <Card.Content>
-          <Title style={styles.sectionTitle}>Attendance & Identification</Title>
-          
-          {/* Attendance Summary */}
-          <View style={styles.attendanceContainer}>
-            <View style={styles.attendanceItem}>
-              <Text style={styles.attendancePercentage}>
-                {student.attendance_percentage}%
-              </Text>
-              <Text style={styles.attendanceLabel}>Attendance Rate</Text>
-            </View>
-            <Button
-              mode="outlined"
-              onPress={handleViewAttendance}
-              style={styles.attendanceButton}
-              icon="history"
-              compact
-            >
-              View History
-            </Button>
-          </View>
-
-          <Divider style={styles.divider} />
-
-          {/* QR Code Status */}
-          <View style={styles.identificationRow}>
-            <View style={styles.identificationLeft}>
-              <MaterialCommunityIcons 
-                name="qrcode" 
-                size={32} 
-                color={student.qr_code_generated ? theme.colors.success : theme.colors.textSecondary} 
-              />
-              <View style={styles.identificationText}>
-                <Text style={styles.identificationTitle}>QR Code</Text>
-                <Text style={styles.identificationStatus}>
-                  {student.qr_code_generated ? 'Generated' : 'Not Generated'}
-                </Text>
-              </View>
-            </View>
-            <Button
-              mode="outlined"
-              onPress={handleViewQRCode}
-              compact
-              icon={student.qr_code_generated ? 'eye' : 'qrcode-plus'}
-            >
-              {student.qr_code_generated ? 'View' : 'Generate'}
-            </Button>
-          </View>
-
-          <Divider style={styles.miniDivider} />
-
-          {/* Biometric Status */}
-          <View style={styles.identificationRow}>
-            <View style={styles.identificationLeft}>
-              <MaterialCommunityIcons 
-                name="fingerprint" 
-                size={32} 
-                color={
-                  student.biometric_enrolled.fingerprint || student.biometric_enrolled.face_recognition 
-                    ? theme.colors.success
-                    : theme.colors.textSecondary
-                } 
-              />
-              <View style={styles.identificationText}>
-                <Text style={styles.identificationTitle}>Biometric</Text>
-                <View style={styles.biometricChips}>
-                  {student.biometric_enrolled.fingerprint && (
-                    <Chip 
-                      mode="flat" 
-                      style={styles.biometricChip}
-                      textStyle={styles.biometricChipText}
-                    >
-                      Fingerprint
-                    </Chip>
-                  )}
-                  {student.biometric_enrolled.face_recognition && (
-                    <Chip 
-                      mode="flat" 
-                      style={styles.biometricChip}
-                      textStyle={styles.biometricChipText}
-                    >
-                      Face
-                    </Chip>
-                  )}
-                  {!student.biometric_enrolled.fingerprint && 
-                   !student.biometric_enrolled.face_recognition && (
-                    <Text style={styles.identificationStatus}>Not Enrolled</Text>
-                  )}
+          {guardians.length > 0 ? (
+            guardians.map((guardian, index) => (
+              <View key={guardian.id}>
+                <View style={styles.guardianRow}>
+                  <View style={styles.guardianInfo}>
+                    <Text style={styles.guardianName}>
+                      {guardian.guardian_name}
+                      {guardian.is_primary && (
+                        <Chip
+                          mode="flat"
+                          style={styles.primaryChip}
+                          textStyle={styles.primaryChipText}
+                        >
+                          PRIMARY
+                        </Chip>
+                      )}
+                    </Text>
+                    <Text style={styles.guardianDetail}>
+                      {guardian.relationship_display}
+                    </Text>
+                    <Text style={styles.guardianDetail}>{guardian.guardian_phone}</Text>
+                    {guardian.guardian_email && (
+                      <Text style={styles.guardianDetail}>{guardian.guardian_email}</Text>
+                    )}
+                  </View>
+                  <IconButton
+                    icon="phone"
+                    size={20}
+                    onPress={() => Alert.alert('Call', `Call ${guardian.guardian_name}?`)}
+                  />
                 </View>
+                {index < guardians.length - 1 && <Divider style={styles.guardianDivider} />}
               </View>
-            </View>
-            <Button
-              mode="outlined"
-              onPress={handleBiometricSetup}
-              compact
-              icon="fingerprint"
-            >
-              Setup
-            </Button>
-          </View>
-        </Card.Content>
-      </Card>
-
-      {/* Guardians Section */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.sectionHeader}>
-            <Title style={styles.sectionTitle}>
-              Guardians ({student.guardians.length}/{MAX_GUARDIANS_PER_STUDENT})
-            </Title>
-            <Button
-              mode="outlined"
-              onPress={handleLinkGuardian}
-              disabled={student.guardians.length >= MAX_GUARDIANS_PER_STUDENT}
-              compact
-            >
-              Add
-            </Button>
-          </View>
-
-          {student.guardians.length > 0 ? (
-            student.guardians.map((guardian) => (
-              <GuardianListItem key={guardian.id} guardian={guardian} />
             ))
           ) : (
-            <Text style={styles.noDataText}>No guardians linked yet</Text>
+            <View style={styles.emptyGuardiansContainer}>
+              <MaterialCommunityIcons
+                name="account-alert"
+                size={48}
+                color={theme.colors.textSecondary}
+              />
+              <Text style={styles.emptyGuardiansText}>No guardians linked yet</Text>
+              <Button
+                mode="outlined"
+                onPress={() =>
+                  navigation.navigate(SCREENS.CREATE_GUARDIAN_LINK, {
+                    studentId: student.id,
+                  })
+                }
+                style={styles.addGuardianButton}
+              >
+                Link Guardian
+              </Button>
+            </View>
           )}
         </Card.Content>
       </Card>
 
-      {/* Payment Summary */}
+      {/* BIOMETRIC & QR CODE */}
       <Card style={styles.card}>
+        <Card.Title
+          title="Attendance Methods"
+          left={(props) => <List.Icon {...props} icon="fingerprint" />}
+        />
         <Card.Content>
-          <Title style={styles.sectionTitle}>Payment Summary</Title>
-          
-          <View style={styles.paymentSummaryContainer}>
-            <View style={styles.paymentStatItem}>
-              <Text style={styles.paymentStatNumber}>{student.pending_payments}</Text>
-              <Text style={styles.paymentStatLabel}>Pending</Text>
+          <View style={styles.biometricRow}>
+            <View style={styles.biometricItem}>
+              <MaterialCommunityIcons
+                name="fingerprint"
+                size={32}
+                color={student.fingerprint_id ? theme.colors.success : theme.colors.disabled}
+              />
+              <Text style={styles.biometricLabel}>
+                Fingerprint {student.fingerprint_id ? '✓' : '✗'}
+              </Text>
             </View>
-            <View style={styles.paymentStatDivider} />
-            <View style={styles.paymentStatItem}>
-              <Text style={styles.paymentStatNumber}>{student.total_payments}</Text>
-              <Text style={styles.paymentStatLabel}>Total Requests</Text>
+            <View style={styles.biometricItem}>
+              <MaterialCommunityIcons
+                name="qrcode"
+                size={32}
+                color={student.qr_code ? theme.colors.success : theme.colors.disabled}
+              />
+              <Text style={styles.biometricLabel}>
+                QR Code {student.qr_code ? '✓' : '✗'}
+              </Text>
+            </View>
+            <View style={styles.biometricItem}>
+              <MaterialCommunityIcons
+                name="face-recognition"
+                size={32}
+                color={student.face_data ? theme.colors.success : theme.colors.disabled}
+              />
+              <Text style={styles.biometricLabel}>
+                Face {student.face_data ? '✓' : '✗'}
+              </Text>
             </View>
           </View>
-
-          <Button
-            mode="contained"
-            onPress={handleCreatePayment}
-            style={styles.paymentButton}
-            icon="cash-plus"
-          >
-            Create Payment Request
-          </Button>
+          
+          <View style={styles.biometricButtons}>
+            <Button
+              mode="outlined"
+              icon="qrcode"
+              onPress={() =>
+                navigation.navigate(SCREENS.STUDENT_QR_CODE, { studentId: student.id })
+              }
+              style={styles.biometricButton}
+            >
+              View QR Code
+            </Button>
+            <Button
+              mode="outlined"
+              icon="fingerprint"
+              onPress={() =>
+                navigation.navigate(SCREENS.BIOMETRIC_SETUP, { studentId: student.id })
+              }
+              style={styles.biometricButton}
+            >
+              Setup Biometrics
+            </Button>
+          </View>
         </Card.Content>
       </Card>
 
-      {/* Action Buttons */}
-      <View style={styles.actionButtonsContainer}>
+      {/* ACTION BUTTONS */}
+      <View style={styles.actionButtons}>
         <Button
-          mode="outlined"
-          onPress={handleEditStudent}
-          style={styles.actionButton}
+          mode="contained"
           icon="pencil"
+          onPress={() =>
+            navigation.navigate(SCREENS.CREATE_STUDENT, {
+              studentId: student.id,
+              editMode: true,
+            })
+          }
+          style={styles.editButton}
         >
           Edit Student
         </Button>
         <Button
           mode="outlined"
-          onPress={handleDeleteStudent}
-          style={[styles.actionButton, styles.deleteButton]}
           icon="delete"
+          onPress={handleDeleteStudent}
+          style={styles.deleteButton}
           textColor={theme.colors.error}
         >
           Delete Student
         </Button>
       </View>
+
+      {/* TIMESTAMPS */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text style={styles.timestampText}>
+            Created: {formatDate(student.created_at)}
+          </Text>
+          {student.updated_at && (
+            <Text style={styles.timestampText}>
+              Last Updated: {formatDate(student.updated_at)}
+            </Text>
+          )}
+        </Card.Content>
+      </Card>
     </ScrollView>
   );
 };
+
+// InfoRow Component
+const InfoRow = ({ label, value }) => (
+  <View style={styles.infoRow}>
+    <Text style={styles.infoLabel}>{label}:</Text>
+    <Text style={styles.infoValue}>{value || 'N/A'}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  contentContainer: {
+  scrollContent: {
     padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
   },
-  card: {
+  noDataText: {
+    textAlign: 'center',
+    marginTop: theme.spacing.xl,
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.textSecondary,
+  },
+  
+  // Header Card
+  headerCard: {
     marginBottom: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    ...theme.shadows.medium,
+    elevation: 2,
   },
-  headerContainer: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
   },
-  avatarContainer: {
+  profilePhoto: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginRight: theme.spacing.md,
   },
-  headerTextContainer: {
+  avatarFallback: {
+    marginRight: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
+  },
+  headerInfo: {
     flex: 1,
   },
   studentName: {
     fontSize: theme.fontSizes.h3,
     fontWeight: 'bold',
-    color: theme.colors.text,
     marginBottom: theme.spacing.xs,
   },
   admissionNumber: {
@@ -616,195 +540,173 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
   },
-  genderChip: {
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.primary + '20',
-    marginTop: theme.spacing.xs,
+  schoolName: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.sm,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.xs,
+  },
+  infoChip: {
+    marginRight: theme.spacing.xs,
+  },
+  statusChip: {
+    borderWidth: 1.5,
   },
   chipText: {
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.primary,
   },
-  divider: {
-    marginVertical: theme.spacing.md,
-    backgroundColor: theme.colors.border,
-  },
-  miniDivider: {
-    marginVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.border,
-  },
-  subsectionTitle: {
-    fontSize: theme.fontSizes.lg,
-    fontWeight: 'bold',
-    color: theme.colors.text,
+  
+  // Cards
+  card: {
     marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    elevation: 1,
   },
+  
+  // Info Rows
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   infoLabel: {
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.sm,
-    marginRight: theme.spacing.sm,
-    minWidth: 120,
-  },
-  infoValue: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text,
     fontWeight: '500',
     flex: 1,
   },
-  colorIndicatorContainer: {
+  infoValue: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.text,
+    flex: 1,
+    textAlign: 'right',
+  },
+  
+  // Color Row
+  colorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xs,
+  },
+  colorInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   colorIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     marginRight: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  specialNeedsCard: {
-    backgroundColor: theme.colors.warningLight,
-  },
-  specialNeedsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  specialNeedsTitle: {
-    fontSize: theme.fontSizes.lg,
-    fontWeight: 'bold',
-    color: theme.colors.warning,
-    marginLeft: theme.spacing.sm,
-  },
+  
+  // Special Needs
   specialNeedsText: {
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.md,
     color: theme.colors.text,
-    lineHeight: 20,
+    lineHeight: 22,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  sectionTitle: {
-    fontSize: theme.fontSizes.lg,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  noDataText: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginVertical: theme.spacing.md,
-  },
-  attendanceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-  },
-  attendanceItem: {
-    alignItems: 'flex-start',
-  },
-  attendancePercentage: {
-    fontSize: theme.fontSizes.h2,
-    fontWeight: 'bold',
-    color: theme.colors.success,
-  },
-  attendanceLabel: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  attendanceButton: {
-    marginLeft: theme.spacing.sm,
-  },
-  identificationRow: {
+  
+  // Guardians
+  guardianRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
   },
-  identificationLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  guardianInfo: {
     flex: 1,
   },
-  identificationText: {
-    marginLeft: theme.spacing.sm,
-    flex: 1,
-  },
-  identificationTitle: {
+  guardianName: {
     fontSize: theme.fontSizes.md,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: theme.colors.text,
     marginBottom: theme.spacing.xs,
   },
-  identificationStatus: {
+  guardianDetail: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.textSecondary,
+    marginBottom: 2,
   },
-  biometricChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.xs,
+  guardianDivider: {
+    marginVertical: theme.spacing.sm,
   },
-  biometricChip: {
-    height: 24,
-    backgroundColor: theme.colors.successLight,
-    marginRight: theme.spacing.xs,
+  primaryChip: {
+    marginLeft: theme.spacing.sm,
+    backgroundColor: theme.colors.warning,
+    height: 20,
   },
-  biometricChipText: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.success,
+  primaryChipText: {
+    fontSize: 10,
+    color: theme.colors.text,
+    fontWeight: 'bold',
   },
-  paymentSummaryContainer: {
+  emptyGuardiansContainer: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
+  },
+  emptyGuardiansText: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  addGuardianButton: {
+    marginTop: theme.spacing.sm,
+  },
+  
+  // Biometric
+  biometricRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: theme.spacing.md,
     marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
-  paymentStatItem: {
+  biometricItem: {
     alignItems: 'center',
-    flex: 1,
   },
-  paymentStatDivider: {
-    width: 1,
-    backgroundColor: theme.colors.border,
-  },
-  paymentStatNumber: {
-    fontSize: theme.fontSizes.h2,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  paymentStatLabel: {
+  biometricLabel: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
   },
-  paymentButton: {
-    backgroundColor: theme.colors.primary,
+  biometricButtons: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
   },
-  actionButtonsContainer: {
+  biometricButton: {
+    flex: 1,
+  },
+  
+  // Action Buttons
+  actionButtons: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
-  actionButton: {
-    marginBottom: theme.spacing.sm,
+  editButton: {
+    flex: 1,
+    backgroundColor: theme.colors.primary,
   },
   deleteButton: {
+    flex: 1,
     borderColor: theme.colors.error,
+  },
+  
+  // Timestamps
+  timestampText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginVertical: 2,
   },
 });
 

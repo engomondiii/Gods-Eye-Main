@@ -1,13 +1,18 @@
+// ========================================
+// GOD'S EYE EDTECH - FINGERPRINT SCANNER
+// ========================================
+
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as LocalAuthentication from 'expo-local-authentication';
 import theme from '../../styles/theme';
+import * as biometricService from '../../services/biometricService';
 
 const FingerprintScanner = ({ onSuccess, onFail, onCancel, studentId }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [capabilities, setCapabilities] = useState(null);
 
   useEffect(() => {
     checkBiometricAvailability();
@@ -15,10 +20,9 @@ const FingerprintScanner = ({ onSuccess, onFail, onCancel, studentId }) => {
 
   const checkBiometricAvailability = async () => {
     try {
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      
-      setIsAvailable(compatible && enrolled);
+      const support = await biometricService.checkBiometricSupport();
+      setCapabilities(support);
+      setIsAvailable(support.isSupported && support.hasFingerprint);
     } catch (error) {
       console.error('Biometric check error:', error);
       setIsAvailable(false);
@@ -29,24 +33,26 @@ const FingerprintScanner = ({ onSuccess, onFail, onCancel, studentId }) => {
     setIsScanning(true);
     
     try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Scan fingerprint for attendance',
-        cancelLabel: 'Cancel',
-        fallbackLabel: 'Use passcode',
+      const response = await biometricService.verifyFingerprint(studentId, {
+        deviceInfo: 'Mobile Device',
+        location: 'Main Entrance',
       });
 
-      if (result.success) {
+      if (response.success) {
         onSuccess({
           studentId,
+          student: response.student,
+          attendance: response.attendance,
           method: 'fingerprint',
           timestamp: new Date().toISOString(),
+          confidenceScore: response.confidenceScore,
         });
       } else {
-        onFail('Authentication failed');
+        onFail(response.message || 'Fingerprint verification failed');
       }
     } catch (error) {
       console.error('Fingerprint error:', error);
-      onFail(error.message);
+      onFail(error.message || 'Failed to verify fingerprint');
     } finally {
       setIsScanning(false);
     }
@@ -64,7 +70,9 @@ const FingerprintScanner = ({ onSuccess, onFail, onCancel, studentId }) => {
           Fingerprint authentication not available
         </Text>
         <Text style={styles.helperText}>
-          Your device doesn't support fingerprint or no fingerprints are enrolled
+          {!capabilities?.hasHardware && 'Your device doesn\'t support fingerprint authentication'}
+          {capabilities?.hasHardware && !capabilities?.isEnrolled && 'No fingerprints are enrolled on this device'}
+          {capabilities?.hasHardware && capabilities?.isEnrolled && !capabilities?.hasFingerprint && 'Fingerprint sensor not detected'}
         </Text>
         <Button mode="contained" onPress={onCancel} style={styles.button}>
           Use Another Method
@@ -88,7 +96,7 @@ const FingerprintScanner = ({ onSuccess, onFail, onCancel, studentId }) => {
       <Text style={styles.instruction}>
         {isScanning 
           ? 'Touch the sensor with your finger' 
-          : 'Tap the button to start scanning'}
+          : 'Tap the button to start fingerprint authentication'}
       </Text>
 
       {!isScanning && (
@@ -107,6 +115,7 @@ const FingerprintScanner = ({ onSuccess, onFail, onCancel, studentId }) => {
         mode="outlined" 
         onPress={onCancel}
         style={styles.button}
+        disabled={isScanning}
       >
         Cancel
       </Button>
@@ -134,6 +143,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
   },
   errorText: {
     fontSize: theme.fontSizes.lg,
@@ -141,22 +151,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
+    fontWeight: '600',
   },
   helperText: {
     fontSize: theme.fontSizes.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
   },
   scanButton: {
     marginBottom: theme.spacing.md,
     backgroundColor: theme.colors.primary,
+    minWidth: 200,
   },
   scanButtonContent: {
     height: 50,
   },
   button: {
     marginTop: theme.spacing.sm,
+    minWidth: 200,
   },
 });
 

@@ -1,22 +1,92 @@
+// ========================================
+// GOD'S EYE EDTECH - COUNTY PICKER
+// ========================================
+
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Keyboard, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Keyboard,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { Text, TextInput, Chip } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import theme from '../../styles/theme';
-import { KENYA_COUNTIES } from '../../utils/constants';
+import * as locationService from '../../services/locationService';
 
-const CountyPicker = ({ 
-  value, 
-  onChange, 
+// ============================================================
+// COUNTY PICKER COMPONENT
+// ============================================================
+
+const CountyPicker = ({
+  value,
+  onChange,
   error = false,
-  disabled = false 
+  disabled = false,
+  label = 'County',
+  placeholder = 'Type or select county...',
+  required = false,
+  helperText = '',
 }) => {
+  // State
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [counties, setCounties] = useState([]);
   const [filteredCounties, setFilteredCounties] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingCounties, setIsLoadingCounties] = useState(true);
+
   const inputRef = useRef(null);
 
-  // Update search query when value changes externally
+  // ============================================================
+  // FETCH COUNTIES FROM BACKEND
+  // ============================================================
+
+  /**
+   * Fetch all Kenya counties from backend
+   */
+  const fetchCounties = async () => {
+    try {
+      setIsLoadingCounties(true);
+
+      if (__DEV__) {
+        console.log('📍 Fetching counties from backend...');
+      }
+
+      const result = await locationService.getKenyaCounties();
+
+      if (result.success) {
+        setCounties(result.data);
+        setFilteredCounties(result.data);
+
+        if (__DEV__) {
+          console.log(`✅ Loaded ${result.data.length} counties`);
+        }
+      } else {
+        console.error('❌ Failed to fetch counties:', result.message);
+      }
+    } catch (error) {
+      console.error('❌ Fetch counties error:', error);
+    } finally {
+      setIsLoadingCounties(false);
+    }
+  };
+
+  /**
+   * Initial load
+   */
+  useEffect(() => {
+    fetchCounties();
+  }, []);
+
+  // ============================================================
+  // SEARCH & FILTER
+  // ============================================================
+
+  /**
+   * Update search query when value changes externally
+   */
   useEffect(() => {
     if (value?.name) {
       setSearchQuery(value.name);
@@ -25,46 +95,57 @@ const CountyPicker = ({
     }
   }, [value]);
 
-  // Filter counties as user types
+  /**
+   * Filter counties as user types
+   */
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredCounties(KENYA_COUNTIES);
+      setFilteredCounties(counties);
       setShowSuggestions(false);
     } else {
-      const filtered = KENYA_COUNTIES.filter(county =>
-        county.toLowerCase().includes(searchQuery.toLowerCase())
+      const filtered = counties.filter((county) =>
+        county.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredCounties(filtered);
       setShowSuggestions(true);
     }
-  }, [searchQuery]);
+  }, [searchQuery, counties]);
 
+  // ============================================================
+  // HANDLERS
+  // ============================================================
+
+  /**
+   * Handle input text change
+   */
   const handleInputChange = (text) => {
     setSearchQuery(text);
-    
+
     // Clear the value when user is typing
     if (value && text !== value.name) {
       onChange(null);
     }
   };
 
+  /**
+   * Handle county selection
+   */
   const handleCountySelect = (county) => {
-    const countyObj = {
-      id: KENYA_COUNTIES.indexOf(county) + 1,
-      name: county,
-    };
-    onChange(countyObj);
-    setSearchQuery(county);
+    onChange(county);
+    setSearchQuery(county.name);
     setShowSuggestions(false);
     Keyboard.dismiss();
   };
 
+  /**
+   * Handle manual entry (custom county)
+   */
   const handleManualEntry = () => {
     if (searchQuery.trim()) {
-      // Create custom county with negative ID to indicate it's manual
       const customCounty = {
-        id: -1,
+        id: null,
         name: searchQuery.trim(),
+        code: searchQuery.trim().toLowerCase().replace(/\s+/g, '_'),
         isCustom: true,
       };
       onChange(customCounty);
@@ -73,20 +154,29 @@ const CountyPicker = ({
     }
   };
 
+  /**
+   * Clear county selection
+   */
   const handleClearCounty = () => {
     onChange(null);
     setSearchQuery('');
-    setFilteredCounties(KENYA_COUNTIES);
+    setFilteredCounties(counties);
     setShowSuggestions(false);
   };
 
+  /**
+   * Handle input focus
+   */
   const handleFocus = () => {
     if (searchQuery.trim() === '') {
-      setFilteredCounties(KENYA_COUNTIES);
+      setFilteredCounties(counties);
     }
     setShowSuggestions(true);
   };
 
+  /**
+   * Handle input blur
+   */
   const handleBlur = () => {
     // Delay to allow item selection
     setTimeout(() => {
@@ -94,10 +184,18 @@ const CountyPicker = ({
     }, 200);
   };
 
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
     <View style={styles.container}>
+      {/* Header Row */}
       <View style={styles.headerRow}>
-        <Text style={styles.label}>County *</Text>
+        <Text style={styles.label}>
+          {label}
+          {required && <Text style={styles.required}> *</Text>}
+        </Text>
         {value && (
           <Chip
             mode="flat"
@@ -115,24 +213,23 @@ const CountyPicker = ({
       {/* Searchable Input */}
       <TextInput
         ref={inputRef}
-        label="Type or select county"
+        label={placeholder}
         mode="outlined"
         value={searchQuery}
         onChangeText={handleInputChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
         error={error}
-        disabled={disabled}
+        disabled={disabled || isLoadingCounties}
         style={styles.input}
-        placeholder="Start typing county name..."
+        placeholder={placeholder}
         autoCapitalize="words"
         left={<TextInput.Icon icon="map-marker" />}
         right={
-          searchQuery ? (
-            <TextInput.Icon
-              icon="close"
-              onPress={handleClearCounty}
-            />
+          isLoadingCounties ? (
+            <TextInput.Icon icon={() => <ActivityIndicator size={20} />} />
+          ) : searchQuery ? (
+            <TextInput.Icon icon="close" onPress={handleClearCounty} />
           ) : (
             <TextInput.Icon icon="menu-down" />
           )
@@ -140,35 +237,39 @@ const CountyPicker = ({
       />
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && !disabled && (
+      {showSuggestions && !disabled && !isLoadingCounties && (
         <View style={styles.suggestionsContainer}>
           {filteredCounties.length > 0 ? (
             <>
               <View style={styles.suggestionsHeader}>
                 <Text style={styles.suggestionsTitle}>
-                  {searchQuery ? `${filteredCounties.length} counties found` : 'All 47 Counties'}
+                  {searchQuery
+                    ? `${filteredCounties.length} ${
+                        filteredCounties.length === 1 ? 'county' : 'counties'
+                      } found`
+                    : `All ${counties.length} Kenya Counties`}
                 </Text>
               </View>
               <ScrollView
                 style={styles.suggestionsList}
                 keyboardShouldPersistTaps="handled"
-                nestedScrollEnabled={false}
+                nestedScrollEnabled={true}
               >
-                {filteredCounties.map((item, index) => {
-                  const isSelected = value?.name === item;
+                {filteredCounties.map((county) => {
+                  const isSelected = value?.id === county.id;
                   return (
                     <TouchableOpacity
-                      key={`${item}-${index}`}
-                      onPress={() => handleCountySelect(item)}
+                      key={county.id}
+                      onPress={() => handleCountySelect(county)}
                       style={[
                         styles.suggestionItem,
                         isSelected && styles.selectedSuggestionItem,
                       ]}
                     >
-                      <MaterialCommunityIcons 
-                        name="map-marker" 
-                        size={20} 
-                        color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+                      <MaterialCommunityIcons
+                        name="map-marker"
+                        size={20}
+                        color={isSelected ? '#6200EE' : '#757575'}
                         style={styles.suggestionIcon}
                       />
                       <Text
@@ -177,8 +278,15 @@ const CountyPicker = ({
                           isSelected && styles.selectedSuggestionText,
                         ]}
                       >
-                        {item}
+                        {county.name}
                       </Text>
+                      {isSelected && (
+                        <MaterialCommunityIcons
+                          name="check-circle"
+                          size={20}
+                          color="#6200EE"
+                        />
+                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -186,10 +294,10 @@ const CountyPicker = ({
             </>
           ) : (
             <View style={styles.noResultsContainer}>
-              <MaterialCommunityIcons 
-                name="map-marker-off" 
-                size={32} 
-                color={theme.colors.textSecondary} 
+              <MaterialCommunityIcons
+                name="map-marker-off"
+                size={32}
+                color="#757575"
               />
               <Text style={styles.noResultsText}>
                 No counties found matching "{searchQuery}"
@@ -209,80 +317,90 @@ const CountyPicker = ({
       )}
 
       {/* Helper Text */}
-      <Text style={styles.helperText}>
-        {value 
-          ? value.isCustom 
-            ? `Custom entry: ${value.name}` 
-            : `Selected: ${value.name}` 
-          : 'Type to search from 47 Kenyan counties or enter custom county'}
+      <Text style={[styles.helperText, error && styles.helperTextError]}>
+        {error
+          ? 'County is required'
+          : helperText ||
+            (value
+              ? value.isCustom
+                ? `Custom entry: ${value.name}`
+                : `Selected: ${value.name}`
+              : isLoadingCounties
+              ? 'Loading counties...'
+              : `Type to search from ${counties.length} Kenya counties`)}
       </Text>
 
+      {/* Custom Badge */}
       {value?.isCustom && (
         <View style={styles.customBadge}>
-          <MaterialCommunityIcons 
-            name="pencil" 
-            size={14} 
-            color={theme.colors.warning} 
-          />
-          <Text style={styles.customBadgeText}>
-            Custom county entry
-          </Text>
+          <MaterialCommunityIcons name="pencil" size={14} color="#FF9800" />
+          <Text style={styles.customBadgeText}>Custom county entry</Text>
         </View>
       )}
     </View>
   );
 };
 
+// ============================================================
+// STYLES
+// ============================================================
+
 const styles = StyleSheet.create({
   container: {
-    marginBottom: theme.spacing.sm,
+    marginBottom: 16,
     zIndex: 1000,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 8,
   },
   label: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text,
+    fontSize: 16,
+    color: '#212121',
     fontWeight: '500',
+  },
+  required: {
+    color: '#F44336',
   },
   clearChip: {
     height: 28,
-    backgroundColor: theme.colors.errorContainer,
+    backgroundColor: '#FFEBEE',
   },
   clearChipText: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.error,
+    fontSize: 12,
+    color: '#F44336',
   },
   input: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: '#FFFFFF',
   },
   suggestionsContainer: {
     position: 'absolute',
     top: 80,
     left: 0,
     right: 0,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.sm,
-    ...theme.shadows.medium,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
     maxHeight: 300,
     zIndex: 1000,
-    elevation: 5,
   },
   suggestionsHeader: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.primaryLight || theme.colors.primary + '10',
+    borderBottomColor: '#E0E0E0',
+    backgroundColor: '#F5F5F5',
   },
   suggestionsTitle: {
-    fontSize: theme.fontSizes.sm,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: theme.colors.primary,
+    color: '#6200EE',
   },
   suggestionsList: {
     maxHeight: 250,
@@ -290,73 +408,80 @@ const styles = StyleSheet.create({
   suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border + '30',
+    borderBottomColor: '#F5F5F5',
   },
   selectedSuggestionItem: {
-    backgroundColor: theme.colors.primaryLight || theme.colors.primary + '10',
+    backgroundColor: '#F3E5F5',
   },
   suggestionIcon: {
-    marginRight: theme.spacing.sm,
+    marginRight: 12,
   },
   suggestionText: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text,
+    fontSize: 16,
+    color: '#212121',
     flex: 1,
   },
   selectedSuggestionText: {
-    color: theme.colors.primary,
+    color: '#6200EE',
     fontWeight: 'bold',
   },
   noResultsContainer: {
-    padding: theme.spacing.xl,
+    padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   noResultsText: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: '#757575',
     textAlign: 'center',
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    marginTop: 12,
+    marginBottom: 16,
   },
   manualEntryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.success,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
-    gap: theme.spacing.xs,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   manualEntryButtonText: {
-    color: '#FFF',
-    fontSize: theme.fontSizes.sm,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '500',
+    marginLeft: 8,
   },
   helperText: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
+    fontSize: 12,
+    color: '#757575',
+    marginTop: 4,
+  },
+  helperTextError: {
+    color: '#F44336',
   },
   customBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
+    marginTop: 8,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: theme.colors.warningLight || theme.colors.warning + '20',
-    borderRadius: theme.borderRadius.xs,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 4,
     alignSelf: 'flex-start',
   },
   customBadgeText: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.warning,
-    marginLeft: theme.spacing.xs,
+    fontSize: 12,
+    color: '#FF9800',
+    marginLeft: 6,
     fontWeight: '500',
   },
 });
+
+// ============================================================
+// EXPORTS
+// ============================================================
 
 export default CountyPicker;

@@ -1,4 +1,294 @@
-// User Roles - UPDATED with SCHOOL_ADMIN
+// ========================================
+// GOD'S EYE EDTECH - CONSTANTS
+// ========================================
+
+import { Platform } from 'react-native';
+
+// ============================================================
+// API CONFIGURATION
+// ============================================================
+
+// ⚠️ IMPORTANT: This is your backend URL
+// For Android Emulator: use 10.0.2.2:8000
+// For iOS Simulator: use 127.0.0.1:8000
+// For Physical Device: use your machine's IP (e.g., 192.168.1.100:8000)
+const getApiBaseUrl = () => {
+  // Development backend URL
+  const BACKEND_BASE = 'http://127.0.0.1:8000';
+  
+  // Android emulator needs special IP
+  if (Platform.OS === 'android') {
+    // If running on Android emulator, use 10.0.2.2
+    // If running on physical Android device, replace with your machine's IP
+    return `http://10.0.2.2:8000/api`;
+  }
+  
+  // iOS simulator and physical iOS devices can use 127.0.0.1
+  return `${BACKEND_BASE}/api`;
+};
+
+// API Base URL
+export const API_BASE_URL = getApiBaseUrl();
+
+// Full API Endpoints
+export const API_ENDPOINTS = {
+  // Base
+  BASE: API_BASE_URL,
+  
+  // Authentication
+  AUTH: {
+    BASE: `${API_BASE_URL}/auth`,
+    LOGIN: `${API_BASE_URL}/auth/login/`,
+    LOGOUT: `${API_BASE_URL}/auth/logout/`,
+    REGISTER: `${API_BASE_URL}/auth/register/`,
+    REFRESH_TOKEN: `${API_BASE_URL}/auth/token/refresh/`,
+    VERIFY_TOKEN: `${API_BASE_URL}/auth/token/verify/`,
+    ME: `${API_BASE_URL}/auth/me/`,
+    PASSWORD_RESET: `${API_BASE_URL}/auth/reset-password/`,
+    PASSWORD_RESET_CONFIRM: `${API_BASE_URL}/auth/reset-password/confirm/`,
+    CHANGE_PASSWORD: `${API_BASE_URL}/auth/change-password/`,
+  },
+  
+  // Users
+  USERS: {
+    BASE: `${API_BASE_URL}/users`,
+    LIST: `${API_BASE_URL}/users/`,
+    DETAIL: (id) => `${API_BASE_URL}/users/${id}/`,
+    CREATE: `${API_BASE_URL}/users/`,
+    UPDATE: (id) => `${API_BASE_URL}/users/${id}/`,
+    DELETE: (id) => `${API_BASE_URL}/users/${id}/`,
+  },
+  
+  // Locations
+  LOCATIONS: {
+    BASE: `${API_BASE_URL}/locations`,
+    // Countries
+    COUNTRIES: `${API_BASE_URL}/locations/countries/`,
+    COUNTRY_DETAIL: (id) => `${API_BASE_URL}/locations/countries/${id}/`,
+    // Counties (Kenya's 47 Counties)
+    COUNTIES: `${API_BASE_URL}/locations/counties/`,
+    COUNTY_DETAIL: (id) => `${API_BASE_URL}/locations/counties/${id}/`,
+    // Sub-Counties
+    SUB_COUNTIES: `${API_BASE_URL}/locations/sub-counties/`,
+    SUB_COUNTY_DETAIL: (id) => `${API_BASE_URL}/locations/sub-counties/${id}/`,
+    // Wards
+    WARDS: `${API_BASE_URL}/locations/wards/`,
+    WARD_DETAIL: (id) => `${API_BASE_URL}/locations/wards/${id}/`,
+  },
+  
+  // Schools
+  SCHOOLS: {
+    BASE: `${API_BASE_URL}/schools`,
+    LIST: `${API_BASE_URL}/schools/`,
+    DETAIL: (id) => `${API_BASE_URL}/schools/${id}/`,
+    CREATE: `${API_BASE_URL}/schools/`,
+    UPDATE: (id) => `${API_BASE_URL}/schools/${id}/`,
+    DELETE: (id) => `${API_BASE_URL}/schools/${id}/`,
+    APPROVE: (id) => `${API_BASE_URL}/schools/${id}/approve_school/`,
+    REJECT: (id) => `${API_BASE_URL}/schools/${id}/reject_school/`,
+    PENDING: `${API_BASE_URL}/schools/pending/`,
+    STATISTICS: (id) => `${API_BASE_URL}/schools/${id}/statistics/`,
+    SETTINGS: (id) => `${API_BASE_URL}/schools/${id}/settings/`,
+  },
+  
+  // Students
+  STUDENTS: {
+    BASE: `${API_BASE_URL}/students`,
+    LIST: `${API_BASE_URL}/students/`,
+    DETAIL: (id) => `${API_BASE_URL}/students/${id}/`,
+    CREATE: `${API_BASE_URL}/students/`,
+    UPDATE: (id) => `${API_BASE_URL}/students/${id}/`,
+    DELETE: (id) => `${API_BASE_URL}/students/${id}/`,
+    BULK_CREATE: `${API_BASE_URL}/students/bulk_create/`,
+    GUARDIANS: (id) => `${API_BASE_URL}/students/${id}/guardians/`,
+    ATTENDANCE: (id) => `${API_BASE_URL}/students/${id}/attendance/`,
+    BY_GRADE: `${API_BASE_URL}/students/by_grade/`,
+  },
+  
+  // Teachers
+  TEACHERS: {
+    BASE: `${API_BASE_URL}/teachers`,
+    LIST: `${API_BASE_URL}/teachers/`,
+    DETAIL: (id) => `${API_BASE_URL}/teachers/${id}/`,
+    CREATE: `${API_BASE_URL}/teachers/`,
+    UPDATE: (id) => `${API_BASE_URL}/teachers/${id}/`,
+    DELETE: (id) => `${API_BASE_URL}/teachers/${id}/`,
+    ASSIGN_CLASS: (id) => `${API_BASE_URL}/teachers/${id}/assign_class/`,
+    CLASSES: (id) => `${API_BASE_URL}/teachers/${id}/classes/`,
+  },
+  
+  // Guardians
+  GUARDIANS: {
+    BASE: `${API_BASE_URL}/guardians`,
+    LIST: `${API_BASE_URL}/guardians/`,
+    DETAIL: (id) => `${API_BASE_URL}/guardians/${id}/`,
+    CREATE: `${API_BASE_URL}/guardians/`,
+    UPDATE: (id) => `${API_BASE_URL}/guardians/${id}/`,
+    DELETE: (id) => `${API_BASE_URL}/guardians/${id}/`,
+    STUDENTS: (id) => `${API_BASE_URL}/guardians/${id}/students/`,
+    LINK: `${API_BASE_URL}/guardians/link/`,
+    APPROVE_LINK: `${API_BASE_URL}/guardians/approve_link/`,
+    REJECT_LINK: `${API_BASE_URL}/guardians/reject_link/`,
+    MY_STUDENTS: `${API_BASE_URL}/guardians/my_students/`,
+  },
+  
+  // Attendance
+  ATTENDANCE: {
+    BASE: `${API_BASE_URL}/attendance`,
+    LIST: `${API_BASE_URL}/attendance/`,
+    DETAIL: (id) => `${API_BASE_URL}/attendance/${id}/`,
+    CREATE: `${API_BASE_URL}/attendance/`,
+    UPDATE: (id) => `${API_BASE_URL}/attendance/${id}/`,
+    DELETE: (id) => `${API_BASE_URL}/attendance/${id}/`,
+    TODAY: `${API_BASE_URL}/attendance/today/`,
+    MARK_PRESENT: `${API_BASE_URL}/attendance/mark_present/`,
+    MARK_ABSENT: `${API_BASE_URL}/attendance/mark_absent/`,
+    MARK_LATE: `${API_BASE_URL}/attendance/mark_late/`,
+    MARK_EXCUSED: `${API_BASE_URL}/attendance/mark_excused/`,
+    BULK_MARK: `${API_BASE_URL}/attendance/bulk_mark/`,
+    BY_DATE: `${API_BASE_URL}/attendance/by_date/`,
+    BY_STUDENT: `${API_BASE_URL}/attendance/by_student/`,
+    STATISTICS: `${API_BASE_URL}/attendance/statistics/`,
+    HISTORY: `${API_BASE_URL}/attendance/history/`,
+    SUMMARIES: `${API_BASE_URL}/attendance/summaries/`,
+    ABSENT_STUDENTS: `${API_BASE_URL}/attendance/absent_students/`,
+    LATE_STUDENTS: `${API_BASE_URL}/attendance/late_students/`,
+  },
+  
+  // QR Codes
+  QRCODES: {
+    BASE: `${API_BASE_URL}/qrcodes`,
+    LIST: `${API_BASE_URL}/qrcodes/`,
+    DETAIL: (id) => `${API_BASE_URL}/qrcodes/${id}/`,
+    GENERATE_FOR_STUDENT: `${API_BASE_URL}/qrcodes/generate_for_student/`,
+    SCAN: `${API_BASE_URL}/qrcodes/scan/`,
+    BULK_GENERATE: `${API_BASE_URL}/qrcodes/bulk_generate/`,
+    BY_STUDENT: `${API_BASE_URL}/qrcodes/by_student/`,
+    SCAN_LOGS: `${API_BASE_URL}/qrcodes/scan-logs/`,
+  },
+  
+  // Biometrics
+  BIOMETRICS: {
+    BASE: `${API_BASE_URL}/biometrics`,
+    LIST: `${API_BASE_URL}/biometrics/`,
+    DETAIL: (id) => `${API_BASE_URL}/biometrics/${id}/`,
+    ENROLL: `${API_BASE_URL}/biometrics/enroll/`,
+    VERIFY: `${API_BASE_URL}/biometrics/verify/`,
+    BY_STUDENT: `${API_BASE_URL}/biometrics/by_student/`,
+    SCAN_LOGS: `${API_BASE_URL}/biometrics/scan-logs/`,
+  },
+  
+  // OTC (One-Time Codes)
+  OTC: {
+    BASE: `${API_BASE_URL}/otc`,
+    LIST: `${API_BASE_URL}/otc/`,
+    DETAIL: (id) => `${API_BASE_URL}/otc/${id}/`,
+    GENERATE: `${API_BASE_URL}/otc/generate/`,
+    VERIFY: `${API_BASE_URL}/otc/verify/`,
+    MY_CODES: `${API_BASE_URL}/otc/my_codes/`,
+    ACTIVE_CODES: `${API_BASE_URL}/otc/active_codes/`,
+  },
+  
+  // Payments
+  PAYMENTS: {
+    BASE: `${API_BASE_URL}/payments`,
+    FEE_STRUCTURES: `${API_BASE_URL}/payments/fee-structures/`,
+    REQUESTS: {
+      BASE: `${API_BASE_URL}/payments/requests`,
+      LIST: `${API_BASE_URL}/payments/requests/`,
+      DETAIL: (id) => `${API_BASE_URL}/payments/requests/${id}/`,
+      CREATE: `${API_BASE_URL}/payments/requests/`,
+      UPDATE: (id) => `${API_BASE_URL}/payments/requests/${id}/`,
+      MY_PAYMENTS: `${API_BASE_URL}/payments/requests/my_payments/`,
+      OVERDUE: `${API_BASE_URL}/payments/requests/overdue/`,
+      STATISTICS: `${API_BASE_URL}/payments/requests/statistics/`,
+      BULK_CREATE: `${API_BASE_URL}/payments/requests/bulk_create/`,
+    },
+    PAYMENTS: {
+      LIST: `${API_BASE_URL}/payments/payments/`,
+      CREATE: `${API_BASE_URL}/payments/payments/`,
+      VERIFY: (id) => `${API_BASE_URL}/payments/payments/${id}/verify/`,
+    },
+    MPESA: {
+      INITIATE: `${API_BASE_URL}/payments/mpesa/initiate/`,
+      CALLBACK: `${API_BASE_URL}/payments/mpesa/callback/`,
+      QUERY: `${API_BASE_URL}/payments/mpesa/query/`,
+    },
+  },
+  
+  // Notifications
+  NOTIFICATIONS: {
+    BASE: `${API_BASE_URL}/notifications`,
+    LIST: `${API_BASE_URL}/notifications/`,
+    DETAIL: (id) => `${API_BASE_URL}/notifications/${id}/`,
+    MY_NOTIFICATIONS: `${API_BASE_URL}/notifications/my_notifications/`,
+    MARK_READ: (id) => `${API_BASE_URL}/notifications/${id}/mark_read/`,
+    MARK_ALL_READ: `${API_BASE_URL}/notifications/mark_all_read/`,
+    UNREAD_COUNT: `${API_BASE_URL}/notifications/unread_count/`,
+    PREFERENCES: {
+      BASE: `${API_BASE_URL}/notifications/preferences`,
+      MY_PREFERENCES: `${API_BASE_URL}/notifications/preferences/my_preferences/`,
+      UPDATE: `${API_BASE_URL}/notifications/preferences/update_preferences/`,
+    },
+  },
+  
+  // Reports
+  REPORTS: {
+    BASE: `${API_BASE_URL}/reports`,
+    LIST: `${API_BASE_URL}/reports/`,
+    GENERATE: `${API_BASE_URL}/reports/generate/`,
+    DETAIL: (id) => `${API_BASE_URL}/reports/${id}/`,
+    DOWNLOAD: (id) => `${API_BASE_URL}/reports/${id}/download/`,
+    SCHEDULED: {
+      BASE: `${API_BASE_URL}/reports/scheduled`,
+      LIST: `${API_BASE_URL}/reports/scheduled/`,
+      CREATE: `${API_BASE_URL}/reports/scheduled/`,
+      UPDATE: (id) => `${API_BASE_URL}/reports/scheduled/${id}/`,
+      DELETE: (id) => `${API_BASE_URL}/reports/scheduled/${id}/`,
+    },
+  },
+  
+  // Analytics
+  ANALYTICS: {
+    BASE: `${API_BASE_URL}/analytics`,
+    DASHBOARD: {
+      METRICS: `${API_BASE_URL}/analytics/dashboard/metrics/`,
+      COMPARATIVE: `${API_BASE_URL}/analytics/dashboard/comparative/`,
+      TOP_PERFORMERS: `${API_BASE_URL}/analytics/dashboard/top_performers/`,
+      TRENDS: `${API_BASE_URL}/analytics/dashboard/trends/`,
+    },
+    DAILY: {
+      LIST: `${API_BASE_URL}/analytics/daily/`,
+      BY_DATE: `${API_BASE_URL}/analytics/daily/by_date/`,
+      DATE_RANGE: `${API_BASE_URL}/analytics/daily/date_range/`,
+    },
+    WEEKLY: {
+      LIST: `${API_BASE_URL}/analytics/weekly/`,
+      CURRENT: `${API_BASE_URL}/analytics/weekly/current_week/`,
+    },
+    MONTHLY: {
+      LIST: `${API_BASE_URL}/analytics/monthly/`,
+      CURRENT: `${API_BASE_URL}/analytics/monthly/current_month/`,
+    },
+  },
+};
+
+// API Configuration
+export const API_CONFIG = {
+  TIMEOUT: 30000, // 30 seconds
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000, // 1 second
+  HEADERS: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+};
+
+// ============================================================
+// USER ROLES & AUTHENTICATION
+// ============================================================
+
+// User Roles - MATCHES BACKEND EXACTLY
 export const USER_ROLES = {
   SUPER_ADMIN: 'super_admin',
   SCHOOL_ADMIN: 'school_admin',
@@ -30,7 +320,317 @@ export const USER_ROLE_COLORS = {
   [USER_ROLES.GUARDIAN]: '#4CAF50',
 };
 
-// Screen Names - 🆕 UPDATED with all School Admin screens
+// ============================================================
+// ROLE HELPER FUNCTIONS
+// ============================================================
+
+/**
+ * Get user role from user object
+ * Priority: Super Admin > School Admin > Teacher > Guardian
+ * @param {Object} user - User object from backend
+ * @returns {string|null} User role constant
+ */
+export const getUserRole = (user) => {
+  if (!user) return null;
+
+  if (user.is_superadmin) return USER_ROLES.SUPER_ADMIN;
+  if (user.is_school_admin) return USER_ROLES.SCHOOL_ADMIN;
+  if (user.is_teacher) return USER_ROLES.TEACHER;
+  if (user.is_guardian) return USER_ROLES.GUARDIAN;
+
+  return null;
+};
+
+/**
+ * Get user role display name
+ * @param {Object} user - User object from backend
+ * @returns {string} User role display name
+ */
+export const getUserRoleDisplay = (user) => {
+  const role = getUserRole(user);
+  return USER_ROLE_LABELS[role] || 'Unknown Role';
+};
+
+/**
+ * Get user role icon
+ * @param {Object} user - User object from backend
+ * @returns {string} Material Community Icon name
+ */
+export const getUserRoleIcon = (user) => {
+  const role = getUserRole(user);
+  return USER_ROLE_ICONS[role] || 'account';
+};
+
+/**
+ * Get user role color
+ * @param {Object} user - User object from backend
+ * @returns {string} Hex color code
+ */
+export const getUserRoleColor = (user) => {
+  const role = getUserRole(user);
+  return USER_ROLE_COLORS[role] || '#9E9E9E';
+};
+
+/**
+ * Check if user has a specific role
+ * @param {Object} user - User object from backend
+ * @param {string} role - Role to check (USER_ROLES constant)
+ * @returns {boolean} True if user has the role
+ */
+export const hasRole = (user, role) => {
+  if (!user || !role) return false;
+
+  switch (role) {
+    case USER_ROLES.SUPER_ADMIN:
+      return user.is_superadmin === true;
+    case USER_ROLES.SCHOOL_ADMIN:
+      return user.is_school_admin === true;
+    case USER_ROLES.TEACHER:
+      return user.is_teacher === true;
+    case USER_ROLES.GUARDIAN:
+      return user.is_guardian === true;
+    default:
+      return false;
+  }
+};
+
+/**
+ * Check if user has any of the specified roles
+ * @param {Object} user - User object from backend
+ * @param {Array<string>} roles - Array of roles to check
+ * @returns {boolean} True if user has any of the roles
+ */
+export const hasAnyRole = (user, roles) => {
+  if (!user || !Array.isArray(roles)) return false;
+  return roles.some(role => hasRole(user, role));
+};
+
+/**
+ * Check if user has all of the specified roles
+ * @param {Object} user - User object from backend
+ * @param {Array<string>} roles - Array of roles to check
+ * @returns {boolean} True if user has all of the roles
+ */
+export const hasAllRoles = (user, roles) => {
+  if (!user || !Array.isArray(roles)) return false;
+  return roles.every(role => hasRole(user, role));
+};
+
+/**
+ * Check if user is admin (Super Admin or School Admin)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user is admin
+ */
+export const isAdmin = (user) => {
+  if (!user) return false;
+  return user.is_superadmin === true || user.is_school_admin === true;
+};
+
+/**
+ * Check if user is school member (School Admin or Teacher)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user is school member
+ */
+export const isSchoolMember = (user) => {
+  if (!user) return false;
+  return user.is_school_admin === true || user.is_teacher === true;
+};
+
+/**
+ * Check if user has valid role assigned
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user has at least one role
+ */
+export const hasValidRole = (user) => {
+  if (!user) return false;
+  return (
+    user.is_superadmin === true ||
+    user.is_school_admin === true ||
+    user.is_teacher === true ||
+    user.is_guardian === true
+  );
+};
+
+/**
+ * Get all roles assigned to user
+ * @param {Object} user - User object from backend
+ * @returns {Array<string>} Array of role constants
+ */
+export const getUserRoles = (user) => {
+  if (!user) return [];
+
+  const roles = [];
+  if (user.is_superadmin) roles.push(USER_ROLES.SUPER_ADMIN);
+  if (user.is_school_admin) roles.push(USER_ROLES.SCHOOL_ADMIN);
+  if (user.is_teacher) roles.push(USER_ROLES.TEACHER);
+  if (user.is_guardian) roles.push(USER_ROLES.GUARDIAN);
+
+  return roles;
+};
+
+/**
+ * Get user's primary role (highest priority)
+ * @param {Object} user - User object from backend
+ * @returns {string|null} Primary role constant
+ */
+export const getPrimaryRole = (user) => {
+  return getUserRole(user);
+};
+
+/**
+ * Format user's full name
+ * @param {Object} user - User object from backend
+ * @returns {string} Formatted full name
+ */
+export const getUserFullName = (user) => {
+  if (!user) return 'Unknown User';
+
+  const parts = [
+    user.first_name,
+    user.middle_name,
+    user.last_name,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(' ') : user.username || 'Unknown User';
+};
+
+/**
+ * Get user's initials
+ * @param {Object} user - User object from backend
+ * @returns {string} User initials (max 2 characters)
+ */
+export const getUserInitials = (user) => {
+  if (!user) return '?';
+
+  const firstName = user.first_name || '';
+  const lastName = user.last_name || '';
+
+  if (firstName && lastName) {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  }
+
+  if (firstName) {
+    return firstName.substring(0, 2).toUpperCase();
+  }
+
+  if (user.username) {
+    return user.username.substring(0, 2).toUpperCase();
+  }
+
+  return '?';
+};
+
+/**
+ * Check if user belongs to a school
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user has a school
+ */
+export const hasSchool = (user) => {
+  if (!user) return false;
+  return !!user.school || !!user.school_data;
+};
+
+/**
+ * Get user's school name
+ * @param {Object} user - User object from backend
+ * @returns {string|null} School name or null
+ */
+export const getUserSchoolName = (user) => {
+  if (!user) return null;
+  return user.school_data?.name || null;
+};
+
+/**
+ * Check if user can manage school (Super Admin or School Admin)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user can manage school
+ */
+export const canManageSchool = (user) => {
+  if (!user) return false;
+  return user.is_superadmin === true || user.is_school_admin === true;
+};
+
+/**
+ * Check if user can view all schools (Super Admin only)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user can view all schools
+ */
+export const canViewAllSchools = (user) => {
+  if (!user) return false;
+  return user.is_superadmin === true;
+};
+
+/**
+ * Check if user can manage students (School Admin or Teacher)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user can manage students
+ */
+export const canManageStudents = (user) => {
+  if (!user) return false;
+  return (
+    user.is_superadmin === true ||
+    user.is_school_admin === true ||
+    user.is_teacher === true
+  );
+};
+
+/**
+ * Check if user can view attendance (School Admin, Teacher, or Guardian)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user can view attendance
+ */
+export const canViewAttendance = (user) => {
+  if (!user) return false;
+  return (
+    user.is_superadmin === true ||
+    user.is_school_admin === true ||
+    user.is_teacher === true ||
+    user.is_guardian === true
+  );
+};
+
+/**
+ * Check if user can mark attendance (School Admin or Teacher)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user can mark attendance
+ */
+export const canMarkAttendance = (user) => {
+  if (!user) return false;
+  return (
+    user.is_superadmin === true ||
+    user.is_school_admin === true ||
+    user.is_teacher === true
+  );
+};
+
+/**
+ * Check if user can view payments (All roles)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user can view payments
+ */
+export const canViewPayments = (user) => {
+  if (!user) return false;
+  return hasValidRole(user);
+};
+
+/**
+ * Check if user can create payment requests (School Admin or Teacher)
+ * @param {Object} user - User object from backend
+ * @returns {boolean} True if user can create payment requests
+ */
+export const canCreatePaymentRequests = (user) => {
+  if (!user) return false;
+  return (
+    user.is_superadmin === true ||
+    user.is_school_admin === true ||
+    user.is_teacher === true
+  );
+};
+
+// ============================================================
+// SCREEN NAMES
+// ============================================================
+
 export const SCREENS = {
   // Auth
   SPLASH: 'Splash',
@@ -52,14 +652,12 @@ export const SCREENS = {
   PENDING_APPROVALS: 'PendingApprovals',
   PAYMENT_REQUESTS: 'PaymentRequests',
   
-  // School Admin - Existing
+  // School Admin
   SCHOOL_ADMIN_DASHBOARD: 'SchoolAdminDashboard',
   SCHOOL_TEACHERS_MANAGEMENT: 'SchoolTeachersManagement',
   SCHOOL_STUDENTS_OVERVIEW: 'SchoolStudentsOverview',
   SCHOOL_SETTINGS: 'SchoolSettings',
   SCHOOL_REPORTS: 'SchoolReports',
-  
-  // 🆕 NEW - School Admin Management Screens
   MANAGE_TEACHERS: 'ManageTeachers',
   ADD_TEACHER: 'AddTeacher',
   MANAGE_STUDENTS: 'ManageStudents',
@@ -90,17 +688,19 @@ export const SCREENS = {
   MANUAL_ATTENDANCE: 'ManualAttendance',
 };
 
-// Payment Status - 🆕 UPDATED with partial payment statuses
+// ============================================================
+// PAYMENT CONSTANTS
+// ============================================================
+
 export const PAYMENT_STATUS = {
   PENDING: 'pending',
   APPROVED: 'approved',
   PAID: 'paid',
-  PARTIALLY_PAID: 'partially_paid',  // 🆕 NEW
+  PARTIALLY_PAID: 'partially_paid',
   REJECTED: 'rejected',
-  OVERDUE: 'overdue',  // 🆕 NEW
+  OVERDUE: 'overdue',
 };
 
-// 🆕 NEW - Payment Status Labels
 export const PAYMENT_STATUS_LABELS = {
   [PAYMENT_STATUS.PENDING]: 'Pending',
   [PAYMENT_STATUS.APPROVED]: 'Approved',
@@ -110,7 +710,6 @@ export const PAYMENT_STATUS_LABELS = {
   [PAYMENT_STATUS.OVERDUE]: 'Overdue',
 };
 
-// 🆕 NEW - Payment Status Colors
 export const PAYMENT_STATUS_COLORS = {
   [PAYMENT_STATUS.PENDING]: '#FF9800',
   [PAYMENT_STATUS.APPROVED]: '#2196F3',
@@ -120,7 +719,6 @@ export const PAYMENT_STATUS_COLORS = {
   [PAYMENT_STATUS.OVERDUE]: '#D32F2F',
 };
 
-// 🆕 NEW - Payment Status Icons
 export const PAYMENT_STATUS_ICONS = {
   [PAYMENT_STATUS.PENDING]: 'clock-outline',
   [PAYMENT_STATUS.APPROVED]: 'check-circle-outline',
@@ -130,31 +728,31 @@ export const PAYMENT_STATUS_ICONS = {
   [PAYMENT_STATUS.OVERDUE]: 'alert-circle',
 };
 
-// 🆕 NEW - Payment Flexibility Types
 export const PAYMENT_FLEXIBILITY = {
-  FULL_ONLY: 'full_only',              // Must pay full amount
-  PARTIAL_ALLOWED: 'partial_allowed',  // Can pay any amount >= minimum
-  INSTALLMENTS: 'installments',        // Fixed installment plan
+  FULL_ONLY: 'full_only',
+  PARTIAL_ALLOWED: 'partial_allowed',
+  INSTALLMENTS: 'installments',
 };
 
-// 🆕 NEW - Payment Flexibility Labels
 export const PAYMENT_FLEXIBILITY_LABELS = {
   [PAYMENT_FLEXIBILITY.FULL_ONLY]: 'Full Payment Only',
   [PAYMENT_FLEXIBILITY.PARTIAL_ALLOWED]: 'Partial Payments Allowed',
   [PAYMENT_FLEXIBILITY.INSTALLMENTS]: 'Installment Plan',
 };
 
-// 🆕 NEW - Payment Configuration
 export const PAYMENT_CONFIG = {
-  MIN_PAYMENT_AMOUNT: 100,              // Minimum KES 100
-  MAX_INSTALLMENTS: 12,                 // Maximum 12 installments
-  DEFAULT_MINIMUM_PERCENTAGE: 20,       // 20% minimum payment
-  ALLOW_OVERPAYMENT: false,            // Don't allow paying more than owed
+  MIN_PAYMENT_AMOUNT: 100,
+  MAX_INSTALLMENTS: 12,
+  DEFAULT_MINIMUM_PERCENTAGE: 20,
+  ALLOW_OVERPAYMENT: false,
   CURRENCY: 'KES',
   CURRENCY_SYMBOL: 'KES',
 };
 
-// Request Status
+// ============================================================
+// REQUEST & APPROVAL CONSTANTS
+// ============================================================
+
 export const REQUEST_STATUS = {
   PENDING: 'pending',
   APPROVED: 'approved',
@@ -163,7 +761,10 @@ export const REQUEST_STATUS = {
   FINALIZED: 'finalized',
 };
 
-// Attendance Status
+// ============================================================
+// ATTENDANCE CONSTANTS
+// ============================================================
+
 export const ATTENDANCE_STATUS = {
   PRESENT: 'present',
   ABSENT: 'absent',
@@ -172,13 +773,35 @@ export const ATTENDANCE_STATUS = {
   UNKNOWN: 'unknown',
 };
 
-// Attendance Types
+export const ATTENDANCE_STATUS_LABELS = {
+  [ATTENDANCE_STATUS.PRESENT]: 'Present',
+  [ATTENDANCE_STATUS.ABSENT]: 'Absent',
+  [ATTENDANCE_STATUS.LATE]: 'Late',
+  [ATTENDANCE_STATUS.EXCUSED]: 'Excused',
+  [ATTENDANCE_STATUS.UNKNOWN]: 'Unknown',
+};
+
+export const ATTENDANCE_STATUS_COLORS = {
+  [ATTENDANCE_STATUS.PRESENT]: '#4CAF50',
+  [ATTENDANCE_STATUS.ABSENT]: '#F44336',
+  [ATTENDANCE_STATUS.LATE]: '#FF9800',
+  [ATTENDANCE_STATUS.EXCUSED]: '#2196F3',
+  [ATTENDANCE_STATUS.UNKNOWN]: '#757575',
+};
+
+export const ATTENDANCE_STATUS_ICONS = {
+  [ATTENDANCE_STATUS.PRESENT]: 'check-circle',
+  [ATTENDANCE_STATUS.ABSENT]: 'close-circle',
+  [ATTENDANCE_STATUS.LATE]: 'clock-alert',
+  [ATTENDANCE_STATUS.EXCUSED]: 'information',
+  [ATTENDANCE_STATUS.UNKNOWN]: 'help-circle',
+};
+
 export const ATTENDANCE_TYPES = {
   CHECK_IN: 'check_in',
   CHECK_OUT: 'check_out',
 };
 
-// Attendance Methods
 export const ATTENDANCE_METHODS = {
   QR_CODE: 'qr_code',
   FINGERPRINT: 'fingerprint',
@@ -187,7 +810,6 @@ export const ATTENDANCE_METHODS = {
   MANUAL: 'manual',
 };
 
-// Attendance Method Labels
 export const ATTENDANCE_METHOD_LABELS = {
   [ATTENDANCE_METHODS.QR_CODE]: 'QR Code',
   [ATTENDANCE_METHODS.FINGERPRINT]: 'Fingerprint',
@@ -196,7 +818,6 @@ export const ATTENDANCE_METHOD_LABELS = {
   [ATTENDANCE_METHODS.MANUAL]: 'Manual Entry',
 };
 
-// Attendance Method Icons
 export const ATTENDANCE_METHOD_ICONS = {
   [ATTENDANCE_METHODS.QR_CODE]: 'qrcode-scan',
   [ATTENDANCE_METHODS.FINGERPRINT]: 'fingerprint',
@@ -205,7 +826,6 @@ export const ATTENDANCE_METHOD_ICONS = {
   [ATTENDANCE_METHODS.MANUAL]: 'pencil',
 };
 
-// Attendance Method Colors
 export const ATTENDANCE_METHOD_COLORS = {
   [ATTENDANCE_METHODS.QR_CODE]: '#2196F3',
   [ATTENDANCE_METHODS.FINGERPRINT]: '#4CAF50',
@@ -214,14 +834,12 @@ export const ATTENDANCE_METHOD_COLORS = {
   [ATTENDANCE_METHODS.MANUAL]: '#757575',
 };
 
-// Biometric Types
 export const BIOMETRIC_TYPES = {
   FINGERPRINT: 'fingerprint',
   FACE_RECOGNITION: 'face_recognition',
   IRIS: 'iris',
 };
 
-// QR Code Settings
 export const QR_CODE_CONFIG = {
   SIZE: 256,
   ERROR_CORRECTION_LEVEL: 'H',
@@ -230,7 +848,6 @@ export const QR_CODE_CONFIG = {
   MARGIN: 4,
 };
 
-// One-Time Code Settings
 export const OTC_CONFIG = {
   LENGTH: 6,
   EXPIRY_MINUTES: 5,
@@ -238,7 +855,6 @@ export const OTC_CONFIG = {
   MAX_ATTEMPTS: 3,
 };
 
-// Attendance Report Types
 export const REPORT_TYPES = {
   DAILY: 'daily',
   WEEKLY: 'weekly',
@@ -248,14 +864,12 @@ export const REPORT_TYPES = {
   CLASS: 'class',
 };
 
-// Attendance Report Formats
 export const REPORT_FORMATS = {
   PDF: 'pdf',
   EXCEL: 'excel',
   CSV: 'csv',
 };
 
-// Attendance Time Windows
 export const ATTENDANCE_TIME_WINDOWS = {
   EARLY_CHECKIN_MINUTES: 30,
   LATE_CHECKIN_MINUTES: 15,
@@ -264,7 +878,6 @@ export const ATTENDANCE_TIME_WINDOWS = {
   DEFAULT_CHECKOUT_TIME: '15:00',
 };
 
-// Biometric Error Codes
 export const BIOMETRIC_ERROR_CODES = {
   NOT_AVAILABLE: 'BIOMETRIC_NOT_AVAILABLE',
   NOT_ENROLLED: 'BIOMETRIC_NOT_ENROLLED',
@@ -275,60 +888,21 @@ export const BIOMETRIC_ERROR_CODES = {
   SYSTEM_ERROR: 'BIOMETRIC_SYSTEM_ERROR',
 };
 
+// ============================================================
 // 🇰🇪 KENYA EDUCATION SYSTEM CONSTANTS
+// ============================================================
 
-// Kenya's 47 Counties (Alphabetically Ordered)
 export const KENYA_COUNTIES = [
-  'Baringo',
-  'Bomet',
-  'Bungoma',
-  'Busia',
-  'Elgeyo-Marakwet',
-  'Embu',
-  'Garissa',
-  'Homa Bay',
-  'Isiolo',
-  'Kajiado',
-  'Kakamega',
-  'Kericho',
-  'Kiambu',
-  'Kilifi',
-  'Kirinyaga',
-  'Kisii',
-  'Kisumu',
-  'Kitui',
-  'Kwale',
-  'Laikipia',
-  'Lamu',
-  'Machakos',
-  'Makueni',
-  'Mandera',
-  'Marsabit',
-  'Meru',
-  'Migori',
-  'Mombasa',
-  'Murang\'a',
-  'Nairobi',
-  'Nakuru',
-  'Nandi',
-  'Narok',
-  'Nyamira',
-  'Nyandarua',
-  'Nyeri',
-  'Samburu',
-  'Siaya',
-  'Taita-Taveta',
-  'Tana River',
-  'Tharaka-Nithi',
-  'Trans Nzoia',
-  'Turkana',
-  'Uasin Gishu',
-  'Vihiga',
-  'Wajir',
-  'West Pokot',
+  'Baringo', 'Bomet', 'Bungoma', 'Busia', 'Elgeyo-Marakwet', 'Embu', 'Garissa',
+  'Homa Bay', 'Isiolo', 'Kajiado', 'Kakamega', 'Kericho', 'Kiambu', 'Kilifi',
+  'Kirinyaga', 'Kisii', 'Kisumu', 'Kitui', 'Kwale', 'Laikipia', 'Lamu',
+  'Machakos', 'Makueni', 'Mandera', 'Marsabit', 'Meru', 'Migori', 'Mombasa',
+  'Murang\'a', 'Nairobi', 'Nakuru', 'Nandi', 'Narok', 'Nyamira', 'Nyandarua',
+  'Nyeri', 'Samburu', 'Siaya', 'Taita-Taveta', 'Tana River', 'Tharaka-Nithi',
+  'Trans Nzoia', 'Turkana', 'Uasin Gishu', 'Vihiga', 'Wajir', 'West Pokot',
 ];
 
-// Kenya Education Levels (CBC System)
+// 🆕 EDUCATION LEVELS
 export const KENYA_EDUCATION_LEVELS = {
   PRE_PRIMARY: 'pre_primary',
   PRIMARY: 'primary',
@@ -336,7 +910,6 @@ export const KENYA_EDUCATION_LEVELS = {
   SENIOR_SECONDARY: 'senior_secondary',
 };
 
-// Kenya Education Level Labels
 export const KENYA_EDUCATION_LEVEL_LABELS = {
   [KENYA_EDUCATION_LEVELS.PRE_PRIMARY]: 'Pre-Primary (EYE)',
   [KENYA_EDUCATION_LEVELS.PRIMARY]: 'Primary',
@@ -344,40 +917,28 @@ export const KENYA_EDUCATION_LEVEL_LABELS = {
   [KENYA_EDUCATION_LEVELS.SENIOR_SECONDARY]: 'Senior Secondary',
 };
 
-// Kenya Grades (CBC System)
+// 🆕 GRADES (Kenya CBC + 8-4-4 System)
 export const KENYA_GRADES = {
-  // Pre-Primary (Ages 4-6)
   PP1: 'pp1',
   PP2: 'pp2',
-  
-  // Lower Primary (Ages 6-9)
   GRADE_1: 'grade_1',
   GRADE_2: 'grade_2',
   GRADE_3: 'grade_3',
-  
-  // Upper Primary (Ages 9-12)
   GRADE_4: 'grade_4',
   GRADE_5: 'grade_5',
   GRADE_6: 'grade_6',
-  
-  // Junior Secondary (Ages 12-15)
   GRADE_7: 'grade_7',
   GRADE_8: 'grade_8',
   GRADE_9: 'grade_9',
-  
-  // Senior Secondary (Ages 15-18)
   GRADE_10: 'grade_10',
   GRADE_11: 'grade_11',
   GRADE_12: 'grade_12',
-  
-  // 8-4-4 System (Transition)
   FORM_1: 'form_1',
   FORM_2: 'form_2',
   FORM_3: 'form_3',
   FORM_4: 'form_4',
 };
 
-// Kenya Grade Labels
 export const KENYA_GRADE_LABELS = {
   [KENYA_GRADES.PP1]: 'PP1 (Pre-Primary 1)',
   [KENYA_GRADES.PP2]: 'PP2 (Pre-Primary 2)',
@@ -399,7 +960,7 @@ export const KENYA_GRADE_LABELS = {
   [KENYA_GRADES.FORM_4]: 'Form 4 (8-4-4)',
 };
 
-// Kenya Grades by Education Level
+// 🆕 GRADES BY EDUCATION LEVEL
 export const KENYA_GRADES_BY_LEVEL = {
   [KENYA_EDUCATION_LEVELS.PRE_PRIMARY]: [
     KENYA_GRADES.PP1,
@@ -429,21 +990,20 @@ export const KENYA_GRADES_BY_LEVEL = {
   ],
 };
 
-// Kenya Academic Terms
+// 🆕 ACADEMIC TERMS
 export const KENYA_ACADEMIC_TERMS = {
   TERM_1: 'term_1',
   TERM_2: 'term_2',
   TERM_3: 'term_3',
 };
 
-// Kenya Academic Term Labels
 export const KENYA_ACADEMIC_TERM_LABELS = {
   [KENYA_ACADEMIC_TERMS.TERM_1]: 'Term 1 (Jan - Apr)',
   [KENYA_ACADEMIC_TERMS.TERM_2]: 'Term 2 (May - Aug)',
   [KENYA_ACADEMIC_TERMS.TERM_3]: 'Term 3 (Sep - Nov)',
 };
 
-// Kenya Stream/Class Naming Conventions
+// 🆕 STREAM TYPES
 export const KENYA_STREAM_TYPES = {
   COLORS: 'colors',
   DIRECTIONS: 'directions',
@@ -453,59 +1013,41 @@ export const KENYA_STREAM_TYPES = {
   CUSTOM: 'custom',
 };
 
-// Kenya Common Streams
+// 🆕 COMMON STREAMS
 export const KENYA_COMMON_STREAMS = {
-  // Colors
   colors: ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'White', 'Black'],
-  
-  // Directions
   directions: ['East', 'West', 'North', 'South', 'Northeast', 'Northwest', 'Southeast', 'Southwest'],
-  
-  // Letters
   letters: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
-  
-  // Animals (African Wildlife)
   animals: ['Lion', 'Leopard', 'Cheetah', 'Buffalo', 'Elephant', 'Rhino', 'Giraffe', 'Zebra'],
-  
-  // Famous Kenyan Places
   places: ['Kilimanjaro', 'Kenya', 'Mara', 'Tsavo', 'Amboseli', 'Nakuru', 'Nairobi', 'Mombasa'],
 };
 
-// Kenya House System
+// 🆕 COMMON HOUSES
 export const KENYA_COMMON_HOUSES = {
-  // Mountains
   mountains: ['Kilimanjaro', 'Kenya', 'Elgon', 'Longonot', 'Aberdare', 'Meru'],
-  
-  // Wildlife Parks
   wildlifeParks: ['Mara', 'Tsavo', 'Amboseli', 'Nakuru', 'Samburu', 'Nairobi'],
-  
-  // Historical Figures
   historicalFigures: ['Kenyatta', 'Odinga', 'Wangari', 'Kimathi', 'Muindi', 'Waiyaki'],
-  
-  // Colors
   colors: ['Red', 'Blue', 'Green', 'Yellow'],
 };
 
-// Kenya House Colors (Array format for color picker component)
+// 🆕 HOUSE COLORS
 export const KENYA_HOUSE_COLORS = [
   { name: 'Red', hex: '#F44336' },
   { name: 'Blue', hex: '#2196F3' },
   { name: 'Green', hex: '#4CAF50' },
-  { name: 'Yellow', hex: '#FFEB3B' },
+  { name: 'Yellow', hex: '#FFEB3B'},
   { name: 'Orange', hex: '#FF9800' },
   { name: 'Purple', hex: '#9C27B0' },
   { name: 'White', hex: '#FFFFFF' },
   { name: 'Black', hex: '#000000' },
 ];
 
-// Kenya School Types
 export const KENYA_SCHOOL_TYPES = {
   PUBLIC: 'public',
   PRIVATE: 'private',
   INTERNATIONAL: 'international',
 };
 
-// Kenya School Categories (Performance-based)
 export const KENYA_SCHOOL_CATEGORIES = {
   NATIONAL: 'national',
   EXTRA_COUNTY: 'extra_county',
@@ -513,29 +1055,62 @@ export const KENYA_SCHOOL_CATEGORIES = {
   SUB_COUNTY: 'sub_county',
 };
 
-// Kenya School Gender Types
 export const KENYA_SCHOOL_GENDER = {
   BOYS: 'boys',
   GIRLS: 'girls',
   MIXED: 'mixed',
 };
 
-// Kenya School Boarding Status
 export const KENYA_SCHOOL_BOARDING = {
   DAY: 'day',
   BOARDING: 'boarding',
   DAY_AND_BOARDING: 'day_and_boarding',
 };
 
-// Notification Types
+// ============================================================
+// 🆕 STUDENT CONSTANTS
+// ============================================================
+
+// Gender Options
+export const GENDER_OPTIONS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+];
+
+// Relationship Types (for Guardian-Student links)
+export const RELATIONSHIP_TYPES = {
+  PARENT: 'parent',
+  FATHER: 'father',
+  MOTHER: 'mother',
+  GUARDIAN: 'guardian',
+  SIBLING: 'sibling',
+  RELATIVE: 'relative',
+  OTHER: 'other',
+};
+
+export const RELATIONSHIP_LABELS = {
+  [RELATIONSHIP_TYPES.PARENT]: 'Parent',
+  [RELATIONSHIP_TYPES.FATHER]: 'Father',
+  [RELATIONSHIP_TYPES.MOTHER]: 'Mother',
+  [RELATIONSHIP_TYPES.GUARDIAN]: 'Legal Guardian',
+  [RELATIONSHIP_TYPES.SIBLING]: 'Sibling',
+  [RELATIONSHIP_TYPES.RELATIVE]: 'Relative',
+  [RELATIONSHIP_TYPES.OTHER]: 'Other',
+};
+
+// ============================================================
+// NOTIFICATION CONSTANTS
+// ============================================================
+
 export const NOTIFICATION_TYPES = {
   APPROVAL_REQUEST: 'approval_request',
   APPROVAL_APPROVED: 'approval_approved',
   APPROVAL_REJECTED: 'approval_rejected',
   PAYMENT_REQUEST: 'payment_request',
   PAYMENT_RECEIVED: 'payment_received',
-  PAYMENT_PARTIAL: 'payment_partial',  // 🆕 NEW
-  PAYMENT_REMINDER: 'payment_reminder',  // 🆕 NEW
+  PAYMENT_PARTIAL: 'payment_partial',
+  PAYMENT_REMINDER: 'payment_reminder',
   SCHOOL_APPROVED: 'school_approved',
   SCHOOL_REJECTED: 'school_rejected',
   SYSTEM: 'system',
@@ -546,7 +1121,10 @@ export const NOTIFICATION_TYPES = {
   ATTENDANCE_REMINDER: 'attendance_reminder',
 };
 
-// Date Formats
+// ============================================================
+// DATE & TIME FORMATS
+// ============================================================
+
 export const DATE_FORMATS = {
   SHORT: 'short',
   LONG: 'long',
@@ -560,7 +1138,10 @@ export const DATE_FORMATS = {
   DISPLAY_DATETIME: 'MMM DD, YYYY hh:mm A',
 };
 
-// API Error Messages
+// ============================================================
+// ERROR MESSAGES
+// ============================================================
+
 export const API_ERRORS = {
   NETWORK_ERROR: 'Network error. Please check your connection.',
   UNAUTHORIZED: 'Your session has expired. Please login again.',
@@ -576,12 +1157,11 @@ export const API_ERRORS = {
   ATTENDANCE_WINDOW_CLOSED: 'Attendance window is closed.',
   OTC_INVALID: 'Invalid one-time code.',
   OTC_EXPIRED: 'One-time code has expired.',
-  PAYMENT_AMOUNT_INVALID: 'Invalid payment amount.',  // 🆕 NEW
-  PAYMENT_AMOUNT_TOO_LOW: 'Payment amount is below minimum required.',  // 🆕 NEW
-  PAYMENT_AMOUNT_TOO_HIGH: 'Payment amount exceeds remaining balance.',  // 🆕 NEW
+  PAYMENT_AMOUNT_INVALID: 'Invalid payment amount.',
+  PAYMENT_AMOUNT_TOO_LOW: 'Payment amount is below minimum required.',
+  PAYMENT_AMOUNT_TOO_HIGH: 'Payment amount exceeds remaining balance.',
 };
 
-// Form Validation Messages
 export const VALIDATION_MESSAGES = {
   REQUIRED: 'This field is required',
   INVALID_EMAIL: 'Please enter a valid email address',
@@ -600,12 +1180,15 @@ export const VALIDATION_MESSAGES = {
   INVALID_BIRTH_CERTIFICATE: 'Invalid birth certificate number',
   INVALID_GRADE: 'Please select a valid grade',
   INVALID_STREAM: 'Please enter a valid stream/class',
-  PAYMENT_AMOUNT_BELOW_MINIMUM: 'Amount must be at least',  // 🆕 NEW
-  PAYMENT_AMOUNT_ABOVE_MAXIMUM: 'Amount cannot exceed',  // 🆕 NEW
-  PAYMENT_AMOUNT_REQUIRED: 'Payment amount is required',  // 🆕 NEW
+  PAYMENT_AMOUNT_BELOW_MINIMUM: 'Amount must be at least',
+  PAYMENT_AMOUNT_ABOVE_MAXIMUM: 'Amount cannot exceed',
+  PAYMENT_AMOUNT_REQUIRED: 'Payment amount is required',
 };
 
-// App Configuration
+// ============================================================
+// APP CONFIGURATION
+// ============================================================
+
 export const APP_CONFIG = {
   API_TIMEOUT: 30000,
   DEBOUNCE_DELAY: 500,
@@ -622,7 +1205,10 @@ export const APP_CONFIG = {
   FINGERPRINT_MATCH_THRESHOLD: 0.85,
 };
 
-// Storage Keys
+// ============================================================
+// STORAGE KEYS
+// ============================================================
+
 export const STORAGE_KEYS = {
   TOKEN: 'auth_token',
   REFRESH_TOKEN: 'refresh_token',
@@ -635,7 +1221,6 @@ export const STORAGE_KEYS = {
   ATTENDANCE_PREFERENCES: 'attendance_preferences',
 };
 
-// Async Storage Keys
 export const ASYNC_STORAGE_KEYS = {
   ONBOARDING_COMPLETE: 'onboarding_complete',
   LAST_SYNC: 'last_sync',
@@ -646,7 +1231,10 @@ export const ASYNC_STORAGE_KEYS = {
   OFFLINE_ATTENDANCE_QUEUE: 'offline_attendance_queue',
 };
 
-// Permission Types
+// ============================================================
+// PERMISSIONS & DEVICE SETTINGS
+// ============================================================
+
 export const PERMISSION_TYPES = {
   CAMERA: 'camera',
   LOCATION: 'location',
@@ -654,7 +1242,6 @@ export const PERMISSION_TYPES = {
   NOTIFICATIONS: 'notifications',
 };
 
-// Camera Settings
 export const CAMERA_SETTINGS = {
   QUALITY: 0.8,
   ASPECT_RATIO: [4, 3],
@@ -663,41 +1250,16 @@ export const CAMERA_SETTINGS = {
   FOCUS_DEPTH: 0,
 };
 
-// Attendance Status Colors
-export const ATTENDANCE_STATUS_COLORS = {
-  [ATTENDANCE_STATUS.PRESENT]: '#4CAF50',
-  [ATTENDANCE_STATUS.ABSENT]: '#F44336',
-  [ATTENDANCE_STATUS.LATE]: '#FF9800',
-  [ATTENDANCE_STATUS.EXCUSED]: '#2196F3',
-  [ATTENDANCE_STATUS.UNKNOWN]: '#757575',
-};
+// ============================================================
+// EXPORT & ANALYTICS
+// ============================================================
 
-// Attendance Status Labels
-export const ATTENDANCE_STATUS_LABELS = {
-  [ATTENDANCE_STATUS.PRESENT]: 'Present',
-  [ATTENDANCE_STATUS.ABSENT]: 'Absent',
-  [ATTENDANCE_STATUS.LATE]: 'Late',
-  [ATTENDANCE_STATUS.EXCUSED]: 'Excused',
-  [ATTENDANCE_STATUS.UNKNOWN]: 'Unknown',
-};
-
-// Attendance Status Icons
-export const ATTENDANCE_STATUS_ICONS = {
-  [ATTENDANCE_STATUS.PRESENT]: 'check-circle',
-  [ATTENDANCE_STATUS.ABSENT]: 'close-circle',
-  [ATTENDANCE_STATUS.LATE]: 'clock-alert',
-  [ATTENDANCE_STATUS.EXCUSED]: 'information',
-  [ATTENDANCE_STATUS.UNKNOWN]: 'help-circle',
-};
-
-// Export Limits
 export const EXPORT_LIMITS = {
   MAX_RECORDS_CSV: 10000,
   MAX_RECORDS_EXCEL: 50000,
   MAX_RECORDS_PDF: 1000,
 };
 
-// Attendance Analytics Periods
 export const ANALYTICS_PERIODS = {
   TODAY: 'today',
   YESTERDAY: 'yesterday',
@@ -709,7 +1271,10 @@ export const ANALYTICS_PERIODS = {
   CUSTOM: 'custom',
 };
 
-// Default Values
+// ============================================================
+// DEFAULT VALUES
+// ============================================================
+
 export const DEFAULTS = {
   ATTENDANCE_METHOD: ATTENDANCE_METHODS.QR_CODE,
   REPORT_TYPE: REPORT_TYPES.DAILY,
@@ -718,5 +1283,14 @@ export const DEFAULTS = {
   ANALYTICS_PERIOD: ANALYTICS_PERIODS.THIS_WEEK,
 };
 
-// Export max guardians
 export const MAX_GUARDIANS_PER_STUDENT = APP_CONFIG.MAX_GUARDIANS;
+
+// ============================================================
+// DEBUG LOGGING (Development Only)
+// ============================================================
+
+if (__DEV__) {
+  console.log('🚀 God\'s Eye EdTech - API Configuration');
+  console.log('📡 API Base URL:', API_BASE_URL);
+  console.log('🔧 Platform:', Platform.OS);
+}

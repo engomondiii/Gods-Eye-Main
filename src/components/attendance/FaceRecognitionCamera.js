@@ -1,3 +1,7 @@
+// ========================================
+// GOD'S EYE EDTECH - FACE RECOGNITION CAMERA
+// ========================================
+
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Alert, Animated } from 'react-native';
 import { Text, Button, ActivityIndicator } from 'react-native-paper';
@@ -5,7 +9,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
 
-const FaceRecognitionCamera = ({ onCapture, onCancel }) => {
+const FaceRecognitionCamera = ({ onCapture, onCancel, student }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState('front');
   const [isCapturing, setIsCapturing] = useState(false);
@@ -59,6 +63,17 @@ const FaceRecognitionCamera = ({ onCapture, onCancel }) => {
     };
   }, [captureCountdown]);
 
+  // Simulate face detection (in production, integrate actual face detection)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Simulate face detection - in production, use expo-face-detector or similar
+      const detected = Math.random() > 0.3;
+      setFaceDetected(detected);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const handleAutoCapture = async () => {
     setCaptureCountdown(null);
     await handleCapture();
@@ -84,6 +99,7 @@ const FaceRecognitionCamera = ({ onCapture, onCancel }) => {
 
     try {
       setIsCapturing(true);
+      
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: true,
@@ -93,6 +109,14 @@ const FaceRecognitionCamera = ({ onCapture, onCancel }) => {
       // Validate photo was taken
       if (!photo || !photo.uri) {
         throw new Error('Failed to capture photo');
+      }
+
+      if (__DEV__) {
+        console.log('📸 Photo captured:', {
+          uri: photo.uri.substring(0, 50) + '...',
+          width: photo.width,
+          height: photo.height,
+        });
       }
 
       onCapture({
@@ -114,21 +138,6 @@ const FaceRecognitionCamera = ({ onCapture, onCancel }) => {
     setFaceDetected(false);
     setCaptureCountdown(null);
   };
-
-  // Simulate face detection (since expo-face-detector might not be available)
-  // In production, you'd integrate actual face detection
-  const simulateFaceDetection = () => {
-    // Simulate random face detection for demo purposes
-    // In real app, this would be triggered by actual face detection
-    const detected = Math.random() > 0.3;
-    setFaceDetected(detected);
-  };
-
-  useEffect(() => {
-    // Simulate face detection every 2 seconds
-    const interval = setInterval(simulateFaceDetection, 2000);
-    return () => clearInterval(interval);
-  }, []);
 
   if (!permission) {
     return (
@@ -213,6 +222,11 @@ const FaceRecognitionCamera = ({ onCapture, onCancel }) => {
                   ? '✓ Face detected - Ready to capture!'
                   : 'Position your face in the frame'}
             </Text>
+            {!faceDetected && !captureCountdown && student && (
+              <Text style={styles.instructionSubtext}>
+                {student.first_name} {student.last_name}
+              </Text>
+            )}
             {!faceDetected && !captureCountdown && (
               <Text style={styles.instructionSubtext}>
                 • Look directly at the camera{'\n'}

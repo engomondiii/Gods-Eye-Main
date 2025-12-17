@@ -119,7 +119,7 @@ const LoginScreen = ({ navigation }) => {
         </View>
 
         {/* Development Mode Hint - UPDATED with 4 roles */}
-        <View style={styles.devModeContainer}>
+        {/* <View style={styles.devModeContainer}>
           <Text style={styles.devModeText}>Development Mode - Test Users</Text>
           <Text style={styles.devModeSubtext}>
             🔑 Super Admin: admin / password{'\n'}
@@ -127,7 +127,20 @@ const LoginScreen = ({ navigation }) => {
             👨‍🏫 Teacher: teacher / password{'\n'}
             👨‍👩‍👧 Guardian: guardian / password
           </Text>
-        </View>
+        </View> */}
+
+        {/* Development Mode Hint - Only show in dev */}
+{__DEV__ && (
+  <View style={styles.devModeContainer}>
+    <Text style={styles.devModeText}>Development Mode - Test Users</Text>
+    <Text style={styles.devModeSubtext}>
+      🔒 Super Admin: admin / password{'\n'}
+      🏫 School Admin: schooladmin / password{'\n'}
+      👨‍🏫 Teacher: teacher / password{'\n'}
+      👨‍👩‍👧 Guardian: guardian / password
+    </Text>
+  </View>
+)}
 
         {/* Login Form */}
         <View style={styles.formSection}>

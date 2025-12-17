@@ -1,259 +1,459 @@
+// ========================================
+// GOD'S EYE EDTECH - AUTHENTICATION CONTEXT
+// ========================================
+
 import React, { createContext, useState, useEffect } from 'react';
 import * as authService from '../services/authService';
 import * as storage from '../utils/storage';
 import { USER_ROLES } from '../utils/constants';
 
+// ============================================================
+// CREATE CONTEXT
+// ============================================================
+
 export const AuthContext = createContext();
 
-// Enable mock mode for development (set to false when backend is ready)
-const MOCK_MODE = true;
-
-// 🆕 UPDATED - Mock users for testing different roles (INCLUDING SCHOOL ADMIN)
-const MOCK_USERS = {
-  teacher: {
-    id: 1,
-    username: 'teacher',
-    email: 'teacher@school.com',
-    first_name: 'Mary',
-    last_name: 'Ochieng',
-    is_teacher: true,
-    is_guardian: false,
-    is_superadmin: false,
-    is_school_admin: false,  // 🆕 NEW
-  },
-  guardian: {
-    id: 2,
-    username: 'guardian',
-    email: 'guardian@example.com',
-    first_name: 'Jane',
-    last_name: 'Doe',
-    is_teacher: false,
-    is_guardian: true,
-    is_superadmin: false,
-    is_school_admin: false,  // 🆕 NEW
-  },
-  // 🆕 NEW - School Admin
-  schooladmin: {
-    id: 3,
-    username: 'schooladmin',
-    email: 'admin@nairobiprimary.ac.ke',
-    first_name: 'John',
-    middle_name: 'Kamau',
-    last_name: 'Mwangi',
-    is_teacher: false,
-    is_guardian: false,
-    is_superadmin: false,
-    is_school_admin: true,  // 🆕 NEW
-    school: {
-      id: 1,
-      name: 'Nairobi Primary School',
-      nemis_code: '001234567',
-    },
-  },
-  // Super Admin
-  admin: {
-    id: 4,
-    username: 'admin',
-    email: 'admin@godseye.com',
-    first_name: 'Super',
-    last_name: 'Admin',
-    is_teacher: false,
-    is_guardian: false,
-    is_superadmin: true,
-    is_school_admin: false,  // 🆕 NEW
-  },
-};
+// ============================================================
+// AUTH PROVIDER
+// ============================================================
 
 export const AuthProvider = ({ children }) => {
+  // State
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check if user is logged in on app start
+  // ============================================================
+  // INITIALIZATION
+  // ============================================================
+
+  /**
+   * Check authentication status on app start
+   */
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
+  /**
+   * Listen for auth:logout event (triggered by api.js on token refresh failure)
+   */
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleLogoutEvent = () => {
+        if (__DEV__) {
+          console.log('🚪 Logout event received - clearing auth state');
+        }
+        logout();
+      };
+
+      window.addEventListener('auth:logout', handleLogoutEvent);
+
+      return () => {
+        window.removeEventListener('auth:logout', handleLogoutEvent);
+      };
+    }
+  }, []);
+
+  // ============================================================
+  // AUTH STATUS CHECK
+  // ============================================================
+
+  /**
+   * Check if user is logged in by validating stored token and user data
+   */
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
+
+      if (__DEV__) {
+        console.log('🔍 Checking authentication status...');
+      }
+
+      // Check if tokens exist
       const token = await storage.getToken();
-      
-      if (token) {
-        const userData = await storage.getUserData();
-        if (userData) {
-          setUser(userData);
-          setUserRole(getUserRole(userData));
-          setIsAuthenticated(true);
-        } else {
-          // Token exists but no user data, clear everything
+      const refreshToken = await storage.getRefreshToken();
+
+      if (!token || !refreshToken) {
+        if (__DEV__) {
+          console.log('❌ No tokens found - user not authenticated');
+        }
+        await logout();
+        return;
+      }
+
+      // Get stored user data
+      const userData = await storage.getUserData();
+
+      if (!userData) {
+        if (__DEV__) {
+          console.log('❌ No user data found - clearing tokens');
+        }
+        await logout();
+        return;
+      }
+
+      // Verify token with backend
+      const verifyResult = await authService.verifyToken(token);
+
+      if (!verifyResult.success) {
+        if (__DEV__) {
+          console.log('❌ Token invalid - attempting refresh...');
+        }
+
+        // Try to refresh token
+        const refreshResult = await authService.refreshToken(refreshToken);
+
+        if (!refreshResult.success) {
+          if (__DEV__) {
+            console.log('❌ Token refresh failed - logging out');
+          }
           await logout();
+          return;
+        }
+
+        // Save new token
+        await storage.setToken(refreshResult.access);
+      }
+
+      // Fetch latest user data from backend
+      const userResult = await authService.getCurrentUser();
+
+      if (!userResult.success) {
+        if (__DEV__) {
+          console.log('❌ Failed to fetch user data - using stored data');
+        }
+        // Use stored data if backend fetch fails
+        setUser(userData);
+        setUserRole(getUserRole(userData));
+        setIsAuthenticated(true);
+      } else {
+        // Update with fresh data from backend
+        await storage.setUserData(userResult.user);
+        setUser(userResult.user);
+        setUserRole(getUserRole(userResult.user));
+        setIsAuthenticated(true);
+
+        if (__DEV__) {
+          console.log('✅ Authentication verified:', {
+            user: userResult.user.username,
+            role: getUserRole(userResult.user),
+          });
         }
       }
     } catch (error) {
-      console.error('Check auth status error:', error);
+      console.error('❌ Check auth status error:', error);
       await logout();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 🆕 UPDATED - Get user role with school admin support
+  // ============================================================
+  // ROLE DETECTION
+  // ============================================================
+
+  /**
+   * Get user role based on role flags
+   * Priority: Super Admin > School Admin > Teacher > Guardian
+   * @param {Object} userData - User object from backend
+   * @returns {string|null} User role constant
+   */
   const getUserRole = (userData) => {
+    if (!userData) return null;
+
     if (userData.is_superadmin) return USER_ROLES.SUPER_ADMIN;
-    if (userData.is_school_admin) return USER_ROLES.SCHOOL_ADMIN;  // 🆕 NEW - Check BEFORE teacher
+    if (userData.is_school_admin) return USER_ROLES.SCHOOL_ADMIN;
     if (userData.is_teacher) return USER_ROLES.TEACHER;
     if (userData.is_guardian) return USER_ROLES.GUARDIAN;
+
     return null;
   };
 
+  // ============================================================
+  // LOGIN
+  // ============================================================
+
+  /**
+   * Login user with username and password
+   * @param {string} username - Username
+   * @param {string} password - Password
+   * @returns {Promise<Object>} Login result
+   */
   const login = async (username, password) => {
     try {
-      // MOCK MODE: Use mock data for development
-      if (MOCK_MODE) {
-        return await mockLogin(username, password);
+      setIsLoading(true);
+
+      if (__DEV__) {
+        console.log('🔐 Logging in:', username);
       }
 
-      // REAL MODE: Connect to backend
-      const response = await authService.login(username, password);
-      const { access, refresh, user: userData } = response;
+      // Call backend login
+      const result = await authService.login(username, password);
 
-      // Store tokens and user data
-      await storage.setToken(access);
-      await storage.setRefreshToken(refresh);
-      await storage.setUserData(userData);
+      if (!result.success) {
+        if (__DEV__) {
+          console.log('❌ Login failed:', result.message);
+        }
+        return {
+          success: false,
+          message: result.message || 'Login failed',
+        };
+      }
 
-      setUser(userData);
-      setUserRole(getUserRole(userData));
+      // Store tokens
+      await storage.setToken(result.access);
+      await storage.setRefreshToken(result.refresh);
+
+      // Store user data
+      await storage.setUserData(result.user);
+
+      // Update state
+      setUser(result.user);
+      setUserRole(getUserRole(result.user));
       setIsAuthenticated(true);
 
-      return { success: true };
+      if (__DEV__) {
+        console.log('✅ Login successful:', {
+          user: result.user.username,
+          role: getUserRole(result.user),
+          hasSchool: !!result.user.school_data,
+        });
+      }
+
+      return {
+        success: true,
+        message: result.message,
+      };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       return {
         success: false,
-        message: error.response?.data?.detail || 'Invalid credentials',
+        message: 'An error occurred during login',
       };
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // 🆕 UPDATED - Mock login with proper role detection
-  const mockLogin = async (username, password) => {
-    try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  // ============================================================
+  // LOGOUT
+  // ============================================================
 
-      // Determine which mock user to use based on username
-      let mockUser;
-      const lowerUsername = username.toLowerCase();
-
-      if (lowerUsername === 'teacher' || lowerUsername.includes('teacher')) {
-        mockUser = MOCK_USERS.teacher;
-      } else if (lowerUsername === 'guardian' || lowerUsername.includes('guardian')) {
-        mockUser = MOCK_USERS.guardian;
-      } else if (lowerUsername === 'schooladmin' || lowerUsername.includes('schooladmin')) {
-        mockUser = MOCK_USERS.schooladmin;  // 🆕 NEW
-      } else if (lowerUsername === 'admin' || lowerUsername.includes('admin')) {
-        mockUser = MOCK_USERS.admin;
-      } else {
-        // Default to teacher for any other username
-        mockUser = MOCK_USERS.teacher;
-      }
-
-      // Mock tokens
-      const mockToken = 'mock_access_token_' + Date.now();
-      const mockRefreshToken = 'mock_refresh_token_' + Date.now();
-
-      // Store tokens and user data
-      await storage.setToken(mockToken);
-      await storage.setRefreshToken(mockRefreshToken);
-      await storage.setUserData(mockUser);
-
-      setUser(mockUser);
-      const role = getUserRole(mockUser);
-      setUserRole(role);
-      setIsAuthenticated(true);
-
-      console.log('Mock login successful:', { 
-        username, 
-        role,
-        is_superadmin: mockUser.is_superadmin,
-        is_school_admin: mockUser.is_school_admin,
-        is_teacher: mockUser.is_teacher,
-        is_guardian: mockUser.is_guardian,
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error('Mock login error:', error);
-      return {
-        success: false,
-        message: 'Login failed. Please try again.',
-      };
-    }
-  };
-
+  /**
+   * Logout user and clear all data
+   */
   const logout = async () => {
     try {
+      if (__DEV__) {
+        console.log('🚪 Logging out...');
+      }
+
+      // Get refresh token before clearing
+      const refreshToken = await storage.getRefreshToken();
+
+      // Call backend logout to blacklist token
+      if (refreshToken) {
+        await authService.logout(refreshToken);
+      }
+
       // Clear all stored data
-      await storage.clearAll();
-      
+      await storage.clearAuthData();
+
+      // Clear state
       setUser(null);
       setUserRole(null);
       setIsAuthenticated(false);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
-  const updateUser = async (updatedData) => {
-    try {
-      const updatedUser = { ...user, ...updatedData };
-      await storage.setUserData(updatedUser);
-      setUser(updatedUser);
-      return { success: true };
-    } catch (error) {
-      console.error('Update user error:', error);
-      return { success: false, error: error.message };
-    }
-  };
-
-  const refreshToken = async () => {
-    try {
-      if (MOCK_MODE) {
-        // Mock token refresh
-        const mockToken = 'mock_access_token_refreshed_' + Date.now();
-        await storage.setToken(mockToken);
-        return mockToken;
+      if (__DEV__) {
+        console.log('✅ Logout complete');
       }
+    } catch (error) {
+      console.error('❌ Logout error:', error);
 
-      const refreshTokenValue = await storage.getRefreshToken();
-      if (!refreshTokenValue) {
+      // Even if there's an error, clear local data
+      await storage.clearAuthData();
+      setUser(null);
+      setUserRole(null);
+      setIsAuthenticated(false);
+    }
+  };
+
+  // ============================================================
+  // TOKEN REFRESH
+  // ============================================================
+
+  /**
+   * Refresh access token
+   * @returns {Promise<string|null>} New access token or null
+   */
+  const refreshAccessToken = async () => {
+    try {
+      const refreshToken = await storage.getRefreshToken();
+
+      if (!refreshToken) {
         throw new Error('No refresh token available');
       }
 
-      const response = await authService.refreshToken(refreshTokenValue);
-      await storage.setToken(response.access);
-      return response.access;
+      if (__DEV__) {
+        console.log('🔄 Refreshing access token...');
+      }
+
+      const result = await authService.refreshToken(refreshToken);
+
+      if (!result.success) {
+        throw new Error('Token refresh failed');
+      }
+
+      // Save new token
+      await storage.setToken(result.access);
+
+      if (__DEV__) {
+        console.log('✅ Access token refreshed');
+      }
+
+      return result.access;
     } catch (error) {
-      console.error('Refresh token error:', error);
+      console.error('❌ Token refresh error:', error);
       await logout();
       throw error;
     }
   };
 
+  // ============================================================
+  // UPDATE USER
+  // ============================================================
+
+  /**
+   * Update user data (for profile changes)
+   * @param {Object} updatedData - Updated user data
+   * @returns {Promise<Object>} Update result
+   */
+  const updateUser = async (updatedData) => {
+    try {
+      if (__DEV__) {
+        console.log('📝 Updating user data...');
+      }
+
+      // Merge with existing user data
+      const updatedUser = { ...user, ...updatedData };
+
+      // Save to storage
+      await storage.setUserData(updatedUser);
+
+      // Update state
+      setUser(updatedUser);
+
+      if (__DEV__) {
+        console.log('✅ User data updated');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Update user error:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  };
+
+  // ============================================================
+  // REGISTER
+  // ============================================================
+
+  /**
+   * Register new user
+   * @param {Object} userData - Registration data
+   * @returns {Promise<Object>} Registration result
+   */
+  const register = async (userData) => {
+    try {
+      setIsLoading(true);
+
+      if (__DEV__) {
+        console.log('📝 Registering new user:', userData.username);
+      }
+
+      // Call backend registration
+      const result = await authService.register(userData);
+
+      if (!result.success) {
+        if (__DEV__) {
+          console.log('❌ Registration failed:', result.message);
+        }
+        return {
+          success: false,
+          message: result.message || 'Registration failed',
+          errors: result.errors,
+        };
+      }
+
+      // Store tokens and user data (same as login)
+      await storage.setToken(result.access);
+      await storage.setRefreshToken(result.refresh);
+      await storage.setUserData(result.user);
+
+      // Update state
+      setUser(result.user);
+      setUserRole(getUserRole(result.user));
+      setIsAuthenticated(true);
+
+      if (__DEV__) {
+        console.log('✅ Registration successful:', result.user.username);
+      }
+
+      return {
+        success: true,
+        message: result.message,
+      };
+    } catch (error) {
+      console.error('❌ Registration error:', error);
+      return {
+        success: false,
+        message: 'An error occurred during registration',
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ============================================================
+  // CONTEXT VALUE
+  // ============================================================
+
   const value = {
+    // State
     user,
     userRole,
     isLoading,
     isAuthenticated,
+
+    // Methods
     login,
     logout,
+    register,
     updateUser,
-    refreshToken,
+    refreshAccessToken,
     checkAuthStatus,
+
+    // Helpers
+    getUserRole,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // ============================================================
+  // RENDER
+  // ============================================================
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
+
+// ============================================================
+// EXPORTS
+// ============================================================
+
+export default AuthContext;

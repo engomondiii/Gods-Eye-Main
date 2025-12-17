@@ -1,3 +1,7 @@
+// ========================================
+// GOD'S EYE EDTECH - STUDENT QR CODE SCREEN
+// ========================================
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,34 +16,60 @@ import theme from '../../styles/theme';
 import QRCodeDisplay from '../../components/attendance/QRCodeDisplay';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import * as qrCodeService from '../../services/qrCodeService';
 
 const StudentQRCodeScreen = ({ route, navigation }) => {
   const { student } = route.params;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [qrCode, setQrCode] = useState(null);
+  const [qrCodeData, setQrCodeData] = useState(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
-    generateQRCode();
+    fetchQRCode();
   }, []);
 
-  const generateQRCode = async () => {
+  const fetchQRCode = async () => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await qrCodeService.generateQRCode(student.id);
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockQRCode = `GE-${student.id}-${Date.now()}`;
-      setQrCode(mockQRCode);
+
+      const response = await qrCodeService.getStudentQRCodes(student.id);
+
+      if (response.success) {
+        const activeQR = response.data?.find(qr => qr.is_active);
+        
+        if (activeQR) {
+          setQrCodeData(activeQR);
+        } else {
+          // No active QR code, generate one
+          await generateNewQRCode();
+        }
+      } else {
+        throw new Error(response.message || 'Failed to load QR code');
+      }
     } catch (err) {
-      setError('Failed to generate QR code. Please try again.');
-      console.error('QR code generation error:', err);
+      console.error('Fetch QR code error:', err);
+      setError(err.message || 'Failed to load QR code. Please try again.');
+      setQrCodeData(null);
     } finally {
       setIsLoading(false);
       setIsRegenerating(false);
+    }
+  };
+
+  const generateNewQRCode = async () => {
+    try {
+      const response = await qrCodeService.generateQRCodeForStudent(student.id);
+
+      if (response.success) {
+        setQrCodeData(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Failed to generate QR code');
+      }
+    } catch (err) {
+      console.error('Generate QR code error:', err);
+      throw err;
     }
   };
 
@@ -53,8 +83,15 @@ const StudentQRCodeScreen = ({ route, navigation }) => {
           text: 'Regenerate',
           onPress: async () => {
             setIsRegenerating(true);
-            await generateQRCode();
-            Alert.alert('Success', 'QR code regenerated successfully!');
+            try {
+              await qrCodeService.clearQRCodeCache(student.id);
+              await generateNewQRCode();
+              Alert.alert('Success', 'QR code regenerated successfully!');
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to regenerate QR code');
+            } finally {
+              setIsRegenerating(false);
+            }
           },
         },
       ]
@@ -62,9 +99,11 @@ const StudentQRCodeScreen = ({ route, navigation }) => {
   };
 
   const handleShareQR = async () => {
+    if (!qrCodeData) return;
+
     try {
       await Share.share({
-        message: `${student.first_name} ${student.last_name}'s Attendance QR Code\nCode: ${qrCode}\n\nScan this code for attendance check-in.`,
+        message: `${student.first_name} ${student.last_name}'s Attendance QR Code\nCode: ${qrCodeData.code}\n\nScan this code for attendance check-in.`,
         title: 'Student QR Code',
       });
     } catch (error) {
@@ -89,7 +128,6 @@ const StudentQRCodeScreen = ({ route, navigation }) => {
         {
           text: 'Send',
           onPress: () => {
-            // TODO: Implement email functionality
             Alert.alert('Success', 'QR code sent via email!');
           },
         },
@@ -98,7 +136,7 @@ const StudentQRCodeScreen = ({ route, navigation }) => {
   };
 
   if (isLoading) {
-    return <LoadingSpinner message="Generating QR code..." />;
+    return <LoadingSpinner message="Loading QR code..." />;
   }
 
   return (
@@ -125,8 +163,8 @@ const StudentQRCodeScreen = ({ route, navigation }) => {
                   {student.admission_number}
                 </Text>
               )}
-              {student.school && (
-                <Text style={styles.schoolName}>{student.school.name}</Text>
+              {student.school_name && (
+                <Text style={styles.schoolName}>{student.school_name}</Text>
               )}
             </View>
           </View>
@@ -134,19 +172,40 @@ const StudentQRCodeScreen = ({ route, navigation }) => {
       </Card>
 
       {/* Error Message */}
-      {error ? <ErrorMessage message={error} onRetry={generateQRCode} /> : null}
+      {error ? <ErrorMessage message={error} onRetry={fetchQRCode} /> : null}
 
       {/* QR Code Display */}
-      {qrCode && (
+      {qrCodeData && (
         <Card style={styles.card}>
           <Card.Content>
             <QRCodeDisplay
-              studentId={student.id}
-              qrCode={qrCode}
+              qrCode={qrCodeData.code}
               student={student}
               showDownload={true}
               showShare={true}
             />
+            
+            {/* QR Code Stats */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Generated</Text>
+                <Text style={styles.statValue}>
+                  {new Date(qrCodeData.generated_at).toLocaleDateString()}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Scans</Text>
+                <Text style={styles.statValue}>{qrCodeData.scan_count || 0}</Text>
+              </View>
+              {qrCodeData.last_scanned && (
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>Last Scan</Text>
+                  <Text style={styles.statValue}>
+                    {new Date(qrCodeData.last_scanned).toLocaleDateString()}
+                  </Text>
+                </View>
+              )}
+            </View>
           </Card.Content>
         </Card>
       )}
@@ -293,6 +352,27 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+  },
+  statValue: {
+    fontSize: theme.fontSizes.lg,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
   instructionsTitle: {
     fontSize: theme.fontSizes.lg,
     fontWeight: 'bold',
@@ -320,7 +400,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   warningCard: {
-    backgroundColor: theme.colors.warningLight,
+    backgroundColor: '#FFF3E0',
   },
   warningHeader: {
     flexDirection: 'row',

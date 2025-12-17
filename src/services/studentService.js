@@ -1,465 +1,811 @@
-import api from './api';
+// ========================================
+// GOD'S EYE EDTECH - STUDENT SERVICE
+// ========================================
+
+import { get, post, put, patch, del, handleApiError } from './api';
+import { API_ENDPOINTS } from '../utils/constants';
+
+// ============================================================
+// STUDENT CRUD OPERATIONS
+// ============================================================
 
 /**
- * Student Service
- * Handles all student-related API calls including Kenya-specific fields
+ * Get all students with optional filters
+ * @param {Object} filters - Optional filters
+ * @returns {Promise<Object>} List of students
+ * 
+ * Backend Endpoint: GET /api/students/
+ * Supported filters: school, county, education_level, current_grade, 
+ *                   stream, gender, is_active, has_special_needs, house_name
  */
-
-// Get students with optional filters
 export const getStudents = async (filters = {}) => {
   try {
-    const response = await api.get('/students/', { params: filters });
-    return response.data;
+    if (__DEV__) {
+      console.log('👨‍🎓 Fetching students with filters:', filters);
+    }
+
+    // Build query parameters
+    const params = new URLSearchParams();
+    
+    if (filters.school) params.append('school', filters.school);
+    if (filters.county) params.append('county', filters.county);
+    if (filters.education_level) params.append('education_level', filters.education_level);
+    if (filters.current_grade) params.append('current_grade', filters.current_grade);
+    if (filters.stream) params.append('stream', filters.stream);
+    if (filters.gender) params.append('gender', filters.gender);
+    if (filters.is_active !== undefined) params.append('is_active', filters.is_active);
+    if (filters.has_special_needs !== undefined) params.append('has_special_needs', filters.has_special_needs);
+    if (filters.house_name) params.append('house_name', filters.house_name);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.ordering) params.append('ordering', filters.ordering);
+    if (filters.page) params.append('page', filters.page);
+    if (filters.page_size) params.append('page_size', filters.page_size);
+
+    const queryString = params.toString();
+    const url = queryString 
+      ? `${API_ENDPOINTS.STUDENTS.LIST}?${queryString}`
+      : API_ENDPOINTS.STUDENTS.LIST;
+
+    const response = await get(url);
+
+    if (__DEV__) {
+      const count = Array.isArray(response) ? response.length : response.results?.length || 0;
+      console.log(`✅ Fetched ${count} students`);
+    }
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get students error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch students',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Get student by ID
+/**
+ * Get student by ID
+ * @param {number} studentId - Student ID
+ * @returns {Promise<Object>} Student details with guardians
+ * 
+ * Backend Endpoint: GET /api/students/{id}/
+ */
 export const getStudentById = async (studentId) => {
   try {
-    const response = await api.get(`/students/${studentId}/`);
-    return response.data;
+    if (!studentId) {
+      throw new Error('Student ID is required');
+    }
+
+    if (__DEV__) {
+      console.log(`👨‍🎓 Fetching student ${studentId}...`);
+    }
+
+    const response = await get(API_ENDPOINTS.STUDENTS.DETAIL(studentId));
+
+    if (__DEV__) {
+      console.log(`✅ Fetched student: ${response.full_name}`);
+    }
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get student error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch student',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Create new student (with Kenya-specific fields)
+/**
+ * Create new student
+ * @param {Object} studentData - Student data
+ * @returns {Promise<Object>} Created student
+ * 
+ * Backend Endpoint: POST /api/students/
+ */
 export const createStudent = async (studentData) => {
   try {
-    // Prepare student data with Kenya-specific fields
-    const payload = {
-      // Personal Information
-      first_name: studentData.first_name,
-      middle_name: studentData.middle_name || null,
-      last_name: studentData.last_name,
-      date_of_birth: studentData.date_of_birth,
-      gender: studentData.gender,
-      birth_certificate_number: studentData.birth_certificate_number || null,
-      
-      // School Information (Kenya only)
-      county_id: studentData.county_id,
-      school_id: studentData.school_id,
-      
-      // Academic Information (CBC System)
-      education_level: studentData.education_level,
-      current_grade: studentData.current_grade,
-      stream: studentData.stream,
-      admission_number: studentData.admission_number,
-      upi_number: studentData.upi_number || null,
-      year_of_admission: studentData.year_of_admission,
-      current_term: studentData.current_term,
-      
-      // House System (Optional)
-      house_name: studentData.house_name || null,
-      house_color: studentData.house_color || null,
-      
-      // Special Needs
-      has_special_needs: studentData.has_special_needs || false,
-      special_needs_description: studentData.special_needs_description || null,
+    if (__DEV__) {
+      console.log('👨‍🎓 Creating student:', studentData.first_name, studentData.last_name);
+    }
+
+    const response = await post(API_ENDPOINTS.STUDENTS.CREATE, studentData);
+
+    if (__DEV__) {
+      console.log(`✅ Student created: ${response.full_name}`);
+    }
+
+    return {
+      success: true,
+      data: response,
+      message: 'Student created successfully',
     };
-    
-    const response = await api.post('/students/', payload);
-    return response.data;
   } catch (error) {
-    throw error;
+    console.error('❌ Create student error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to create student',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Update student (with Kenya-specific fields)
+/**
+ * Update student
+ * @param {number} studentId - Student ID
+ * @param {Object} studentData - Updated student data
+ * @returns {Promise<Object>} Updated student
+ * 
+ * Backend Endpoint: PATCH /api/students/{id}/
+ */
 export const updateStudent = async (studentId, studentData) => {
   try {
-    // Prepare update data with Kenya-specific fields
-    const payload = {
-      // Personal Information
-      first_name: studentData.first_name,
-      middle_name: studentData.middle_name || null,
-      last_name: studentData.last_name,
-      date_of_birth: studentData.date_of_birth,
-      gender: studentData.gender,
-      birth_certificate_number: studentData.birth_certificate_number || null,
-      
-      // School Information (Kenya only)
-      county_id: studentData.county_id,
-      school_id: studentData.school_id,
-      
-      // Academic Information (CBC System)
-      education_level: studentData.education_level,
-      current_grade: studentData.current_grade,
-      stream: studentData.stream,
-      admission_number: studentData.admission_number,
-      upi_number: studentData.upi_number || null,
-      year_of_admission: studentData.year_of_admission,
-      current_term: studentData.current_term,
-      
-      // House System (Optional)
-      house_name: studentData.house_name || null,
-      house_color: studentData.house_color || null,
-      
-      // Special Needs
-      has_special_needs: studentData.has_special_needs || false,
-      special_needs_description: studentData.special_needs_description || null,
+    if (!studentId) {
+      throw new Error('Student ID is required');
+    }
+
+    if (__DEV__) {
+      console.log(`👨‍🎓 Updating student ${studentId}...`);
+    }
+
+    const response = await patch(API_ENDPOINTS.STUDENTS.UPDATE(studentId), studentData);
+
+    if (__DEV__) {
+      console.log(`✅ Student updated: ${response.full_name}`);
+    }
+
+    return {
+      success: true,
+      data: response,
+      message: 'Student updated successfully',
     };
-    
-    const response = await api.patch(`/students/${studentId}/`, payload);
-    return response.data;
   } catch (error) {
-    throw error;
+    console.error('❌ Update student error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to update student',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Delete student
+/**
+ * Delete student
+ * @param {number} studentId - Student ID
+ * @returns {Promise<Object>} Success response
+ * 
+ * Backend Endpoint: DELETE /api/students/{id}/
+ */
 export const deleteStudent = async (studentId) => {
   try {
-    const response = await api.delete(`/students/${studentId}/`);
-    return response.data;
+    if (!studentId) {
+      throw new Error('Student ID is required');
+    }
+
+    if (__DEV__) {
+      console.log(`👨‍🎓 Deleting student ${studentId}...`);
+    }
+
+    await del(API_ENDPOINTS.STUDENTS.DELETE(studentId));
+
+    if (__DEV__) {
+      console.log(`✅ Student deleted`);
+    }
+
+    return {
+      success: true,
+      message: 'Student deleted successfully',
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Delete student error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to delete student',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Get student guardians
+// ============================================================
+// STUDENT QUERIES
+// ============================================================
+
+/**
+ * Get students by grade
+ * @param {string} grade - Grade code (e.g., 'grade_5')
+ * @returns {Promise<Array>} Students in the grade
+ * 
+ * Backend Endpoint: GET /api/students/?current_grade=grade_5
+ */
+export const getStudentsByGrade = async (grade) => {
+  return await getStudents({ current_grade: grade });
+};
+
+/**
+ * Get students by stream
+ * @param {string} stream - Stream name
+ * @returns {Promise<Array>} Students in the stream
+ */
+export const getStudentsByStream = async (stream) => {
+  return await getStudents({ stream });
+};
+
+/**
+ * Get students by house
+ * @param {string} houseName - House name
+ * @returns {Promise<Array>} Students in the house
+ */
+export const getStudentsByHouse = async (houseName) => {
+  return await getStudents({ house_name: houseName });
+};
+
+/**
+ * Get students by education level
+ * @param {string} level - Education level code
+ * @returns {Promise<Array>} Students in the education level
+ */
+export const getStudentsByLevel = async (level) => {
+  return await getStudents({ education_level: level });
+};
+
+/**
+ * Search students
+ * @param {string} query - Search query
+ * @returns {Promise<Array>} Search results
+ * 
+ * Backend Endpoint: GET /api/students/search/?q=query
+ */
+export const searchStudents = async (query) => {
+  try {
+    if (!query || query.trim().length < 2) {
+      return {
+        success: true,
+        data: { count: 0, results: [] },
+      };
+    }
+
+    if (__DEV__) {
+      console.log(`🔍 Searching students: "${query}"`);
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/search/?q=${encodeURIComponent(query)}`);
+
+    return {
+      success: true,
+      data: response,
+    };
+  } catch (error) {
+    console.error('❌ Search students error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to search students',
+      error: handleApiError(error),
+    };
+  }
+};
+
+// ============================================================
+// STUDENT GUARDIANS
+// ============================================================
+
+/**
+ * Get student's guardians
+ * @param {number} studentId - Student ID
+ * @returns {Promise<Object>} Student's guardians
+ * 
+ * Backend Endpoint: GET /api/students/{id}/get_guardians/
+ */
 export const getStudentGuardians = async (studentId) => {
   try {
-    const response = await api.get(`/students/${studentId}/guardians/`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
+    if (!studentId) {
+      throw new Error('Student ID is required');
+    }
 
-// Get student payments
-export const getStudentPayments = async (studentId) => {
-  try {
-    const response = await api.get(`/students/${studentId}/payments/`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
+    if (__DEV__) {
+      console.log(`👨‍👩‍👧 Fetching guardians for student ${studentId}...`);
+    }
 
-// Search students (with Kenya-specific filters)
-export const searchStudents = async (query, filters = {}) => {
-  try {
-    const params = {
-      q: query,
-      ...filters,
+    const response = await get(`${API_ENDPOINTS.STUDENTS.DETAIL(studentId)}/get_guardians/`);
+
+    if (__DEV__) {
+      console.log(`✅ Found ${response.guardian_count} guardians`);
+    }
+
+    return {
+      success: true,
+      data: response,
     };
-    
-    const response = await api.get('/students/search/', { params });
-    return response.data;
   } catch (error) {
-    throw error;
+    console.error('❌ Get student guardians error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch student guardians',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Filter students by grade
-export const filterStudentsByGrade = async (grade) => {
-  try {
-    const response = await api.get('/students/', {
-      params: { current_grade: grade },
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Filter students by stream
-export const filterStudentsByStream = async (stream) => {
-  try {
-    const response = await api.get('/students/', {
-      params: { stream },
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Filter students by house
-export const filterStudentsByHouse = async (house) => {
-  try {
-    const response = await api.get('/students/', {
-      params: { house_name: house },
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Filter students by education level
-export const filterStudentsByLevel = async (level) => {
-  try {
-    const response = await api.get('/students/', {
-      params: { education_level: level },
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Get students by multiple filters (Kenya-specific)
-export const getStudentsWithFilters = async (filters = {}) => {
-  try {
-    // Filters can include:
-    // - current_grade
-    // - stream
-    // - house_name
-    // - education_level
-    // - year_of_admission
-    // - current_term
-    // - has_guardians (boolean)
-    // - has_biometric (boolean)
-    
-    const response = await api.get('/students/', { params: filters });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Get student attendance records
+/**
+ * Get student's attendance records
+ * @param {number} studentId - Student ID
+ * @param {Object} filters - Optional filters (start_date, end_date)
+ * @returns {Promise<Object>} Student's attendance
+ * 
+ * Backend Endpoint: GET /api/students/{id}/get_attendance/
+ */
 export const getStudentAttendance = async (studentId, filters = {}) => {
   try {
-    const response = await api.get(`/students/${studentId}/attendance/`, {
-      params: filters,
-    });
-    return response.data;
+    if (!studentId) {
+      throw new Error('Student ID is required');
+    }
+
+    if (__DEV__) {
+      console.log(`📅 Fetching attendance for student ${studentId}...`);
+    }
+
+    const params = new URLSearchParams();
+    if (filters.start_date) params.append('start_date', filters.start_date);
+    if (filters.end_date) params.append('end_date', filters.end_date);
+
+    const queryString = params.toString();
+    const url = queryString
+      ? `${API_ENDPOINTS.STUDENTS.DETAIL(studentId)}/get_attendance/?${queryString}`
+      : `${API_ENDPOINTS.STUDENTS.DETAIL(studentId)}/get_attendance/`;
+
+    const response = await get(url);
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get student attendance error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch student attendance',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Get student attendance summary
-export const getStudentAttendanceSummary = async (studentId, startDate, endDate) => {
+/**
+ * Get student's payment requests
+ * @param {number} studentId - Student ID
+ * @returns {Promise<Object>} Student's payments
+ * 
+ * Backend Endpoint: GET /api/students/{id}/get_payments/
+ */
+export const getStudentPayments = async (studentId) => {
   try {
-    const response = await api.get(`/students/${studentId}/attendance/summary/`, {
-      params: { start_date: startDate, end_date: endDate },
-    });
-    return response.data;
+    if (!studentId) {
+      throw new Error('Student ID is required');
+    }
+
+    if (__DEV__) {
+      console.log(`💰 Fetching payments for student ${studentId}...`);
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.DETAIL(studentId)}/get_payments/`);
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get student payments error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch student payments',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Get student QR code
+/**
+ * Get student's QR code
+ * @param {number} studentId - Student ID
+ * @returns {Promise<Object>} Student's QR code
+ * 
+ * Backend Endpoint: GET /api/students/{id}/get_qr_code/
+ */
 export const getStudentQRCode = async (studentId) => {
   try {
-    const response = await api.get(`/students/${studentId}/qrcode/`);
-    return response.data;
+    if (!studentId) {
+      throw new Error('Student ID is required');
+    }
+
+    if (__DEV__) {
+      console.log(`📱 Fetching QR code for student ${studentId}...`);
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.DETAIL(studentId)}/get_qr_code/`);
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get student QR code error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch student QR code',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Generate student QR code
-export const generateStudentQRCode = async (studentId) => {
+// ============================================================
+// VALIDATION OPERATIONS
+// ============================================================
+
+/**
+ * Validate UPI number (for new student)
+ * @param {string} upi - UPI number to validate
+ * @returns {Promise<Object>} Validation result
+ * 
+ * Backend Endpoint: POST /api/students/validate_upi_new/
+ */
+export const validateUPI = async (upi) => {
   try {
-    const response = await api.post(`/students/${studentId}/qrcode/generate/`);
-    return response.data;
+    if (!upi) {
+      throw new Error('UPI number is required');
+    }
+
+    if (__DEV__) {
+      console.log(`✓ Validating UPI: ${upi}`);
+    }
+
+    const response = await post(`${API_ENDPOINTS.STUDENTS.BASE}/validate_upi_new/`, { upi });
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Validate UPI error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to validate UPI',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Regenerate student QR code
-export const regenerateStudentQRCode = async (studentId, reason = '') => {
+/**
+ * Check admission number availability
+ * @param {number} schoolId - School ID
+ * @param {string} admissionNumber - Admission number to check
+ * @returns {Promise<Object>} Availability result
+ * 
+ * Backend Endpoint: POST /api/students/check_admission_number/
+ */
+export const checkAdmissionNumber = async (schoolId, admissionNumber) => {
   try {
-    const response = await api.post(`/students/${studentId}/qrcode/regenerate/`, {
-      reason,
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
+    if (!schoolId || !admissionNumber) {
+      throw new Error('School ID and admission number are required');
+    }
 
-// Get student biometric info
-export const getStudentBiometricInfo = async (studentId) => {
-  try {
-    const response = await api.get(`/students/${studentId}/biometric/`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
+    if (__DEV__) {
+      console.log(`✓ Checking admission number: ${admissionNumber}`);
+    }
 
-// Setup student fingerprint
-export const setupStudentFingerprint = async (studentId, data) => {
-  try {
-    const response = await api.post(`/students/${studentId}/biometric/fingerprint/`, data);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Setup student face recognition
-export const setupStudentFaceRecognition = async (studentId, imageData) => {
-  try {
-    const response = await api.post(`/students/${studentId}/biometric/face/`, {
-      image_data: imageData,
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Remove student fingerprint
-export const removeStudentFingerprint = async (studentId) => {
-  try {
-    const response = await api.delete(`/students/${studentId}/biometric/fingerprint/`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Remove student face recognition
-export const removeStudentFaceRecognition = async (studentId) => {
-  try {
-    const response = await api.delete(`/students/${studentId}/biometric/face/`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Get student biometric enrollment status
-export const getStudentBiometricStatus = async (studentId) => {
-  try {
-    const response = await api.get(`/students/${studentId}/biometric/status/`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Validate UPI number
-export const validateUPINumber = async (upiNumber) => {
-  try {
-    const response = await api.post('/students/validate-upi/', {
-      upi_number: upiNumber,
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Check admission number availability
-export const checkAdmissionNumberAvailability = async (schoolId, admissionNumber) => {
-  try {
-    const response = await api.post('/students/check-admission-number/', {
-      school_id: schoolId,
+    const response = await post(`${API_ENDPOINTS.STUDENTS.BASE}/check_admission_number/`, {
+      school: schoolId,
       admission_number: admissionNumber,
     });
-    return response.data;
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Check admission number error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to check admission number',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Get students statistics by grade
-export const getStudentStatsByGrade = async (schoolId) => {
+/**
+ * Generate admission number for school
+ * @param {number} schoolId - School ID
+ * @returns {Promise<Object>} Generated admission number
+ * 
+ * Backend Endpoint: GET /api/students/generate_admission_number/?school=1
+ */
+export const generateAdmissionNumber = async (schoolId) => {
   try {
-    const response = await api.get(`/students/stats/by-grade/`, {
-      params: { school_id: schoolId },
-    });
-    return response.data;
+    if (!schoolId) {
+      throw new Error('School ID is required');
+    }
+
+    if (__DEV__) {
+      console.log(`🔢 Generating admission number for school ${schoolId}...`);
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/generate_admission_number/?school=${schoolId}`);
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Generate admission number error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to generate admission number',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Get students statistics by stream
-export const getStudentStatsByStream = async (schoolId, grade) => {
+// ============================================================
+// STATISTICS OPERATIONS
+// ============================================================
+
+/**
+ * Get student statistics by grade
+ * @returns {Promise<Object>} Statistics by grade
+ * 
+ * Backend Endpoint: GET /api/students/statistics_by_grade/
+ */
+export const getStatisticsByGrade = async () => {
   try {
-    const response = await api.get(`/students/stats/by-stream/`, {
-      params: { school_id: schoolId, grade },
-    });
-    return response.data;
+    if (__DEV__) {
+      console.log('📊 Fetching student statistics by grade...');
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/statistics_by_grade/`);
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get statistics by grade error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Get students statistics by house
-export const getStudentStatsByHouse = async (schoolId) => {
+/**
+ * Get student statistics by stream
+ * @returns {Promise<Object>} Statistics by stream
+ * 
+ * Backend Endpoint: GET /api/students/statistics_by_stream/
+ */
+export const getStatisticsByStream = async () => {
   try {
-    const response = await api.get(`/students/stats/by-house/`, {
-      params: { school_id: schoolId },
-    });
-    return response.data;
+    if (__DEV__) {
+      console.log('📊 Fetching student statistics by stream...');
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/statistics_by_stream/`);
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get statistics by stream error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Bulk update students (e.g., promote to next grade)
-export const bulkUpdateStudents = async (studentIds, updateData) => {
+/**
+ * Get student statistics by gender
+ * @returns {Promise<Object>} Statistics by gender
+ * 
+ * Backend Endpoint: GET /api/students/statistics_by_gender/
+ */
+export const getStatisticsByGender = async () => {
   try {
-    const response = await api.post('/students/bulk-update/', {
-      student_ids: studentIds,
-      update_data: updateData,
-    });
-    return response.data;
+    if (__DEV__) {
+      console.log('📊 Fetching student statistics by gender...');
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/statistics_by_gender/`);
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get statistics by gender error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Promote students to next grade
-export const promoteStudentsToNextGrade = async (schoolId, fromGrade, toGrade, stream = null) => {
+/**
+ * Get student statistics by house
+ * @returns {Promise<Object>} Statistics by house
+ * 
+ * Backend Endpoint: GET /api/students/statistics_by_house/
+ */
+export const getStatisticsByHouse = async () => {
   try {
-    const response = await api.post('/students/promote/', {
-      school_id: schoolId,
-      from_grade: fromGrade,
-      to_grade: toGrade,
-      stream,
-    });
-    return response.data;
+    if (__DEV__) {
+      console.log('📊 Fetching student statistics by house...');
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/statistics_by_house/`);
+
+    return {
+      success: true,
+      data: response,
+    };
   } catch (error) {
-    throw error;
+    console.error('❌ Get statistics by house error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: handleApiError(error),
+    };
   }
 };
 
-// Default export with all functions
+/**
+ * Get comprehensive student statistics
+ * @returns {Promise<Object>} Comprehensive statistics
+ * 
+ * Backend Endpoint: GET /api/students/statistics/
+ */
+export const getStatistics = async () => {
+  try {
+    if (__DEV__) {
+      console.log('📊 Fetching comprehensive student statistics...');
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/statistics/`);
+
+    return {
+      success: true,
+      data: response,
+    };
+  } catch (error) {
+    console.error('❌ Get statistics error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch statistics',
+      error: handleApiError(error),
+    };
+  }
+};
+
+/**
+ * Get students grouped by grade and stream
+ * @returns {Promise<Object>} Students grouped by grade and stream
+ * 
+ * Backend Endpoint: GET /api/students/by_grade_and_stream/
+ */
+export const getByGradeAndStream = async () => {
+  try {
+    if (__DEV__) {
+      console.log('📊 Fetching students by grade and stream...');
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/by_grade_and_stream/`);
+
+    return {
+      success: true,
+      data: response,
+    };
+  } catch (error) {
+    console.error('❌ Get by grade and stream error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch data',
+      error: handleApiError(error),
+    };
+  }
+};
+
+/**
+ * Get recently added students
+ * @param {number} limit - Number of students to return (default: 10)
+ * @returns {Promise<Object>} Recent students
+ * 
+ * Backend Endpoint: GET /api/students/recent/?limit=10
+ */
+export const getRecentStudents = async (limit = 10) => {
+  try {
+    if (__DEV__) {
+      console.log(`📅 Fetching ${limit} recent students...`);
+    }
+
+    const response = await get(`${API_ENDPOINTS.STUDENTS.BASE}/recent/?limit=${limit}`);
+
+    return {
+      success: true,
+      data: response,
+    };
+  } catch (error) {
+    console.error('❌ Get recent students error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch recent students',
+      error: handleApiError(error),
+    };
+  }
+};
+
+// ============================================================
+// EXPORTS
+// ============================================================
+
 export default {
+  // CRUD
   getStudents,
   getStudentById,
   createStudent,
   updateStudent,
   deleteStudent,
-  getStudentGuardians,
-  getStudentPayments,
+
+  // Queries
+  getStudentsByGrade,
+  getStudentsByStream,
+  getStudentsByHouse,
+  getStudentsByLevel,
   searchStudents,
-  filterStudentsByGrade,
-  filterStudentsByStream,
-  filterStudentsByHouse,
-  filterStudentsByLevel,
-  getStudentsWithFilters,
+
+  // Relations
+  getStudentGuardians,
   getStudentAttendance,
-  getStudentAttendanceSummary,
+  getStudentPayments,
   getStudentQRCode,
-  generateStudentQRCode,
-  regenerateStudentQRCode,
-  getStudentBiometricInfo,
-  setupStudentFingerprint,
-  setupStudentFaceRecognition,
-  removeStudentFingerprint,
-  removeStudentFaceRecognition,
-  getStudentBiometricStatus,
-  validateUPINumber,
-  checkAdmissionNumberAvailability,
-  getStudentStatsByGrade,
-  getStudentStatsByStream,
-  getStudentStatsByHouse,
-  bulkUpdateStudents,
-  promoteStudentsToNextGrade,
+
+  // Validation
+  validateUPI,
+  checkAdmissionNumber,
+  generateAdmissionNumber,
+
+  // Statistics
+  getStatisticsByGrade,
+  getStatisticsByStream,
+  getStatisticsByGender,
+  getStatisticsByHouse,
+  getStatistics,
+  getByGradeAndStream,
+  getRecentStudents,
 };

@@ -1,3 +1,7 @@
+// ========================================
+// GOD'S EYE EDTECH - BIOMETRIC SETUP SCREEN
+// ========================================
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -7,9 +11,10 @@ import {
 } from 'react-native';
 import { Text, Button, Card, List, Switch } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as LocalAuthentication from 'expo-local-authentication';
 import theme from '../../styles/theme';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import * as biometricService from '../../services/biometricService';
+import { SCREENS } from '../../utils/constants';
 
 const BiometricSetupScreen = ({ route, navigation }) => {
   const { student } = route.params;
@@ -18,30 +23,34 @@ const BiometricSetupScreen = ({ route, navigation }) => {
   const [biometricData, setBiometricData] = useState({
     fingerprintEnabled: false,
     faceRecognitionEnabled: false,
-    qrCodeGenerated: false,
+    fingerprintRecord: null,
+    faceRecord: null,
   });
   const [deviceCapabilities, setDeviceCapabilities] = useState({
     hasHardware: false,
     isEnrolled: false,
     supportedTypes: [],
+    hasFingerprint: false,
+    hasFaceRecognition: false,
   });
 
   useEffect(() => {
-    checkBiometricCapabilities();
-    loadBiometricData();
+    initialize();
   }, []);
+
+  const initialize = async () => {
+    await checkBiometricCapabilities();
+    await loadBiometricData();
+  };
 
   const checkBiometricCapabilities = async () => {
     try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      
-      setDeviceCapabilities({
-        hasHardware,
-        isEnrolled,
-        supportedTypes,
-      });
+      const capabilities = await biometricService.checkBiometricSupport();
+      setDeviceCapabilities(capabilities);
+
+      if (__DEV__) {
+        console.log('Device capabilities:', capabilities);
+      }
     } catch (error) {
       console.error('Capability check error:', error);
     }
@@ -49,18 +58,19 @@ const BiometricSetupScreen = ({ route, navigation }) => {
 
   const loadBiometricData = async () => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await biometricService.getBiometricInfo(student.id);
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockData = {
-        fingerprintEnabled: false,
-        faceRecognitionEnabled: false,
-        qrCodeGenerated: true,
-      };
-      
-      setBiometricData(mockData);
+      const response = await biometricService.getStudentBiometrics(student.id);
+
+      if (response.success) {
+        const fingerprintRecord = response.data?.find(b => b.biometric_type === 'fingerprint' && b.is_active);
+        const faceRecord = response.data?.find(b => b.biometric_type === 'face' && b.is_active);
+
+        setBiometricData({
+          fingerprintEnabled: !!fingerprintRecord,
+          faceRecognitionEnabled: !!faceRecord,
+          fingerprintRecord,
+          faceRecord,
+        });
+      }
     } catch (error) {
       console.error('Load biometric data error:', error);
     } finally {
@@ -79,30 +89,27 @@ const BiometricSetupScreen = ({ route, navigation }) => {
     }
 
     try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Scan fingerprint to enroll',
-        cancelLabel: 'Cancel',
-      });
+      setIsSaving(true);
 
-      if (result.success) {
-        setIsSaving(true);
-        // TODO: Replace with actual API call
-        // await biometricService.setupBiometric(student.id, { type: 'fingerprint' });
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setBiometricData(prev => ({ ...prev, fingerprintEnabled: true }));
+      const response = await biometricService.enrollFingerprint(student.id);
+
+      if (response.success) {
         Alert.alert('Success', 'Fingerprint enrolled successfully!');
+        await loadBiometricData();
+      } else {
+        throw new Error(response.message || 'Failed to enroll fingerprint');
       }
     } catch (error) {
       console.error('Fingerprint enrollment error:', error);
-      Alert.alert('Error', 'Failed to enroll fingerprint. Please try again.');
+      Alert.alert('Error', error.message || 'Failed to enroll fingerprint. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleRemoveFingerprint = () => {
+    if (!biometricData.fingerprintRecord) return;
+
     Alert.alert(
       'Remove Fingerprint',
       'Are you sure you want to remove fingerprint authentication?',
@@ -112,11 +119,25 @@ const BiometricSetupScreen = ({ route, navigation }) => {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            setIsSaving(true);
-            // TODO: API call to remove fingerprint
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setBiometricData(prev => ({ ...prev, fingerprintEnabled: false }));
-            setIsSaving(false);
+            try {
+              setIsSaving(true);
+
+              const response = await biometricService.deleteBiometric(
+                biometricData.fingerprintRecord.id
+              );
+
+              if (response.success) {
+                Alert.alert('Success', 'Fingerprint removed successfully');
+                await biometricService.removeLocalBiometricData(student.id, 'fingerprint');
+                await loadBiometricData();
+              } else {
+                throw new Error(response.message || 'Failed to remove fingerprint');
+              }
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to remove fingerprint');
+            } finally {
+              setIsSaving(false);
+            }
           },
         },
       ]
@@ -124,20 +145,39 @@ const BiometricSetupScreen = ({ route, navigation }) => {
   };
 
   const handleCaptureFace = () => {
-    navigation.navigate('FaceRecognitionCamera', {
+    navigation.navigate(SCREENS.FACE_RECOGNITION_CAMERA || 'FaceRecognitionCamera', {
+      student,
       onCapture: async (imageData) => {
-        setIsSaving(true);
-        // TODO: API call to save face data
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setBiometricData(prev => ({ ...prev, faceRecognitionEnabled: true }));
-        setIsSaving(false);
+        try {
+          setIsSaving(true);
+
+          const response = await biometricService.enrollFaceRecognition(
+            student.id,
+            imageData
+          );
+
+          if (response.success) {
+            navigation.goBack();
+            Alert.alert('Success', 'Face recognition enrolled successfully!');
+            await loadBiometricData();
+          } else {
+            throw new Error(response.message || 'Failed to enroll face recognition');
+          }
+        } catch (error) {
+          Alert.alert('Error', error.message || 'Failed to enroll face recognition');
+        } finally {
+          setIsSaving(false);
+        }
+      },
+      onCancel: () => {
         navigation.goBack();
-        Alert.alert('Success', 'Face recognition enrolled successfully!');
       },
     });
   };
 
   const handleRemoveFace = () => {
+    if (!biometricData.faceRecord) return;
+
     Alert.alert(
       'Remove Face Recognition',
       'Are you sure you want to remove face recognition?',
@@ -147,11 +187,25 @@ const BiometricSetupScreen = ({ route, navigation }) => {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            setIsSaving(true);
-            // TODO: API call to remove face data
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setBiometricData(prev => ({ ...prev, faceRecognitionEnabled: false }));
-            setIsSaving(false);
+            try {
+              setIsSaving(true);
+
+              const response = await biometricService.deleteBiometric(
+                biometricData.faceRecord.id
+              );
+
+              if (response.success) {
+                Alert.alert('Success', 'Face recognition removed successfully');
+                await biometricService.removeLocalBiometricData(student.id, 'face_recognition');
+                await loadBiometricData();
+              } else {
+                throw new Error(response.message || 'Failed to remove face recognition');
+              }
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to remove face recognition');
+            } finally {
+              setIsSaving(false);
+            }
           },
         },
       ]
@@ -164,20 +218,17 @@ const BiometricSetupScreen = ({ route, navigation }) => {
       return;
     }
 
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Test biometric authentication',
-        cancelLabel: 'Cancel',
-      });
+    const result = await biometricService.testBiometricAuthentication();
 
-      if (result.success) {
-        Alert.alert('Success', 'Biometric authentication successful!');
-      } else {
-        Alert.alert('Failed', 'Biometric authentication failed.');
-      }
-    } catch (error) {
-      console.error('Test biometric error:', error);
+    if (result.success) {
+      Alert.alert('Success', 'Biometric authentication successful!');
+    } else {
+      Alert.alert('Failed', result.message || 'Biometric authentication failed.');
     }
+  };
+
+  const handleViewQRCode = () => {
+    navigation.navigate(SCREENS.STUDENT_QR_CODE, { student });
   };
 
   if (isLoading) {
@@ -204,12 +255,17 @@ const BiometricSetupScreen = ({ route, navigation }) => {
                 {student.first_name} {student.last_name}
               </Text>
               <Text style={styles.studentSubtitle}>Biometric Setup</Text>
+              {student.admission_number && (
+                <Text style={styles.admissionNumber}>
+                  {student.admission_number}
+                </Text>
+              )}
             </View>
           </View>
         </Card.Content>
       </Card>
 
-      {/* Device Capabilities */}
+      {/* Device Capabilities Warning */}
       {!deviceCapabilities.hasHardware && (
         <Card style={[styles.card, styles.warningCard]}>
           <Card.Content>
@@ -227,6 +283,23 @@ const BiometricSetupScreen = ({ route, navigation }) => {
         </Card>
       )}
 
+      {deviceCapabilities.hasHardware && !deviceCapabilities.isEnrolled && (
+        <Card style={[styles.card, styles.warningCard]}>
+          <Card.Content>
+            <View style={styles.warningHeader}>
+              <MaterialCommunityIcons
+                name="information"
+                size={24}
+                color={theme.colors.info}
+              />
+              <Text style={styles.warningText}>
+                No biometrics enrolled on this device. Please add fingerprints or face data in device settings.
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+
       {/* Fingerprint */}
       <Card style={styles.card}>
         <Card.Content>
@@ -234,7 +307,7 @@ const BiometricSetupScreen = ({ route, navigation }) => {
             title="Fingerprint Authentication"
             description={
               biometricData.fingerprintEnabled
-                ? 'Enrolled and active'
+                ? `Enrolled on ${new Date(biometricData.fingerprintRecord?.enrolled_at).toLocaleDateString()}`
                 : 'Not enrolled'
             }
             left={props => (
@@ -252,13 +325,13 @@ const BiometricSetupScreen = ({ route, navigation }) => {
               <View style={styles.switchContainer}>
                 <Switch
                   value={biometricData.fingerprintEnabled}
-                  disabled={!deviceCapabilities.hasHardware}
+                  disabled={true}
                 />
               </View>
             )}
           />
           
-          {deviceCapabilities.hasHardware && (
+          {deviceCapabilities.hasFingerprint && (
             <View style={styles.buttonGroup}>
               {!biometricData.fingerprintEnabled ? (
                 <Button
@@ -283,6 +356,25 @@ const BiometricSetupScreen = ({ route, navigation }) => {
               )}
             </View>
           )}
+
+          {biometricData.fingerprintRecord && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Uses</Text>
+                <Text style={styles.statValue}>
+                  {biometricData.fingerprintRecord.use_count || 0}
+                </Text>
+              </View>
+              {biometricData.fingerprintRecord.last_used && (
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>Last Used</Text>
+                  <Text style={styles.statValue}>
+                    {new Date(biometricData.fingerprintRecord.last_used).toLocaleDateString()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </Card.Content>
       </Card>
 
@@ -293,7 +385,7 @@ const BiometricSetupScreen = ({ route, navigation }) => {
             title="Face Recognition"
             description={
               biometricData.faceRecognitionEnabled
-                ? 'Enrolled and active'
+                ? `Enrolled on ${new Date(biometricData.faceRecord?.enrolled_at).toLocaleDateString()}`
                 : 'Not enrolled'
             }
             left={props => (
@@ -309,7 +401,7 @@ const BiometricSetupScreen = ({ route, navigation }) => {
             )}
             right={props => (
               <View style={styles.switchContainer}>
-                <Switch value={biometricData.faceRecognitionEnabled} />
+                <Switch value={biometricData.faceRecognitionEnabled} disabled={true} />
               </View>
             )}
           />
@@ -337,28 +429,39 @@ const BiometricSetupScreen = ({ route, navigation }) => {
               </Button>
             )}
           </View>
+
+          {biometricData.faceRecord && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Uses</Text>
+                <Text style={styles.statValue}>
+                  {biometricData.faceRecord.use_count || 0}
+                </Text>
+              </View>
+              {biometricData.faceRecord.last_used && (
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>Last Used</Text>
+                  <Text style={styles.statValue}>
+                    {new Date(biometricData.faceRecord.last_used).toLocaleDateString()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </Card.Content>
       </Card>
 
-      {/* QR Code Status */}
+      {/* QR Code Option */}
       <Card style={styles.card}>
         <Card.Content>
           <List.Item
             title="QR Code"
-            description={
-              biometricData.qrCodeGenerated
-                ? 'Generated and ready'
-                : 'Not generated'
-            }
+            description="Always available as fallback"
             left={props => (
               <MaterialCommunityIcons
                 name="qrcode"
                 size={40}
-                color={
-                  biometricData.qrCodeGenerated
-                    ? theme.colors.success
-                    : theme.colors.textSecondary
-                }
+                color={theme.colors.success}
               />
             )}
           />
@@ -367,7 +470,7 @@ const BiometricSetupScreen = ({ route, navigation }) => {
             <Button
               mode="outlined"
               icon="qrcode"
-              onPress={() => navigation.navigate('StudentQRCode', { student })}
+              onPress={handleViewQRCode}
             >
               View QR Code
             </Button>
@@ -403,7 +506,8 @@ const BiometricSetupScreen = ({ route, navigation }) => {
             • Biometric data is stored securely{'\n'}
             • Multiple authentication methods can be active{'\n'}
             • You can remove biometric data anytime{'\n'}
-            • QR code remains available as fallback
+            • QR code remains available as fallback{'\n'}
+            • Usage statistics are tracked for security
           </Text>
         </Card.Content>
       </Card>
@@ -443,8 +547,13 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
+  admissionNumber: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+  },
   warningCard: {
-    backgroundColor: theme.colors.warningLight,
+    backgroundColor: '#FFF3E0',
   },
   warningHeader: {
     flexDirection: 'row',
@@ -452,7 +561,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: theme.fontSizes.md,
-    color: theme.colors.warning,
+    color: theme.colors.text,
     marginLeft: theme.spacing.sm,
     flex: 1,
   },
@@ -461,6 +570,27 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     marginTop: theme.spacing.md,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+  },
+  statValue: {
+    fontSize: theme.fontSizes.lg,
+    fontWeight: 'bold',
+    color: theme.colors.text,
   },
   sectionTitle: {
     fontSize: theme.fontSizes.lg,

@@ -1,17 +1,22 @@
+// ========================================
+// GOD'S EYE EDTECH - STUDENT LIST SCREEN
+// ========================================
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   RefreshControl,
+  Alert,
 } from 'react-native';
-import { Searchbar, FAB, Chip, Menu, Button } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Searchbar, FAB, Chip, Menu, Button, Text } from 'react-native-paper';
 import StudentCard from '../../components/student/StudentCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
-import { SCREENS, KENYA_EDUCATION_LEVELS } from '../../utils/constants';
+import { SCREENS, KENYA_GRADE_LABELS } from '../../utils/constants';
+import * as studentService from '../../services/studentService';
 import theme from '../../styles/theme';
 
 const StudentListScreen = ({ navigation }) => {
@@ -21,6 +26,12 @@ const StudentListScreen = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Filter states
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -36,179 +47,139 @@ const StudentListScreen = ({ navigation }) => {
   // Get unique streams and houses from students
   const [availableStreams, setAvailableStreams] = useState([]);
   const [availableHouses, setAvailableHouses] = useState([]);
+  const [availableGrades, setAvailableGrades] = useState([]);
 
-  // Fetch students
-  const fetchStudents = async () => {
+  // Fetch students with backend integration
+  const fetchStudents = async (page = 1, append = false) => {
     try {
-      setError('');
-      // TODO: Replace with actual API call
-      // const response = await studentService.getStudents();
-      
-      // Mock data for development with Kenya-specific fields
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockStudents = [
-        {
-          id: 1,
-          first_name: 'John',
-          middle_name: 'Kamau',
-          last_name: 'Mwangi',
-          admission_number: 'ADM/2020/001',
-          school: { name: 'Nairobi Primary School' },
-          education_level: 'primary',
-          current_grade: 'grade_5',
-          stream: 'Red',
-          house_name: 'Kilimanjaro',
-          house_color: 'Red',
-          guardians: [
-            { id: 1, first_name: 'Jane', last_name: 'Mwangi' },
-            { id: 2, first_name: 'Michael', last_name: 'Mwangi' },
-          ],
-          attendance_percentage: 92,
-        },
-        {
-          id: 2,
-          first_name: 'Sarah',
-          middle_name: 'Akinyi',
-          last_name: 'Odhiambo',
-          admission_number: 'ADM/2020/002',
-          school: { name: 'Nairobi Primary School' },
-          education_level: 'primary',
-          current_grade: 'grade_5',
-          stream: 'Blue',
-          house_name: 'Mara',
-          house_color: 'Blue',
-          guardians: [
-            { id: 3, first_name: 'Emily', last_name: 'Odhiambo' },
-          ],
-          attendance_percentage: 88,
-        },
-        {
-          id: 3,
-          first_name: 'David',
-          middle_name: 'Kipchoge',
-          last_name: 'Kibet',
-          admission_number: 'ADM/2021/003',
-          school: { name: 'Nairobi Primary School' },
-          education_level: 'primary',
-          current_grade: 'grade_4',
-          stream: 'Red',
-          house_name: 'Kilimanjaro',
-          house_color: 'Red',
-          guardians: [
-            { id: 4, first_name: 'Robert', last_name: 'Kibet' },
-            { id: 5, first_name: 'Linda', last_name: 'Kibet' },
-          ],
-          attendance_percentage: 95,
-        },
-        {
-          id: 4,
-          first_name: 'Grace',
-          middle_name: 'Wanjiru',
-          last_name: 'Njoroge',
-          admission_number: 'ADM/2021/004',
-          school: { name: 'Nairobi Primary School' },
-          education_level: 'junior_secondary',
-          current_grade: 'grade_7',
-          stream: 'East',
-          house_name: 'Tsavo',
-          house_color: 'Green',
-          guardians: [],
-          attendance_percentage: 90,
-        },
-        {
-          id: 5,
-          first_name: 'James',
-          middle_name: 'Otieno',
-          last_name: 'Ouma',
-          admission_number: 'ADM/2019/005',
-          school: { name: 'Nairobi Primary School' },
-          education_level: 'primary',
-          current_grade: 'grade_6',
-          stream: 'Blue',
-          house_name: 'Mara',
-          house_color: 'Blue',
-          guardians: [
-            { id: 6, first_name: 'Mary', last_name: 'Ouma' },
-          ],
-          attendance_percentage: 85,
-        },
-      ];
-      
-      setStudents(mockStudents);
-      setFilteredStudents(mockStudents);
-      
-      // Extract unique streams and houses
-      const streams = [...new Set(mockStudents.map(s => s.stream))].filter(Boolean);
-      const houses = [...new Set(mockStudents.map(s => s.house_name))].filter(Boolean);
-      setAvailableStreams(streams);
-      setAvailableHouses(houses);
-      
+      if (!append) {
+        setError('');
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
+      // Build filters
+      const filters = {
+        page,
+        page_size: 20,
+        ordering: 'first_name,last_name',
+      };
+
+      // Add guardian filter
+      if (selectedFilter === 'with_guardians') {
+        // Backend doesn't have direct filter, we'll filter client-side
+      } else if (selectedFilter === 'without_guardians') {
+        // Backend doesn't have direct filter, we'll filter client-side
+      }
+
+      // Add grade filter
+      if (selectedGrade) {
+        filters.current_grade = selectedGrade;
+      }
+
+      // Add stream filter
+      if (selectedStream) {
+        filters.stream = selectedStream;
+      }
+
+      // Add house filter
+      if (selectedHouse) {
+        filters.house_name = selectedHouse;
+      }
+
+      // Add search query
+      if (searchQuery.trim()) {
+        filters.search = searchQuery.trim();
+      }
+
+      const response = await studentService.getStudents(filters);
+
+      if (response.success) {
+        const data = response.data;
+        
+        // Handle pagination response
+        const results = data.results || data;
+        const count = data.count || results.length;
+        const nextPage = data.next;
+
+        if (append) {
+          setStudents(prev => [...prev, ...results]);
+          setFilteredStudents(prev => [...prev, ...results]);
+        } else {
+          setStudents(results);
+          setFilteredStudents(results);
+          
+          // Extract unique values for filters
+          const grades = [...new Set(results.map(s => s.current_grade))].filter(Boolean);
+          const streams = [...new Set(results.map(s => s.stream))].filter(Boolean);
+          const houses = [...new Set(results.map(s => s.house_name))].filter(Boolean);
+          
+          setAvailableGrades(grades);
+          setAvailableStreams(streams);
+          setAvailableHouses(houses);
+        }
+
+        setTotalCount(count);
+        setHasNextPage(!!nextPage);
+        setCurrentPage(page);
+      } else {
+        throw new Error(response.message || 'Failed to load students');
+      }
     } catch (err) {
-      setError('Failed to load students. Please try again.');
       console.error('Fetch students error:', err);
+      setError(err.message || 'Failed to load students. Please try again.');
+      
+      if (!append) {
+        setStudents([]);
+        setFilteredStudents([]);
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+      setIsLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    fetchStudents();
-  }, []);
+    fetchStudents(1, false);
+  }, [selectedGrade, selectedStream, selectedHouse, searchQuery]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchStudents();
-  }, []);
+    setCurrentPage(1);
+    fetchStudents(1, false);
+  }, [selectedGrade, selectedStream, selectedHouse, searchQuery]);
 
-  // Apply all filters
-  const applyFilters = useCallback(() => {
+  // Load more (pagination)
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasNextPage && !isLoading) {
+      fetchStudents(currentPage + 1, true);
+    }
+  };
+
+  // Apply client-side guardian filter
+  const applyGuardianFilter = useCallback(() => {
     let filtered = [...students];
 
-    // Search filter
-    if (searchQuery.trim() !== '') {
-      const searchLower = searchQuery.toLowerCase();
-      filtered = filtered.filter((student) => {
-        const fullName = `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.toLowerCase();
-        const admissionNumber = student.admission_number.toLowerCase();
-        return fullName.includes(searchLower) || admissionNumber.includes(searchLower);
-      });
-    }
-
-    // Guardian filter
+    // Guardian filter (client-side)
     if (selectedFilter === 'with_guardians') {
-      filtered = filtered.filter(s => s.guardians.length > 0);
+      filtered = filtered.filter(s => s.guardian_count > 0);
     } else if (selectedFilter === 'without_guardians') {
-      filtered = filtered.filter(s => s.guardians.length === 0);
-    }
-
-    // Grade filter
-    if (selectedGrade) {
-      filtered = filtered.filter(s => s.current_grade === selectedGrade);
-    }
-
-    // Stream filter
-    if (selectedStream) {
-      filtered = filtered.filter(s => s.stream === selectedStream);
-    }
-
-    // House filter
-    if (selectedHouse) {
-      filtered = filtered.filter(s => s.house_name === selectedHouse);
+      filtered = filtered.filter(s => s.guardian_count === 0);
     }
 
     setFilteredStudents(filtered);
-  }, [students, searchQuery, selectedFilter, selectedGrade, selectedStream, selectedHouse]);
+  }, [students, selectedFilter]);
 
-  // Apply filters whenever dependencies change
   useEffect(() => {
-    applyFilters();
-  }, [applyFilters]);
+    applyGuardianFilter();
+  }, [applyGuardianFilter]);
 
   // Search functionality
   const handleSearch = (query) => {
     setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   // Clear all filters
@@ -218,6 +189,7 @@ const StudentListScreen = ({ navigation }) => {
     setSelectedStream(null);
     setSelectedHouse(null);
     setSearchQuery('');
+    setCurrentPage(1);
   };
 
   const handleStudentPress = (student) => {
@@ -228,43 +200,25 @@ const StudentListScreen = ({ navigation }) => {
     <StudentCard student={item} onPress={() => handleStudentPress(item)} />
   );
 
-  // Helper function to get grade label
-  const getGradeLabel = (grade) => {
-    const gradeLabels = {
-      pp1: 'PP1',
-      pp2: 'PP2',
-      grade_1: 'Grade 1',
-      grade_2: 'Grade 2',
-      grade_3: 'Grade 3',
-      grade_4: 'Grade 4',
-      grade_5: 'Grade 5',
-      grade_6: 'Grade 6',
-      grade_7: 'Grade 7',
-      grade_8: 'Grade 8',
-      grade_9: 'Grade 9',
-      grade_10: 'Grade 10',
-      grade_11: 'Grade 11',
-      grade_12: 'Grade 12',
-      form_1: 'Form 1',
-      form_2: 'Form 2',
-      form_3: 'Form 3',
-      form_4: 'Form 4',
-    };
-    return gradeLabels[grade] || grade;
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.loadingMore}>
+        <Text>Loading more students...</Text>
+      </View>
+    );
   };
-
-  // Get unique grades from current students
-  const availableGrades = [...new Set(students.map(s => s.current_grade))].filter(Boolean);
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
 
   const activeFiltersCount = 
     (selectedFilter !== 'all' ? 1 : 0) + 
     (selectedGrade ? 1 : 0) + 
     (selectedStream ? 1 : 0) + 
-    (selectedHouse ? 1 : 0);
+    (selectedHouse ? 1 : 0) +
+    (searchQuery.trim() ? 1 : 0);
+
+  if (isLoading) {
+    return <LoadingSpinner message="Loading students..." />;
+  }
 
   return (
     <View style={styles.container}>
@@ -275,10 +229,11 @@ const StudentListScreen = ({ navigation }) => {
           onChangeText={handleSearch}
           value={searchQuery}
           style={styles.searchBar}
+          inputStyle={styles.searchInput}
         />
       </View>
 
-      {/* Filter Chips - Row 1: Guardian & Grade */}
+      {/* Filter Chips - Row 1: Guardian Status */}
       <View style={styles.filterContainer}>
         <Chip
           selected={selectedFilter === 'all'}
@@ -286,7 +241,7 @@ const StudentListScreen = ({ navigation }) => {
           style={styles.filterChip}
           icon="account-group"
         >
-          All ({students.length})
+          All ({totalCount})
         </Chip>
         <Chip
           selected={selectedFilter === 'with_guardians'}
@@ -320,7 +275,7 @@ const StudentListScreen = ({ navigation }) => {
               icon="book-open-variant"
               onClose={selectedGrade ? () => setSelectedGrade(null) : undefined}
             >
-              {selectedGrade ? getGradeLabel(selectedGrade) : 'Grade'}
+              {selectedGrade ? KENYA_GRADE_LABELS[selectedGrade] : 'Grade'}
             </Chip>
           }
         >
@@ -331,66 +286,70 @@ const StudentListScreen = ({ navigation }) => {
                 setSelectedGrade(grade);
                 setGradeMenuVisible(false);
               }}
-              title={getGradeLabel(grade)}
+              title={KENYA_GRADE_LABELS[grade] || grade}
             />
           ))}
         </Menu>
 
         {/* Stream Filter */}
-        <Menu
-          visible={streamMenuVisible}
-          onDismiss={() => setStreamMenuVisible(false)}
-          anchor={
-            <Chip
-              selected={!!selectedStream}
-              onPress={() => setStreamMenuVisible(true)}
-              style={styles.filterChip}
-              icon="format-list-bulleted"
-              onClose={selectedStream ? () => setSelectedStream(null) : undefined}
-            >
-              {selectedStream ? selectedStream : 'Stream'}
-            </Chip>
-          }
-        >
-          {availableStreams.map((stream) => (
-            <Menu.Item
-              key={stream}
-              onPress={() => {
-                setSelectedStream(stream);
-                setStreamMenuVisible(false);
-              }}
-              title={stream}
-            />
-          ))}
-        </Menu>
+        {availableStreams.length > 0 && (
+          <Menu
+            visible={streamMenuVisible}
+            onDismiss={() => setStreamMenuVisible(false)}
+            anchor={
+              <Chip
+                selected={!!selectedStream}
+                onPress={() => setStreamMenuVisible(true)}
+                style={styles.filterChip}
+                icon="format-list-bulleted"
+                onClose={selectedStream ? () => setSelectedStream(null) : undefined}
+              >
+                {selectedStream ? selectedStream : 'Stream'}
+              </Chip>
+            }
+          >
+            {availableStreams.map((stream) => (
+              <Menu.Item
+                key={stream}
+                onPress={() => {
+                  setSelectedStream(stream);
+                  setStreamMenuVisible(false);
+                }}
+                title={stream}
+              />
+            ))}
+          </Menu>
+        )}
 
         {/* House Filter */}
-        <Menu
-          visible={houseMenuVisible}
-          onDismiss={() => setHouseMenuVisible(false)}
-          anchor={
-            <Chip
-              selected={!!selectedHouse}
-              onPress={() => setHouseMenuVisible(true)}
-              style={styles.filterChip}
-              icon="home-group"
-              onClose={selectedHouse ? () => setSelectedHouse(null) : undefined}
-            >
-              {selectedHouse ? selectedHouse : 'House'}
-            </Chip>
-          }
-        >
-          {availableHouses.map((house) => (
-            <Menu.Item
-              key={house}
-              onPress={() => {
-                setSelectedHouse(house);
-                setHouseMenuVisible(false);
-              }}
-              title={house}
-            />
-          ))}
-        </Menu>
+        {availableHouses.length > 0 && (
+          <Menu
+            visible={houseMenuVisible}
+            onDismiss={() => setHouseMenuVisible(false)}
+            anchor={
+              <Chip
+                selected={!!selectedHouse}
+                onPress={() => setHouseMenuVisible(true)}
+                style={styles.filterChip}
+                icon="home-group"
+                onClose={selectedHouse ? () => setSelectedHouse(null) : undefined}
+              >
+                {selectedHouse ? selectedHouse : 'House'}
+              </Chip>
+            }
+          >
+            {availableHouses.map((house) => (
+              <Menu.Item
+                key={house}
+                onPress={() => {
+                  setSelectedHouse(house);
+                  setHouseMenuVisible(false);
+                }}
+                title={house}
+              />
+            ))}
+          </Menu>
+        )}
       </View>
 
       {/* Clear Filters Button */}
@@ -408,7 +367,9 @@ const StudentListScreen = ({ navigation }) => {
       )}
 
       {/* Error Message */}
-      {error ? <ErrorMessage message={error} onRetry={fetchStudents} /> : null}
+      {error ? (
+        <ErrorMessage message={error} onRetry={() => fetchStudents(1, false)} />
+      ) : null}
 
       {/* Students List */}
       {filteredStudents.length > 0 ? (
@@ -420,6 +381,9 @@ const StudentListScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
           }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
         />
       ) : (
@@ -461,6 +425,9 @@ const styles = StyleSheet.create({
     elevation: 0,
     backgroundColor: theme.colors.background,
   },
+  searchInput: {
+    fontSize: theme.fontSizes.md,
+  },
   filterContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -483,6 +450,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: theme.spacing.md,
+  },
+  loadingMore: {
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
   },
   fab: {
     position: 'absolute',

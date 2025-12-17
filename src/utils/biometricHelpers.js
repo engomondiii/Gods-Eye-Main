@@ -1,14 +1,17 @@
+// ========================================
+// GOD'S EYE EDTECH - BIOMETRIC HELPERS
+// ========================================
+
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Platform } from 'react-native';
 
-/**
- * Biometric Helper Functions
- * Utility functions for biometric operations
- */
+// ============================================================
+// BIOMETRIC SUPPORT CHECKS
+// ============================================================
 
 /**
  * Check if device supports biometric authentication
- * @returns {Promise<Object>} - Support information
+ * @returns {Promise<Object>} Support information
  */
 export const checkBiometricSupport = async () => {
   try {
@@ -46,9 +49,21 @@ export const checkBiometricSupport = async () => {
 };
 
 /**
+ * Check if biometric is available for specific platform
+ * @returns {boolean} True if available
+ */
+export const isBiometricAvailableForPlatform = () => {
+  return Platform.OS === 'ios' || Platform.OS === 'android';
+};
+
+// ============================================================
+// BIOMETRIC TYPE UTILITIES
+// ============================================================
+
+/**
  * Get biometric type name
  * @param {number} type - Authentication type
- * @returns {string} - Type name
+ * @returns {string} Type name
  */
 export const getBiometricTypeName = (type) => {
   switch (type) {
@@ -66,7 +81,7 @@ export const getBiometricTypeName = (type) => {
 /**
  * Get available biometric types as array of names
  * @param {Array} supportedTypes - Array of supported types
- * @returns {Array} - Array of type names
+ * @returns {Array} Array of type names
  */
 export const getAvailableBiometricTypes = (supportedTypes) => {
   return supportedTypes.map(type => getBiometricTypeName(type));
@@ -75,7 +90,7 @@ export const getAvailableBiometricTypes = (supportedTypes) => {
 /**
  * Get biometric icon name for Material Community Icons
  * @param {number} type - Authentication type
- * @returns {string} - Icon name
+ * @returns {string} Icon name
  */
 export const getBiometricIcon = (type) => {
   switch (type) {
@@ -91,9 +106,45 @@ export const getBiometricIcon = (type) => {
 };
 
 /**
+ * Get platform-specific biometric name
+ * @returns {string} Platform-specific name
+ */
+export const getPlatformBiometricName = () => {
+  if (Platform.OS === 'ios') {
+    return 'Touch ID / Face ID';
+  } else if (Platform.OS === 'android') {
+    return 'Fingerprint / Face Unlock';
+  }
+  return 'Biometric';
+};
+
+/**
+ * Get recommended biometric type
+ * @param {Array} supportedTypes - Supported types
+ * @returns {number|null} Recommended type
+ */
+export const getRecommendedBiometricType = (supportedTypes) => {
+  // Prefer Face Recognition > Fingerprint > Iris
+  if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+    return LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION;
+  }
+  if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+    return LocalAuthentication.AuthenticationType.FINGERPRINT;
+  }
+  if (supportedTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+    return LocalAuthentication.AuthenticationType.IRIS;
+  }
+  return null;
+};
+
+// ============================================================
+// ERROR HANDLING
+// ============================================================
+
+/**
  * Get user-friendly error message
  * @param {string} error - Error code or message
- * @returns {string} - User-friendly message
+ * @returns {string} User-friendly message
  */
 export const getBiometricErrorMessage = (error) => {
   const errorMessages = {
@@ -117,7 +168,7 @@ export const getBiometricErrorMessage = (error) => {
 /**
  * Validate biometric authentication result
  * @param {Object} result - Authentication result
- * @returns {Object} - Validation result
+ * @returns {Object} Validation result
  */
 export const validateBiometricResult = (result) => {
   if (!result) {
@@ -140,33 +191,15 @@ export const validateBiometricResult = (result) => {
   };
 };
 
-/**
- * Check if biometric is available for specific platform
- * @returns {boolean} - True if available
- */
-export const isBiometricAvailableForPlatform = () => {
-  // Biometric is available on both iOS and Android
-  return Platform.OS === 'ios' || Platform.OS === 'android';
-};
-
-/**
- * Get platform-specific biometric name
- * @returns {string} - Platform-specific name
- */
-export const getPlatformBiometricName = () => {
-  if (Platform.OS === 'ios') {
-    return 'Touch ID / Face ID';
-  } else if (Platform.OS === 'android') {
-    return 'Fingerprint / Face Unlock';
-  }
-  return 'Biometric';
-};
+// ============================================================
+// STATUS & FORMATTING
+// ============================================================
 
 /**
  * Format biometric enrollment status
  * @param {boolean} hasHardware - Has biometric hardware
  * @param {boolean} isEnrolled - Has enrolled biometrics
- * @returns {Object} - Status information
+ * @returns {Object} Status information
  */
 export const formatBiometricStatus = (hasHardware, isEnrolled) => {
   if (!hasHardware) {
@@ -195,7 +228,7 @@ export const formatBiometricStatus = (hasHardware, isEnrolled) => {
 /**
  * Get security level for biometric type
  * @param {number} type - Authentication type
- * @returns {Object} - Security level info
+ * @returns {Object} Security level info
  */
 export const getBiometricSecurityLevel = (type) => {
   switch (type) {
@@ -226,10 +259,14 @@ export const getBiometricSecurityLevel = (type) => {
   }
 };
 
+// ============================================================
+// AUTHENTICATION OPTIONS
+// ============================================================
+
 /**
  * Create authentication options
  * @param {Object} config - Configuration options
- * @returns {Object} - LocalAuthentication options
+ * @returns {Object} LocalAuthentication options
  */
 export const createAuthOptions = (config = {}) => {
   return {
@@ -244,7 +281,7 @@ export const createAuthOptions = (config = {}) => {
 /**
  * Check if biometric should be used based on settings
  * @param {Object} settings - User settings
- * @returns {boolean} - Should use biometric
+ * @returns {boolean} Should use biometric
  */
 export const shouldUseBiometric = (settings = {}) => {
   if (!settings.biometricEnabled) return false;
@@ -253,29 +290,14 @@ export const shouldUseBiometric = (settings = {}) => {
   return true;
 };
 
-/**
- * Get recommended biometric type
- * @param {Array} supportedTypes - Supported types
- * @returns {number|null} - Recommended type
- */
-export const getRecommendedBiometricType = (supportedTypes) => {
-  // Prefer Face Recognition > Fingerprint > Iris
-  if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-    return LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION;
-  }
-  if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-    return LocalAuthentication.AuthenticationType.FINGERPRINT;
-  }
-  if (supportedTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
-    return LocalAuthentication.AuthenticationType.IRIS;
-  }
-  return null;
-};
+// ============================================================
+// VALIDATION
+// ============================================================
 
 /**
  * Validate biometric data format
  * @param {Object} data - Biometric data
- * @returns {Object} - Validation result
+ * @returns {Object} Validation result
  */
 export const validateBiometricData = (data) => {
   const errors = [];
@@ -302,7 +324,7 @@ export const validateBiometricData = (data) => {
  * Check if biometric re-enrollment is needed
  * @param {Date} lastEnrolled - Last enrollment date
  * @param {number} maxAgeDays - Maximum age in days
- * @returns {boolean} - True if re-enrollment needed
+ * @returns {boolean} True if re-enrollment needed
  */
 export const needsBiometricReEnrollment = (lastEnrolled, maxAgeDays = 365) => {
   if (!lastEnrolled) return true;
@@ -317,7 +339,7 @@ export const needsBiometricReEnrollment = (lastEnrolled, maxAgeDays = 365) => {
 /**
  * Get biometric quality score
  * @param {Object} metadata - Biometric metadata
- * @returns {number} - Quality score (0-100)
+ * @returns {number} Quality score (0-100)
  */
 export const getBiometricQualityScore = (metadata = {}) => {
   let score = 50; // Base score
@@ -334,12 +356,16 @@ export const getBiometricQualityScore = (metadata = {}) => {
   return Math.max(0, Math.min(100, score));
 };
 
+// ============================================================
+// LOGGING & TRACKING
+// ============================================================
+
 /**
  * Format biometric attempt log
  * @param {boolean} success - Success status
  * @param {string} type - Biometric type
  * @param {string} error - Error message
- * @returns {Object} - Log entry
+ * @returns {Object} Log entry
  */
 export const formatBiometricLog = (success, type, error = null) => {
   return {
@@ -351,22 +377,65 @@ export const formatBiometricLog = (success, type, error = null) => {
   };
 };
 
+/**
+ * Get biometric usage statistics
+ * @param {Array} logs - Array of biometric logs
+ * @returns {Object} Usage statistics
+ */
+export const getBiometricStats = (logs = []) => {
+  const totalAttempts = logs.length;
+  const successfulAttempts = logs.filter(log => log.success).length;
+  const failedAttempts = totalAttempts - successfulAttempts;
+  const successRate = totalAttempts > 0 ? (successfulAttempts / totalAttempts) * 100 : 0;
+
+  const typeBreakdown = logs.reduce((acc, log) => {
+    acc[log.type] = (acc[log.type] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    totalAttempts,
+    successfulAttempts,
+    failedAttempts,
+    successRate: successRate.toFixed(2),
+    typeBreakdown,
+  };
+};
+
+// ============================================================
+// EXPORTS
+// ============================================================
+
 export default {
+  // Support Checks
   checkBiometricSupport,
+  isBiometricAvailableForPlatform,
+
+  // Type Utilities
   getBiometricTypeName,
   getAvailableBiometricTypes,
   getBiometricIcon,
+  getPlatformBiometricName,
+  getRecommendedBiometricType,
+
+  // Error Handling
   getBiometricErrorMessage,
   validateBiometricResult,
-  isBiometricAvailableForPlatform,
-  getPlatformBiometricName,
+
+  // Status & Formatting
   formatBiometricStatus,
   getBiometricSecurityLevel,
+
+  // Authentication Options
   createAuthOptions,
   shouldUseBiometric,
-  getRecommendedBiometricType,
+
+  // Validation
   validateBiometricData,
   needsBiometricReEnrollment,
   getBiometricQualityScore,
+
+  // Logging & Tracking
   formatBiometricLog,
+  getBiometricStats,
 };

@@ -1,20 +1,24 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Alert, Share } from 'react-native';
+// ========================================
+// GOD'S EYE EDTECH - QR CODE DISPLAY COMPONENT
+// ========================================
+
+import React, { useRef } from 'react';
+import { View, StyleSheet, Alert, Share, Platform } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import theme from '../../styles/theme';
-import { APP_CONFIG } from '../../utils/constants';
 
 const QRCodeDisplay = ({ 
-  studentId,
   qrCode,
-  size = APP_CONFIG.QR_CODE_SIZE || 250,
+  size = 250,
   showDownload = true,
   showShare = true,
   student = null
 }) => {
-  const [qrRef, setQrRef] = useState(null);
+  const qrRef = useRef(null);
 
   if (!qrCode) {
     return (
@@ -45,12 +49,36 @@ const QRCodeDisplay = ({
     }
   };
 
-  const handleDownload = () => {
-    Alert.alert(
-      'Download QR Code',
-      'QR Code download functionality requires native implementation. Use Share instead.',
-      [{ text: 'OK' }]
-    );
+  const handleDownload = async () => {
+    try {
+      // Get QR code as base64
+      qrRef.current?.toDataURL(async (dataURL) => {
+        if (Platform.OS === 'web') {
+          // Web: download directly
+          const link = document.createElement('a');
+          link.href = `data:image/png;base64,${dataURL}`;
+          link.download = `qr-code-${student?.admission_number || 'student'}.png`;
+          link.click();
+        } else {
+          // Mobile: save to file system and share
+          const filename = `qr-code-${student?.admission_number || 'student'}.png`;
+          const fileUri = FileSystem.documentDirectory + filename;
+          
+          await FileSystem.writeAsStringAsync(fileUri, dataURL, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(fileUri);
+          } else {
+            Alert.alert('Success', `QR code saved to ${fileUri}`);
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      Alert.alert('Error', 'Failed to download QR code');
+    }
   };
 
   const handlePrint = () => {
@@ -82,7 +110,7 @@ const QRCodeDisplay = ({
           size={size}
           color={theme.colors.text}
           backgroundColor={theme.colors.surface}
-          getRef={(ref) => setQrRef(ref)}
+          getRef={(ref) => (qrRef.current = ref)}
         />
       </View>
 
@@ -109,6 +137,7 @@ const QRCodeDisplay = ({
             onPress={handleShare}
             style={styles.button}
             icon="share-variant"
+            compact
           >
             Share
           </Button>
@@ -120,6 +149,7 @@ const QRCodeDisplay = ({
             onPress={handleDownload}
             style={styles.button}
             icon="download"
+            compact
           >
             Download
           </Button>
@@ -130,6 +160,7 @@ const QRCodeDisplay = ({
           onPress={handlePrint}
           style={styles.button}
           icon="printer"
+          compact
         >
           Print
         </Button>
@@ -180,12 +211,12 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
     fontWeight: '600',
     color: theme.colors.text,
-    fontFamily: 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.infoLight,
+    backgroundColor: '#E3F2FD',
     padding: theme.spacing.sm,
     borderRadius: theme.borderRadius.sm,
     marginBottom: theme.spacing.md,

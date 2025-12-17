@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+// ========================================
+// GOD'S EYE EDTECH - CREATE STUDENT SCREEN
+// ========================================
+
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,12 +20,13 @@ import StreamPicker from '../../components/form/StreamPicker';
 import HousePicker from '../../components/form/HousePicker';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import theme from '../../styles/theme';
-import { KENYA_EDUCATION_LEVELS, KENYA_ACADEMIC_TERMS } from '../../utils/constants';
+import { KENYA_ACADEMIC_TERMS } from '../../utils/constants';
+import * as studentService from '../../services/studentService';
 
 const CreateStudentScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   
-  // Form state - Personal Information
+  // Form state
   const [formData, setFormData] = useState({
     // Personal Information
     first_name: '',
@@ -31,7 +36,7 @@ const CreateStudentScreen = ({ navigation }) => {
     gender: 'male',
     birth_certificate_number: '',
     
-    // School Information (Kenya is default, no country picker)
+    // School Information
     county: null,
     school: null,
     
@@ -44,7 +49,7 @@ const CreateStudentScreen = ({ navigation }) => {
     year_of_admission: new Date().getFullYear().toString(),
     current_term: 'term_1',
     
-    // House System (Optional)
+    // House System
     house_name: '',
     house_color: '',
     
@@ -55,6 +60,25 @@ const CreateStudentScreen = ({ navigation }) => {
 
   // Error state
   const [errors, setErrors] = useState({});
+
+  // Auto-generate admission number when school is selected
+  useEffect(() => {
+    if (formData.school && !formData.admission_number) {
+      generateAdmissionNumber();
+    }
+  }, [formData.school]);
+
+  // Generate admission number
+  const generateAdmissionNumber = async () => {
+    try {
+      const response = await studentService.generateAdmissionNumber(formData.school.id);
+      if (response.success) {
+        updateField('admission_number', response.data.admission_number);
+      }
+    } catch (error) {
+      console.error('Generate admission number error:', error);
+    }
+  };
 
   // Update form field
   const updateField = (field, value) => {
@@ -69,7 +93,7 @@ const CreateStudentScreen = ({ navigation }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Personal Information Validation
+    // Personal Information
     if (!formData.first_name.trim()) {
       newErrors.first_name = 'First name is required';
     }
@@ -80,9 +104,26 @@ const CreateStudentScreen = ({ navigation }) => {
 
     if (!formData.date_of_birth) {
       newErrors.date_of_birth = 'Date of birth is required';
+    } else {
+      // Validate age (3-25 years)
+      const age = Math.floor((new Date() - formData.date_of_birth) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age < 3) {
+        newErrors.date_of_birth = 'Student must be at least 3 years old';
+      } else if (age > 25) {
+        newErrors.date_of_birth = 'Student age cannot exceed 25 years';
+      }
     }
 
-    // School Information Validation
+    // Birth certificate (optional but if provided, must be valid)
+    if (formData.birth_certificate_number.trim()) {
+      if (!/^\d+$/.test(formData.birth_certificate_number)) {
+        newErrors.birth_certificate_number = 'Birth certificate must contain only digits';
+      } else if (formData.birth_certificate_number.length < 6 || formData.birth_certificate_number.length > 10) {
+        newErrors.birth_certificate_number = 'Birth certificate must be 6-10 digits';
+      }
+    }
+
+    // School Information
     if (!formData.county) {
       newErrors.county = 'County is required';
     }
@@ -91,7 +132,7 @@ const CreateStudentScreen = ({ navigation }) => {
       newErrors.school = 'School is required';
     }
 
-    // Academic Information Validation
+    // Academic Information
     if (!formData.education_level) {
       newErrors.education_level = 'Education level is required';
     }
@@ -108,9 +149,16 @@ const CreateStudentScreen = ({ navigation }) => {
       newErrors.admission_number = 'Admission number is required';
     }
 
-    // UPI Number Format Validation (Optional but if provided, must be valid)
+    // UPI Number (optional but if provided, must be valid)
     if (formData.upi_number.trim() && formData.upi_number.trim().length < 10) {
       newErrors.upi_number = 'UPI number must be at least 10 characters';
+    }
+
+    // Year of admission
+    const currentYear = new Date().getFullYear();
+    const admissionYear = parseInt(formData.year_of_admission);
+    if (isNaN(admissionYear) || admissionYear < 1990 || admissionYear > currentYear + 1) {
+      newErrors.year_of_admission = `Year must be between 1990 and ${currentYear + 1}`;
     }
 
     setErrors(newErrors);
@@ -120,7 +168,7 @@ const CreateStudentScreen = ({ navigation }) => {
   // Handle submit
   const handleSubmit = async () => {
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please fill in all required fields');
+      Alert.alert('Validation Error', 'Please fill in all required fields correctly');
       return;
     }
 
@@ -129,33 +177,64 @@ const CreateStudentScreen = ({ navigation }) => {
       
       // Prepare data for API
       const studentData = {
-        ...formData,
-        // Convert date to ISO string
+        first_name: formData.first_name.trim(),
+        middle_name: formData.middle_name.trim() || null,
+        last_name: formData.last_name.trim(),
         date_of_birth: formData.date_of_birth.toISOString().split('T')[0],
-        // Extract IDs from objects
-        county_id: formData.county.id,
-        school_id: formData.school.id,
+        gender: formData.gender,
+        birth_certificate_number: formData.birth_certificate_number.trim() || null,
+        county: formData.county.id,
+        school: formData.school.id,
+        education_level: formData.education_level,
+        current_grade: formData.current_grade,
+        stream: formData.stream.trim(),
+        admission_number: formData.admission_number.trim(),
+        upi_number: formData.upi_number.trim() || null,
+        year_of_admission: parseInt(formData.year_of_admission),
+        current_term: formData.current_term,
+        house_name: formData.house_name.trim() || null,
+        house_color: formData.house_color.trim() || null,
+        has_special_needs: formData.has_special_needs,
+        special_needs_description: formData.has_special_needs ? formData.special_needs_description.trim() : null,
       };
       
-      // TODO: Replace with actual API call
-      // const response = await studentService.createStudent(studentData);
+      const response = await studentService.createStudent(studentData);
       
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      Alert.alert(
-        'Success',
-        'Student created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      if (response.success) {
+        Alert.alert(
+          'Success',
+          'Student created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      } else {
+        throw new Error(response.message || 'Failed to create student');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to create student. Please try again.');
       console.error('Create student error:', error);
+      
+      // Handle specific validation errors
+      if (error.response?.data) {
+        const backendErrors = error.response.data;
+        const newErrors = {};
+        
+        Object.keys(backendErrors).forEach(key => {
+          if (Array.isArray(backendErrors[key])) {
+            newErrors[key] = backendErrors[key][0];
+          } else {
+            newErrors[key] = backendErrors[key];
+          }
+        });
+        
+        setErrors(newErrors);
+        Alert.alert('Validation Error', 'Please check the form for errors');
+      } else {
+        Alert.alert('Error', error.message || 'Failed to create student. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -247,10 +326,15 @@ const CreateStudentScreen = ({ navigation }) => {
           mode="outlined"
           value={formData.birth_certificate_number}
           onChangeText={(text) => updateField('birth_certificate_number', text)}
+          error={!!errors.birth_certificate_number}
           style={styles.input}
-          autoCapitalize="characters"
           keyboardType="numeric"
+          placeholder="6-10 digits"
         />
+        {errors.birth_certificate_number && (
+          <HelperText type="error">{errors.birth_certificate_number}</HelperText>
+        )}
+        <HelperText type="info">Optional: Kenya birth certificate number</HelperText>
 
         <Divider style={styles.divider} />
 
@@ -260,7 +344,6 @@ const CreateStudentScreen = ({ navigation }) => {
 
         {/* County Picker */}
         <CountyPicker
-          countryId={1} // Kenya is always ID 1 in your system
           value={formData.county}
           onChange={(county) => {
             updateField('county', county);
@@ -280,6 +363,7 @@ const CreateStudentScreen = ({ navigation }) => {
               value={formData.school}
               onChange={(school) => updateField('school', school)}
               error={!!errors.school}
+              approvedOnly
             />
             {errors.school && (
               <HelperText type="error">{errors.school}</HelperText>
@@ -292,7 +376,7 @@ const CreateStudentScreen = ({ navigation }) => {
         {/* SECTION 3: ACADEMIC INFORMATION */}
         <Text style={styles.sectionTitle}>Academic Information (CBC System)</Text>
 
-        {/* Education Level */}
+        {/* Grade Picker */}
         <GradePicker
           value={formData.current_grade}
           onGradeChange={(grade) => updateField('current_grade', grade)}
@@ -322,11 +406,20 @@ const CreateStudentScreen = ({ navigation }) => {
           error={!!errors.admission_number}
           style={styles.input}
           autoCapitalize="characters"
-          placeholder="e.g., ADM/2025/001"
+          placeholder="e.g., 0012-001"
+          right={
+            formData.school && (
+              <TextInput.Icon
+                icon="refresh"
+                onPress={generateAdmissionNumber}
+              />
+            )
+          }
         />
         {errors.admission_number && (
           <HelperText type="error">{errors.admission_number}</HelperText>
         )}
+        <HelperText type="info">Auto-generated, but you can edit it</HelperText>
 
         {/* UPI Number */}
         <TextInput
@@ -342,9 +435,7 @@ const CreateStudentScreen = ({ navigation }) => {
         {errors.upi_number && (
           <HelperText type="error">{errors.upi_number}</HelperText>
         )}
-        <HelperText type="info">
-          Optional: UPI number from Ministry of Education
-        </HelperText>
+        <HelperText type="info">Optional: 10+ character UPI from MOE</HelperText>
 
         {/* Year of Admission */}
         <TextInput
@@ -352,10 +443,14 @@ const CreateStudentScreen = ({ navigation }) => {
           mode="outlined"
           value={formData.year_of_admission}
           onChangeText={(text) => updateField('year_of_admission', text)}
+          error={!!errors.year_of_admission}
           style={styles.input}
           keyboardType="numeric"
           maxLength={4}
         />
+        {errors.year_of_admission && (
+          <HelperText type="error">{errors.year_of_admission}</HelperText>
+        )}
 
         {/* Current Term */}
         <Text style={styles.fieldLabel}>Current Term *</Text>
@@ -372,7 +467,7 @@ const CreateStudentScreen = ({ navigation }) => {
 
         <Divider style={styles.divider} />
 
-        {/* SECTION 4: HOUSE SYSTEM (OPTIONAL) */}
+        {/* SECTION 4: HOUSE SYSTEM */}
         <Text style={styles.sectionTitle}>House System (Optional)</Text>
         <Text style={styles.sectionSubtitle}>
           Common in Kenyan secondary schools for competitions
@@ -387,7 +482,7 @@ const CreateStudentScreen = ({ navigation }) => {
 
         <Divider style={styles.divider} />
 
-        {/* SECTION 5: SPECIAL NEEDS (OPTIONAL) */}
+        {/* SECTION 5: SPECIAL NEEDS */}
         <Text style={styles.sectionTitle}>Special Needs (Optional)</Text>
 
         <SegmentedButtons
@@ -420,6 +515,7 @@ const CreateStudentScreen = ({ navigation }) => {
           style={styles.submitButton}
           contentStyle={styles.submitButtonContent}
           disabled={isLoading}
+          loading={isLoading}
         >
           Create Student
         </Button>
@@ -445,6 +541,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
   },
   sectionTitle: {
     fontSize: theme.fontSizes.h4,
@@ -484,7 +581,7 @@ const styles = StyleSheet.create({
     height: 50,
   },
   cancelButton: {
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
   },
 });
 

@@ -1,17 +1,23 @@
+// ========================================
+// GOD'S EYE EDTECH - GUARDIAN LINK REQUESTS SCREEN (TEACHER)
+// ========================================
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   RefreshControl,
-  Text,
+  Alert,
 } from 'react-native';
-import { Chip, FAB } from 'react-native-paper';
-import PendingApprovalCard from '../../components/teacher/PendingApprovalCard';
+import { Card, Title, Text, Chip, Button, Avatar, Divider } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
-import { SCREENS, REQUEST_STATUS } from '../../utils/constants';
+import { SCREENS } from '../../utils/constants';
+import * as guardianService from '../../services/guardianService';
+import theme from '../../styles/theme';
 
 const GuardianLinkRequestsScreen = ({ navigation }) => {
   const [requests, setRequests] = useState([]);
@@ -25,66 +31,24 @@ const GuardianLinkRequestsScreen = ({ navigation }) => {
   const fetchRequests = async () => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await guardianService.getLinkRequests();
-      
-      // Mock data for development
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockRequests = [
-        {
-          id: 1,
-          student: {
-            id: 1,
-            first_name: 'John',
-            last_name: 'Doe',
-            admission_number: 'NPS001',
-          },
-          new_guardian: {
-            id: 3,
-            first_name: 'Uncle',
-            last_name: 'Doe',
-            phone: '+254734567890',
-          },
-          created_at: '2025-10-26T10:00:00Z',
-          expires_at: '2025-10-27T10:00:00Z',
-          approved_by: [
-            { id: 1, first_name: 'Jane', last_name: 'Doe' },
-          ],
-          total_guardians: 2,
-          status: REQUEST_STATUS.PENDING,
-          teacher_approved: false,
-        },
-        {
-          id: 2,
-          student: {
-            id: 2,
-            first_name: 'Sarah',
-            last_name: 'Smith',
-            admission_number: 'NPS002',
-          },
-          new_guardian: {
-            id: 6,
-            first_name: 'Aunt',
-            last_name: 'Smith',
-            phone: '+254745678901',
-          },
-          created_at: '2025-10-25T14:30:00Z',
-          expires_at: '2025-10-26T14:30:00Z',
-          approved_by: [
-            { id: 3, first_name: 'Emily', last_name: 'Smith' },
-          ],
-          total_guardians: 1,
-          status: REQUEST_STATUS.APPROVED,
-          teacher_approved: false,
-        },
-      ];
-      
-      setRequests(mockRequests);
-      applyFilter(selectedFilter, mockRequests);
+
+      // Fetch all link requests
+      const response = await guardianService.getLinkRequests({
+        page_size: 100,
+      });
+
+      if (response.success) {
+        const data = response.data.results || response.data;
+        setRequests(data);
+        applyFilter(selectedFilter, data);
+      } else {
+        throw new Error(response.message || 'Failed to load requests');
+      }
     } catch (err) {
-      setError('Failed to load requests. Please try again.');
       console.error('Fetch requests error:', err);
+      setError(err.message || 'Failed to load requests. Please try again.');
+      setRequests([]);
+      setFilteredRequests([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -106,53 +70,219 @@ const GuardianLinkRequestsScreen = ({ navigation }) => {
     
     if (filter === 'all') {
       setFilteredRequests(requestsList);
-    } else if (filter === 'pending') {
+    } else if (filter === 'pending_guardian') {
+      // Pending guardian approval
       const filtered = requestsList.filter(
-        r => r.status === REQUEST_STATUS.PENDING
+        r => r.status === 'pending' && !r.requires_teacher_approval
       );
       setFilteredRequests(filtered);
-    } else if (filter === 'approved') {
+    } else if (filter === 'ready_for_teacher') {
+      // All guardians approved, ready for teacher
       const filtered = requestsList.filter(
-        r => r.status === REQUEST_STATUS.APPROVED && !r.teacher_approved
+        r => r.status === 'approved' && 
+             r.requires_teacher_approval && 
+             !r.teacher_approved &&
+             r.approval_progress?.is_complete
       );
       setFilteredRequests(filtered);
     } else if (filter === 'finalized') {
+      // Teacher approved (finalized)
       const filtered = requestsList.filter(r => r.teacher_approved);
+      setFilteredRequests(filtered);
+    } else if (filter === 'expired') {
+      const filtered = requestsList.filter(r => r.status === 'expired' || r.is_expired);
       setFilteredRequests(filtered);
     }
   };
 
-  const handleApprove = async (requestId) => {
-    try {
-      // TODO: Replace with actual API call
-      // await guardianService.teacherApproveRequest(requestId);
-      
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Refresh the list
-      fetchRequests();
-    } catch (error) {
-      console.error('Approve error:', error);
-    }
+  // Handle teacher approve
+  const handleTeacherApprove = async (requestId) => {
+    Alert.alert(
+      'Approve Link Request',
+      'Are you sure you want to approve this guardian link request?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Approve',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const response = await guardianService.teacherApproveLinkRequest(requestId);
+              
+              if (response.success) {
+                Alert.alert('Success', 'Link request approved successfully!');
+                fetchRequests();
+              } else {
+                throw new Error(response.message || 'Failed to approve request');
+              }
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to approve request');
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const handleViewDetails = (request) => {
-    navigation.navigate(SCREENS.STUDENT_DETAIL, {
-      studentId: request.student.id,
+  // Handle view student details
+  const handleViewStudent = (studentId) => {
+    navigation.navigate(SCREENS.STUDENT_DETAIL, { studentId });
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
-  const renderRequest = ({ item }) => (
-    <PendingApprovalCard
-      request={item}
-      onApprove={() => handleApprove(item.id)}
-      onViewDetails={() => handleViewDetails(item)}
-    />
-  );
+  // Get status color
+  const getStatusColor = (status, isExpired) => {
+    if (isExpired) return theme.colors.disabled;
+    switch (status) {
+      case 'pending':
+        return theme.colors.warning;
+      case 'approved':
+        return theme.colors.success;
+      case 'rejected':
+        return theme.colors.error;
+      case 'expired':
+        return theme.colors.disabled;
+      default:
+        return theme.colors.textSecondary;
+    }
+  };
 
-  if (isLoading) {
-    return <LoadingSpinner />;
+  // Render request card
+  const renderRequest = ({ item }) => {
+    const progress = item.approval_progress || {};
+    const isReadyForTeacher = 
+      item.status === 'approved' && 
+      item.requires_teacher_approval && 
+      !item.teacher_approved &&
+      progress.is_complete;
+
+    return (
+      <Card style={styles.card}>
+        <Card.Content>
+          {/* Header - Student & Guardian */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <MaterialCommunityIcons
+                name="account-arrow-right"
+                size={40}
+                color={theme.colors.primary}
+              />
+              <View style={styles.headerText}>
+                <Text style={styles.studentName}>{item.student_name}</Text>
+                <Text style={styles.guardianName}>→ {item.guardian_name}</Text>
+              </View>
+            </View>
+            <Chip
+              mode="flat"
+              style={[
+                styles.statusChip,
+                { backgroundColor: getStatusColor(item.status, item.is_expired) },
+              ]}
+              textStyle={styles.statusChipText}
+            >
+              {item.is_expired ? 'Expired' : item.status_display}
+            </Chip>
+          </View>
+
+          <Divider style={styles.divider} />
+
+          {/* Details */}
+          <View style={styles.detailsRow}>
+            <MaterialCommunityIcons name="heart-outline" size={16} color={theme.colors.textSecondary} />
+            <Text style={styles.detailText}>
+              Relationship: {item.relationship_display}
+            </Text>
+          </View>
+
+          <View style={styles.detailsRow}>
+            <MaterialCommunityIcons name="clock-outline" size={16} color={theme.colors.textSecondary} />
+            <Text style={styles.detailText}>
+              Created: {formatDate(item.created_at)}
+            </Text>
+          </View>
+
+          {item.expires_at && !item.is_expired && (
+            <View style={styles.detailsRow}>
+              <MaterialCommunityIcons name="timer-sand" size={16} color={theme.colors.warning} />
+              <Text style={[styles.detailText, { color: theme.colors.warning }]}>
+                Expires: {formatDate(item.expires_at)} ({Math.ceil(item.hours_until_expiry)}h remaining)
+              </Text>
+            </View>
+          )}
+
+          {/* Approval Progress */}
+          {item.requires_teacher_approval && progress && (
+            <View style={styles.progressContainer}>
+              <Text style={styles.progressTitle}>Approval Progress:</Text>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${progress.percentage || 0}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.progressText}>
+                {progress.approved || 0} / {progress.required || 0} approved
+                {!item.teacher_approved && ' (Teacher approval pending)'}
+              </Text>
+            </View>
+          )}
+
+          {/* Teacher Approval Status */}
+          {item.teacher_approved && (
+            <View style={styles.approvedBanner}>
+              <MaterialCommunityIcons name="check-circle" size={20} color={theme.colors.success} />
+              <Text style={styles.approvedText}>
+                Teacher Approved on {formatDate(item.teacher_approved_at)}
+              </Text>
+            </View>
+          )}
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <Button
+              mode="outlined"
+              onPress={() => handleViewStudent(item.student)}
+              style={styles.actionButton}
+              icon="eye"
+              compact
+            >
+              View Student
+            </Button>
+
+            {isReadyForTeacher && (
+              <Button
+                mode="contained"
+                onPress={() => handleTeacherApprove(item.id)}
+                style={styles.approveButton}
+                icon="check"
+                compact
+              >
+                Approve
+              </Button>
+            )}
+          </View>
+        </Card.Content>
+      </Card>
+    );
+  };
+
+  if (isLoading && !isRefreshing) {
+    return <LoadingSpinner message="Loading link requests..." />;
   }
 
   return (
@@ -160,16 +290,18 @@ const GuardianLinkRequestsScreen = ({ navigation }) => {
       {/* Filter Chips */}
       <View style={styles.filterContainer}>
         <Chip
-          selected={selectedFilter === 'pending'}
-          onPress={() => applyFilter('pending')}
+          selected={selectedFilter === 'pending_guardian'}
+          onPress={() => applyFilter('pending_guardian')}
           style={styles.filterChip}
+          icon="clock-outline"
         >
           Pending Guardian
         </Chip>
         <Chip
-          selected={selectedFilter === 'approved'}
-          onPress={() => applyFilter('approved')}
+          selected={selectedFilter === 'ready_for_teacher'}
+          onPress={() => applyFilter('ready_for_teacher')}
           style={styles.filterChip}
+          icon="clipboard-check"
         >
           Ready for Approval
         </Chip>
@@ -177,13 +309,23 @@ const GuardianLinkRequestsScreen = ({ navigation }) => {
           selected={selectedFilter === 'finalized'}
           onPress={() => applyFilter('finalized')}
           style={styles.filterChip}
+          icon="check-circle"
         >
           Finalized
+        </Chip>
+        <Chip
+          selected={selectedFilter === 'expired'}
+          onPress={() => applyFilter('expired')}
+          style={styles.filterChip}
+          icon="timer-off"
+        >
+          Expired
         </Chip>
         <Chip
           selected={selectedFilter === 'all'}
           onPress={() => applyFilter('all')}
           style={styles.filterChip}
+          icon="format-list-bulleted"
         >
           All
         </Chip>
@@ -206,25 +348,21 @@ const GuardianLinkRequestsScreen = ({ navigation }) => {
         />
       ) : (
         <EmptyState
-          icon="clipboard-check"
+          icon="clipboard-check-outline"
           title="No Requests"
           message={
-            selectedFilter === 'pending'
+            selectedFilter === 'pending_guardian'
               ? 'No pending guardian link requests'
-              : selectedFilter === 'approved'
+              : selectedFilter === 'ready_for_teacher'
               ? 'No requests ready for your approval'
+              : selectedFilter === 'finalized'
+              ? 'No finalized requests'
+              : selectedFilter === 'expired'
+              ? 'No expired requests'
               : 'No guardian link requests yet'
           }
         />
       )}
-
-      {/* Floating Action Button */}
-      <FAB
-        style={styles.fab}
-        icon="account-multiple-plus"
-        onPress={() => navigation.navigate(SCREENS.CREATE_GUARDIAN_LINK)}
-        label="Link Guardian"
-      />
     </View>
   );
 };
@@ -232,29 +370,128 @@ const GuardianLinkRequestsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background,
   },
   filterContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.colors.border,
+    gap: theme.spacing.sm,
   },
   filterChip: {
-    marginRight: 8,
-    marginBottom: 8,
+    marginRight: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
   },
   listContent: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#6200EE',
+  card: {
+    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    elevation: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: theme.spacing.sm,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerText: {
+    marginLeft: theme.spacing.sm,
+    flex: 1,
+  },
+  studentName: {
+    fontSize: theme.fontSizes.md,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  guardianName: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  statusChip: {
+    height: 28,
+  },
+  statusChipText: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.surface,
+    fontWeight: 'bold',
+  },
+  divider: {
+    marginVertical: theme.spacing.sm,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  detailText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.xs,
+  },
+  progressContainer: {
+    marginTop: theme.spacing.sm,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.sm,
+  },
+  progressTitle: {
+    fontSize: theme.fontSizes.sm,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: theme.colors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.xs,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+  },
+  progressText: {
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.textSecondary,
+  },
+  approvedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: theme.spacing.sm,
+    padding: theme.spacing.sm,
+    backgroundColor: '#E8F5E9',
+    borderRadius: theme.borderRadius.sm,
+  },
+  approvedText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.success,
+    marginLeft: theme.spacing.xs,
+    fontWeight: '600',
+  },
+  actions: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  approveButton: {
+    flex: 1,
+    backgroundColor: theme.colors.success,
   },
 });
 

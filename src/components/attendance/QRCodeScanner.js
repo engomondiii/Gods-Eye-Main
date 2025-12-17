@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Text, Platform } from 'react-native';
-import { Button } from 'react-native-paper';
+// ========================================
+// GOD'S EYE EDTECH - QR CODE SCANNER
+// ========================================
+
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text, Platform, Alert } from 'react-native';
+import { Button, TextInput } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import theme from '../../styles/theme';
 
-// Import the mock scanner
-import QRCodeScannerMock from './QRCodeScannerMock';
-
-// Try to import expo-camera, but handle if it doesn't exist
+// Try to import expo-camera
 let CameraView, useCameraPermissions;
 try {
   const Camera = require('expo-camera');
   CameraView = Camera.CameraView;
   useCameraPermissions = Camera.useCameraPermissions;
 } catch (e) {
-  // expo-camera not available
   CameraView = null;
   useCameraPermissions = null;
 }
@@ -26,14 +26,100 @@ const QRCodeScanner = ({ onScan, onCancel }) => {
   
   // If in Expo Go or camera not available, use mock scanner
   if (isExpoGo || !CameraView || !useCameraPermissions) {
-    return <QRCodeScannerMock onScan={onScan} onCancel={onCancel} />;
+    return <MockQRCodeScanner onScan={onScan} onCancel={onCancel} />;
   }
 
-  // Real scanner implementation for development/production builds
+  // Real scanner for development/production builds
   return <RealQRCodeScanner onScan={onScan} onCancel={onCancel} />;
 };
 
-// Real QR Code Scanner Component (only used in dev/prod builds)
+// ============================================================
+// MOCK QR CODE SCANNER (FOR EXPO GO TESTING)
+// ============================================================
+
+const MockQRCodeScanner = ({ onScan, onCancel }) => {
+  const [manualCode, setManualCode] = useState('');
+
+  const handleManualScan = () => {
+    if (manualCode.trim()) {
+      onScan(manualCode.trim());
+    } else {
+      Alert.alert('Error', 'Please enter a QR code');
+    }
+  };
+
+  const handleQuickTest = () => {
+    // Generate a test QR code for demo
+    const testCode = `GE-1-${Date.now()}`;
+    onScan(testCode);
+  };
+
+  return (
+    <View style={styles.mockContainer}>
+      <MaterialCommunityIcons
+        name="qrcode-scan"
+        size={100}
+        color={theme.colors.primary}
+      />
+      
+      <Text style={styles.mockTitle}>QR Code Scanner</Text>
+      <Text style={styles.mockSubtitle}>
+        Camera scanning not available in Expo Go
+      </Text>
+
+      <View style={styles.mockInputContainer}>
+        <Text style={styles.mockLabel}>Enter QR Code Manually:</Text>
+        <TextInput
+          mode="outlined"
+          value={manualCode}
+          onChangeText={setManualCode}
+          placeholder="GE-123-1704067200"
+          style={styles.mockInput}
+        />
+      </View>
+
+      <View style={styles.mockButtons}>
+        <Button
+          mode="contained"
+          onPress={handleManualScan}
+          style={styles.mockButton}
+          icon="check"
+        >
+          Scan Code
+        </Button>
+
+        <Button
+          mode="outlined"
+          onPress={handleQuickTest}
+          style={styles.mockButton}
+          icon="test-tube"
+        >
+          Quick Test
+        </Button>
+
+        <Button
+          mode="outlined"
+          onPress={onCancel}
+          style={styles.mockButton}
+        >
+          Cancel
+        </Button>
+      </View>
+
+      <View style={styles.mockInfo}>
+        <MaterialCommunityIcons name="information" size={20} color={theme.colors.info} />
+        <Text style={styles.mockInfoText}>
+          Camera scanning requires a development or production build. Use manual entry for testing.
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+// ============================================================
+// REAL QR CODE SCANNER (FOR DEV/PROD BUILDS)
+// ============================================================
+
 const RealQRCodeScanner = ({ onScan, onCancel }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -123,6 +209,10 @@ const RealQRCodeScanner = ({ onScan, onCancel }) => {
     </View>
   );
 };
+
+// ============================================================
+// STYLES
+// ============================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -227,6 +317,62 @@ const styles = StyleSheet.create({
   button: {
     marginTop: theme.spacing.md,
     minWidth: 200,
+  },
+  // Mock Scanner Styles
+  mockContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.background,
+  },
+  mockTitle: {
+    fontSize: theme.fontSizes.h2,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+  },
+  mockSubtitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  mockInputContainer: {
+    width: '100%',
+    marginBottom: theme.spacing.lg,
+  },
+  mockLabel: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+    fontWeight: '600',
+  },
+  mockInput: {
+    backgroundColor: theme.colors.surface,
+  },
+  mockButtons: {
+    width: '100%',
+    gap: theme.spacing.sm,
+  },
+  mockButton: {
+    width: '100%',
+  },
+  mockInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: theme.spacing.xl,
+    padding: theme.spacing.md,
+    backgroundColor: '#E3F2FD',
+    borderRadius: theme.borderRadius.md,
+  },
+  mockInfoText: {
+    flex: 1,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.info,
+    marginLeft: theme.spacing.sm,
+    lineHeight: 20,
   },
 });
 
