@@ -1,13 +1,13 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
-import attendanceService from '../services/attendanceService';
-import qrCodeService from '../services/qrCodeService';
-import biometricService from '../services/biometricService';
-import otcService from '../services/otcService';
+// ========================================
+// GOD'S EYE EDTECH - ATTENDANCE CONTEXT
+// ========================================
 
-/**
- * Attendance Context
- * Manages global attendance state
- */
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import * as attendanceService from '../services/attendanceService';
+import * as qrCodeService from '../services/qrCodeService';
+import * as biometricService from '../services/biometricService';
+import * as otcService from '../services/otcService';
+
 export const AttendanceContext = createContext();
 
 export const AttendanceProvider = ({ children }) => {
@@ -19,6 +19,7 @@ export const AttendanceProvider = ({ children }) => {
       late: 0,
       excused: 0,
       total: 0,
+      attendance_rate: 0,
     },
     recentRecords: [],
   });
@@ -40,8 +41,22 @@ export const AttendanceProvider = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await attendanceService.getDashboardData();
-      setDashboardData(data);
+
+      const response = await attendanceService.getTodaysAttendance();
+
+      if (response.success) {
+        setDashboardData({
+          stats: {
+            present: response.data?.present || 0,
+            absent: response.data?.absent || 0,
+            late: response.data?.late || 0,
+            excused: response.data?.excused || 0,
+            total: response.data?.total_students || 0,
+            attendance_rate: response.data?.attendance_rate || 0,
+          },
+          recentRecords: response.data?.records || [],
+        });
+      }
     } catch (err) {
       setError(err.message);
       console.error('Fetch dashboard data error:', err);
@@ -57,9 +72,14 @@ export const AttendanceProvider = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await attendanceService.getHistory(filters);
-      setAttendanceHistory(data.records || data);
-      return data;
+
+      const response = await attendanceService.getAttendanceRecords(filters);
+
+      if (response.success) {
+        setAttendanceHistory(response.data?.results || response.data || []);
+      }
+
+      return response;
     } catch (err) {
       setError(err.message);
       console.error('Fetch attendance history error:', err);
@@ -70,21 +90,39 @@ export const AttendanceProvider = ({ children }) => {
   }, []);
 
   /**
-   * Create attendance record
+   * Mark attendance (present/absent/late/excused)
    */
-  const createAttendance = useCallback(async (data) => {
+  const markAttendance = useCallback(async (type, data) => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await attendanceService.createAttendance(data);
-      
-      // Refresh dashboard data
-      await fetchDashboardData();
-      
-      return result;
+
+      let response;
+      switch (type) {
+        case 'present':
+          response = await attendanceService.markPresent(data);
+          break;
+        case 'absent':
+          response = await attendanceService.markAbsent(data);
+          break;
+        case 'late':
+          response = await attendanceService.markLate(data);
+          break;
+        case 'excused':
+          response = await attendanceService.markExcused(data);
+          break;
+        default:
+          throw new Error('Invalid attendance type');
+      }
+
+      if (response.success) {
+        await fetchDashboardData();
+      }
+
+      return response;
     } catch (err) {
       setError(err.message);
-      console.error('Create attendance error:', err);
+      console.error('Mark attendance error:', err);
       throw err;
     } finally {
       setIsLoading(false);
@@ -92,32 +130,20 @@ export const AttendanceProvider = ({ children }) => {
   }, [fetchDashboardData]);
 
   /**
-   * Check in student
-   */
-  const checkIn = useCallback(async (data) => {
-    return createAttendance({ ...data, type: 'check_in' });
-  }, [createAttendance]);
-
-  /**
-   * Check out student
-   */
-  const checkOut = useCallback(async (data) => {
-    return createAttendance({ ...data, type: 'check_out' });
-  }, [createAttendance]);
-
-  /**
    * Scan QR code for attendance
    */
-  const scanQRCode = useCallback(async (qrCode, attendanceType = 'check_in') => {
+  const scanQRCode = useCallback(async (qrCode, options = {}) => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await qrCodeService.scanQRCode(qrCode, attendanceType);
-      
-      // Refresh dashboard data
-      await fetchDashboardData();
-      
-      return result;
+
+      const response = await qrCodeService.scanQRCode(qrCode, options);
+
+      if (response.success) {
+        await fetchDashboardData();
+      }
+
+      return response;
     } catch (err) {
       setError(err.message);
       console.error('Scan QR code error:', err);
@@ -130,20 +156,18 @@ export const AttendanceProvider = ({ children }) => {
   /**
    * Verify fingerprint for attendance
    */
-  const verifyFingerprint = useCallback(async (studentId) => {
+  const verifyFingerprint = useCallback(async (studentId, options = {}) => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await biometricService.verifyFingerprint(studentId);
-      
-      // Create attendance record
-      await createAttendance({
-        studentId,
-        method: 'fingerprint',
-        type: 'check_in',
-      });
-      
-      return result;
+
+      const response = await biometricService.verifyFingerprint(studentId, options);
+
+      if (response.success) {
+        await fetchDashboardData();
+      }
+
+      return response;
     } catch (err) {
       setError(err.message);
       console.error('Verify fingerprint error:', err);
@@ -151,25 +175,23 @@ export const AttendanceProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [createAttendance]);
+  }, [fetchDashboardData]);
 
   /**
    * Verify face for attendance
    */
-  const verifyFace = useCallback(async (studentId, imageData) => {
+  const verifyFace = useCallback(async (studentId, imageData, options = {}) => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await biometricService.verifyFace(studentId, imageData);
-      
-      // Create attendance record
-      await createAttendance({
-        studentId,
-        method: 'face_recognition',
-        type: 'check_in',
-      });
-      
-      return result;
+
+      const response = await biometricService.verifyFaceRecognition(studentId, imageData, options);
+
+      if (response.success) {
+        await fetchDashboardData();
+      }
+
+      return response;
     } catch (err) {
       setError(err.message);
       console.error('Verify face error:', err);
@@ -177,21 +199,23 @@ export const AttendanceProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [createAttendance]);
+  }, [fetchDashboardData]);
 
   /**
    * Submit one-time code
    */
-  const submitOTC = useCallback(async (code, attendanceType = 'check_in') => {
+  const submitOTC = useCallback(async (code) => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await otcService.submitOTC(code, attendanceType);
-      
-      // Refresh dashboard data
-      await fetchDashboardData();
-      
-      return result;
+
+      const response = await otcService.verifyOTC(code);
+
+      if (response.success) {
+        await fetchDashboardData();
+      }
+
+      return response;
     } catch (err) {
       setError(err.message);
       console.error('Submit OTC error:', err);
@@ -202,21 +226,23 @@ export const AttendanceProvider = ({ children }) => {
   }, [fetchDashboardData]);
 
   /**
-   * Create manual attendance entry
+   * Bulk mark attendance
    */
-  const createManualEntry = useCallback(async (data) => {
+  const bulkMarkAttendance = useCallback(async (data) => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await attendanceService.createManualEntry(data);
-      
-      // Refresh dashboard data
-      await fetchDashboardData();
-      
-      return result;
+
+      const response = await attendanceService.bulkMarkAttendance(data);
+
+      if (response.success) {
+        await fetchDashboardData();
+      }
+
+      return response;
     } catch (err) {
       setError(err.message);
-      console.error('Create manual entry error:', err);
+      console.error('Bulk mark attendance error:', err);
       throw err;
     } finally {
       setIsLoading(false);
@@ -226,12 +252,13 @@ export const AttendanceProvider = ({ children }) => {
   /**
    * Get student attendance records
    */
-  const getStudentAttendance = useCallback(async (studentId, filters = {}) => {
+  const getStudentAttendance = useCallback(async (studentId, params = {}) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await attendanceService.getStudentAttendance(studentId, filters);
-      return data;
+
+      const response = await attendanceService.getStudentAttendance(studentId, params);
+      return response;
     } catch (err) {
       setError(err.message);
       console.error('Get student attendance error:', err);
@@ -244,33 +271,16 @@ export const AttendanceProvider = ({ children }) => {
   /**
    * Get attendance statistics
    */
-  const getStatistics = useCallback(async (filters = {}) => {
+  const getStatistics = useCallback(async (params = {}) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await attendanceService.getStatistics(filters);
-      return data;
+
+      const response = await attendanceService.getAttendanceStatistics(params);
+      return response;
     } catch (err) {
       setError(err.message);
       console.error('Get statistics error:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  /**
-   * Get report data
-   */
-  const getReportData = useCallback(async (period = 'today', options = {}) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await attendanceService.getReportData(period, options);
-      return data;
-    } catch (err) {
-      setError(err.message);
-      console.error('Get report data error:', err);
       throw err;
     } finally {
       setIsLoading(false);
@@ -327,17 +337,14 @@ export const AttendanceProvider = ({ children }) => {
     setError,
     fetchDashboardData,
     fetchAttendanceHistory,
-    createAttendance,
-    checkIn,
-    checkOut,
+    markAttendance,
     scanQRCode,
     verifyFingerprint,
     verifyFace,
     submitOTC,
-    createManualEntry,
+    bulkMarkAttendance,
     getStudentAttendance,
     getStatistics,
-    getReportData,
   };
 
   return (

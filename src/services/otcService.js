@@ -1,418 +1,427 @@
-import api from './api';
+// ========================================
+// GOD'S EYE EDTECH - OTC SERVICE
+// ========================================
+
+import { get, post, handleApiError } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OTC_CONFIG } from '../utils/constants';
+import { API_ENDPOINTS, OTC_CONFIG } from '../utils/constants';
+
+const STORAGE_KEY = '@otc_codes';
+
+// ============================================================
+// OTC GENERATION
+// ============================================================
 
 /**
- * One-Time Code (OTC) Service
- * Handles generation and validation of one-time attendance codes
+ * Generate OTC for a student (Guardian only)
+ * @param {number} studentId - Student ID
+ * @returns {Promise<Object>} Generated OTC data
+ * 
+ * Backend Endpoint: POST /api/otc/generate/
  */
-class OTCService {
-  constructor() {
-    this.STORAGE_KEY = '@otc_codes';
-    this.CODE_LENGTH = OTC_CONFIG.LENGTH || 6;
-    this.EXPIRY_MINUTES = OTC_CONFIG.EXPIRY_MINUTES || 5;
+export const generateOTC = async (studentId) => {
+  try {
+    if (!studentId) {
+      throw new Error('Student ID is required');
+    }
+
+    if (__DEV__) {
+      console.log(`🔢 Generating OTC for student ${studentId}...`);
+    }
+
+    const response = await post(`${API_ENDPOINTS.OTC.BASE}/generate/`, {
+      student: studentId,
+    });
+
+    if (__DEV__) {
+      console.log(`✅ OTC generated: ${response.otc?.code}`);
+    }
+
+    // Cache locally
+    await cacheOTC(studentId, response.otc);
+
+    return {
+      success: true,
+      data: response.otc,
+      message: response.message || 'OTC generated successfully',
+    };
+  } catch (error) {
+    console.error('❌ Generate OTC error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to generate OTC',
+      error: handleApiError(error),
+    };
   }
+};
 
-  /**
-   * Generate one-time code for a student
-   * @param {string} studentId - Student ID
-   * @param {Object} options - Generation options
-   */
-  async generateOTC(studentId, options = {}) {
-    try {
-      const payload = {
-        student_id: studentId,
-        expiry_minutes: options.expiryMinutes || this.EXPIRY_MINUTES,
-        purpose: options.purpose || 'attendance',
-      };
+// ============================================================
+// OTC VERIFICATION
+// ============================================================
 
-      const response = await api.post('/otc/generate', payload);
-
-      // Cache the code locally
-      await this.cacheOTC(studentId, response.data);
-
-      return response.data;
-    } catch (error) {
-      console.error('Generate OTC error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Validate one-time code
-   * @param {string} code - OTC to validate
-   * @param {string} studentId - Optional student ID for verification
-   */
-  async validateOTC(code, studentId = null) {
-    try {
-      const response = await api.post('/otc/validate', {
-        code,
-        student_id: studentId,
-        timestamp: new Date().toISOString(),
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error('Validate OTC error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Submit OTC for attendance
-   * @param {string} code - OTC code
-   * @param {string} attendanceType - check_in or check_out
-   */
-  async submitOTC(code, attendanceType = 'check_in') {
-    try {
-      // First validate the code
-      const validation = await this.validateOTC(code);
-
-      if (!validation.valid) {
-        throw new Error(validation.message || 'Invalid or expired code');
-      }
-
-      // Create attendance record
-      const response = await api.post('/otc/submit', {
-        code,
-        attendance_type: attendanceType,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Remove from cache after successful use
-      if (validation.student_id) {
-        await this.removeCachedOTC(validation.student_id);
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('Submit OTC error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Get active OTC for a student
-   * @param {string} studentId - Student ID
-   */
-  async getActiveOTC(studentId) {
-    try {
-      // Check cache first
-      const cached = await this.getCachedOTC(studentId);
-      if (cached && !this.isOTCExpired(cached)) {
-        return cached.data;
-      }
-
-      // Fetch from API
-      const response = await api.get(`/students/${studentId}/otc/active`);
-
-      // Cache the result
-      if (response.data) {
-        await this.cacheOTC(studentId, response.data);
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('Get active OTC error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Revoke OTC
-   * @param {string} studentId - Student ID
-   * @param {string} code - Optional specific code to revoke
-   */
-  async revokeOTC(studentId, code = null) {
-    try {
-      const response = await api.delete(`/students/${studentId}/otc`, {
-        data: { code },
-      });
-
-      // Remove from cache
-      await this.removeCachedOTC(studentId);
-
-      return response.data;
-    } catch (error) {
-      console.error('Revoke OTC error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Get OTC usage history
-   * @param {string} studentId - Student ID
-   * @param {Object} filters - Filter options
-   */
-  async getOTCHistory(studentId, filters = {}) {
-    try {
-      const params = {
-        start_date: filters.startDate || null,
-        end_date: filters.endDate || null,
-        page: filters.page || 1,
-        limit: filters.limit || 20,
-      };
-
-      const response = await api.get(`/students/${studentId}/otc/history`, { params });
-      return response.data;
-    } catch (error) {
-      console.error('Get OTC history error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Get OTC statistics
-   * @param {string} studentId - Student ID
-   */
-  async getOTCStats(studentId) {
-    try {
-      const response = await api.get(`/students/${studentId}/otc/statistics`);
-      return response.data;
-    } catch (error) {
-      console.error('Get OTC stats error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Verify OTC integrity (check if code format is valid)
-   * @param {string} code - Code to verify
-   */
-  verifyCodeFormat(code) {
-    if (!code || typeof code !== 'string') {
-      return {
-        valid: false,
-        error: 'Invalid code format',
-      };
+/**
+ * Verify OTC code and mark attendance
+ * @param {string} code - OTC code
+ * @returns {Promise<Object>} Verification result with attendance data
+ * 
+ * Backend Endpoint: POST /api/otc/verify/
+ */
+export const verifyOTC = async (code) => {
+  try {
+    if (!code) {
+      throw new Error('OTC code is required');
     }
 
-    // Remove any spaces or dashes
-    const cleanCode = code.replace(/[\s-]/g, '');
-
-    // Check length
-    if (cleanCode.length !== this.CODE_LENGTH) {
-      return {
-        valid: false,
-        error: `Code must be ${this.CODE_LENGTH} digits`,
-      };
+    // Validate format
+    const validation = validateCodeFormat(code);
+    if (!validation.valid) {
+      throw new Error(validation.error);
     }
 
-    // Check if all characters are digits
-    if (!/^\d+$/.test(cleanCode)) {
-      return {
-        valid: false,
-        error: 'Code must contain only numbers',
-      };
+    if (__DEV__) {
+      console.log(`🔍 Verifying OTC: ${code}...`);
+    }
+
+    const response = await post(`${API_ENDPOINTS.OTC.BASE}/verify/`, {
+      code: validation.code,
+    });
+
+    if (__DEV__) {
+      console.log(`✅ OTC verified successfully: ${response.student?.name}`);
     }
 
     return {
-      valid: true,
-      code: cleanCode,
+      success: true,
+      data: response,
+      student: response.student,
+      attendance: response.attendance,
+      message: response.message || 'Attendance marked successfully',
     };
-  }
-
-  /**
-   * Generate local OTC (for offline use - needs sync later)
-   * @param {string} studentId - Student ID
-   */
-  generateLocalOTC(studentId) {
-    const code = Math.floor(
-      Math.pow(10, this.CODE_LENGTH - 1) +
-      Math.random() * (Math.pow(10, this.CODE_LENGTH) - Math.pow(10, this.CODE_LENGTH - 1))
-    ).toString();
-
-    const otcData = {
-      code,
-      student_id: studentId,
-      generated_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + this.EXPIRY_MINUTES * 60 * 1000).toISOString(),
-      is_local: true,
-      synced: false,
-    };
-
-    return otcData;
-  }
-
-  /**
-   * Calculate remaining time for OTC
-   * @param {string} expiresAt - Expiration timestamp
-   */
-  getRemainingTime(expiresAt) {
-    const now = new Date().getTime();
-    const expiry = new Date(expiresAt).getTime();
-    const remaining = Math.max(0, expiry - now);
+  } catch (error) {
+    console.error('❌ Verify OTC error:', error);
 
     return {
-      milliseconds: remaining,
-      seconds: Math.floor(remaining / 1000),
-      minutes: Math.floor(remaining / 60000),
-      isExpired: remaining === 0,
+      success: false,
+      message: error.response?.data?.error || 'Failed to verify OTC',
+      error: handleApiError(error),
+    };
+  }
+};
+
+// ============================================================
+// OTC RETRIEVAL
+// ============================================================
+
+/**
+ * Get guardian's generated OTC codes
+ * @returns {Promise<Object>} Guardian's OTC codes
+ * 
+ * Backend Endpoint: GET /api/otc/my_codes/
+ */
+export const getMyOTCCodes = async () => {
+  try {
+    if (__DEV__) {
+      console.log('📋 Fetching my OTC codes...');
+    }
+
+    const response = await get(`${API_ENDPOINTS.OTC.BASE}/my_codes/`);
+
+    if (__DEV__) {
+      console.log(`✅ Fetched ${response.count} OTC code(s)`);
+    }
+
+    return {
+      success: true,
+      data: response.codes,
+      count: response.count,
+    };
+  } catch (error) {
+    console.error('❌ Get my OTC codes error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch OTC codes',
+      error: handleApiError(error),
+    };
+  }
+};
+
+/**
+ * Get active OTC codes (admin/teacher)
+ * @returns {Promise<Object>} Active OTC codes
+ * 
+ * Backend Endpoint: GET /api/otc/active_codes/
+ */
+export const getActiveOTCCodes = async () => {
+  try {
+    if (__DEV__) {
+      console.log('📋 Fetching active OTC codes...');
+    }
+
+    const response = await get(`${API_ENDPOINTS.OTC.BASE}/active_codes/`);
+
+    if (__DEV__) {
+      console.log(`✅ Fetched ${response.count} active OTC code(s)`);
+    }
+
+    return {
+      success: true,
+      data: response.codes,
+      count: response.count,
+    };
+  } catch (error) {
+    console.error('❌ Get active OTC codes error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch active OTC codes',
+      error: handleApiError(error),
+    };
+  }
+};
+
+/**
+ * Get all OTC codes
+ * @param {Object} filters - Filter options
+ * @returns {Promise<Object>} OTC codes list
+ * 
+ * Backend Endpoint: GET /api/otc/
+ */
+export const getOTCCodes = async (filters = {}) => {
+  try {
+    if (__DEV__) {
+      console.log('📋 Fetching OTC codes...', filters);
+    }
+
+    const params = new URLSearchParams();
+    
+    if (filters.student) params.append('student', filters.student);
+    if (filters.guardian) params.append('guardian', filters.guardian);
+    if (filters.is_active !== undefined) params.append('is_active', filters.is_active);
+    if (filters.is_used !== undefined) params.append('is_used', filters.is_used);
+    if (filters.page) params.append('page', filters.page);
+    if (filters.page_size) params.append('page_size', filters.page_size);
+
+    const queryString = params.toString();
+    const url = queryString 
+      ? `${API_ENDPOINTS.OTC.LIST}?${queryString}`
+      : API_ENDPOINTS.OTC.LIST;
+
+    const response = await get(url);
+
+    if (__DEV__) {
+      const count = Array.isArray(response) ? response.length : response.results?.length || 0;
+      console.log(`✅ Fetched ${count} OTC codes`);
+    }
+
+    return {
+      success: true,
+      data: response,
+    };
+  } catch (error) {
+    console.error('❌ Get OTC codes error:', error);
+
+    return {
+      success: false,
+      message: 'Failed to fetch OTC codes',
+      error: handleApiError(error),
+    };
+  }
+};
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
+/**
+ * Validate OTC code format
+ * @param {string} code - Code to validate
+ * @returns {Object} Validation result
+ */
+export const validateCodeFormat = (code) => {
+  if (!code || typeof code !== 'string') {
+    return {
+      valid: false,
+      error: 'Invalid code format',
     };
   }
 
-  /**
-   * Format OTC with separators
-   * @param {string} code - Code to format
-   */
-  formatOTC(code) {
-    if (!code) return '';
-    
-    // Format as XXX-XXX for 6 digits
-    const clean = code.replace(/\D/g, '');
-    if (clean.length === 6) {
-      return `${clean.slice(0, 3)}-${clean.slice(3)}`;
+  // Remove any spaces or dashes
+  const cleanCode = code.replace(/[\s-]/g, '');
+
+  // Check length
+  const expectedLength = OTC_CONFIG?.LENGTH || 6;
+  if (cleanCode.length !== expectedLength) {
+    return {
+      valid: false,
+      error: `Code must be ${expectedLength} digits`,
+    };
+  }
+
+  // Check if all characters are digits
+  if (!/^\d+$/.test(cleanCode)) {
+    return {
+      valid: false,
+      error: 'Code must contain only numbers',
+    };
+  }
+
+  return {
+    valid: true,
+    code: cleanCode,
+  };
+};
+
+/**
+ * Calculate remaining time for OTC
+ * @param {string} expiresAt - Expiration timestamp
+ * @returns {Object} Remaining time info
+ */
+export const getRemainingTime = (expiresAt) => {
+  const now = new Date().getTime();
+  const expiry = new Date(expiresAt).getTime();
+  const remaining = Math.max(0, expiry - now);
+
+  return {
+    milliseconds: remaining,
+    seconds: Math.floor(remaining / 1000),
+    minutes: Math.floor(remaining / 60000),
+    isExpired: remaining === 0,
+  };
+};
+
+/**
+ * Format OTC with separators
+ * @param {string} code - Code to format
+ * @returns {string} Formatted code
+ */
+export const formatOTC = (code) => {
+  if (!code) return '';
+  
+  // Format as XXX-XXX for 6 digits
+  const clean = code.replace(/\D/g, '');
+  if (clean.length === 6) {
+    return `${clean.slice(0, 3)}-${clean.slice(3)}`;
+  }
+  
+  return clean;
+};
+
+/**
+ * Check if OTC is expired
+ * @param {Object} otc - OTC data
+ * @returns {boolean} True if expired
+ */
+export const isOTCExpired = (otc) => {
+  if (!otc || !otc.expires_at) return true;
+  
+  const expiryTime = new Date(otc.expires_at).getTime();
+  const now = new Date().getTime();
+  
+  return now > expiryTime;
+};
+
+// ============================================================
+// CACHE MANAGEMENT
+// ============================================================
+
+/**
+ * Cache OTC locally
+ * @param {number} studentId - Student ID
+ * @param {Object} data - OTC data
+ */
+const cacheOTC = async (studentId, data) => {
+  try {
+    const cacheData = {
+      studentId,
+      data,
+      cachedAt: new Date().toISOString(),
+    };
+
+    const key = `${STORAGE_KEY}_${studentId}`;
+    await AsyncStorage.setItem(key, JSON.stringify(cacheData));
+
+    if (__DEV__) {
+      console.log(`📦 Cached OTC for student ${studentId}`);
     }
-    
-    return clean;
+  } catch (error) {
+    console.error('❌ Cache OTC error:', error);
   }
+};
 
-  /**
-   * Cache OTC locally
-   * @param {string} studentId - Student ID
-   * @param {Object} data - OTC data
-   */
-  async cacheOTC(studentId, data) {
-    try {
-      const cacheData = {
-        studentId,
-        data,
-        cachedAt: new Date().toISOString(),
-      };
+/**
+ * Get cached OTC
+ * @param {number} studentId - Student ID
+ * @returns {Promise<Object|null>} Cached data
+ */
+export const getCachedOTC = async (studentId) => {
+  try {
+    const key = `${STORAGE_KEY}_${studentId}`;
+    const cached = await AsyncStorage.getItem(key);
+    return cached ? JSON.parse(cached) : null;
+  } catch (error) {
+    console.error('❌ Get cached OTC error:', error);
+    return null;
+  }
+};
 
-      const key = `${this.STORAGE_KEY}_${studentId}`;
-      await AsyncStorage.setItem(key, JSON.stringify(cacheData));
-    } catch (error) {
-      console.error('Cache OTC error:', error);
+/**
+ * Clear OTC cache
+ * @param {number} studentId - Student ID
+ */
+export const clearOTCCache = async (studentId) => {
+  try {
+    const key = `${STORAGE_KEY}_${studentId}`;
+    await AsyncStorage.removeItem(key);
+
+    if (__DEV__) {
+      console.log(`🗑️ Cleared OTC cache for student ${studentId}`);
     }
+  } catch (error) {
+    console.error('❌ Clear cache error:', error);
   }
+};
 
-  /**
-   * Get cached OTC
-   * @param {string} studentId - Student ID
-   */
-  async getCachedOTC(studentId) {
-    try {
-      const key = `${this.STORAGE_KEY}_${studentId}`;
-      const cached = await AsyncStorage.getItem(key);
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.error('Get cached OTC error:', error);
-      return null;
+/**
+ * Clear all OTC caches
+ */
+export const clearAllOTCCaches = async () => {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const otcKeys = keys.filter(key => key.startsWith(STORAGE_KEY));
+    await AsyncStorage.multiRemove(otcKeys);
+
+    if (__DEV__) {
+      console.log(`🗑️ Cleared ${otcKeys.length} OTC caches`);
     }
+  } catch (error) {
+    console.error('❌ Clear all caches error:', error);
   }
+};
 
-  /**
-   * Check if OTC is expired
-   * @param {Object} cached - Cached OTC data
-   */
-  isOTCExpired(cached) {
-    if (!cached || !cached.data || !cached.data.expires_at) return true;
-    
-    const expiryTime = new Date(cached.data.expires_at).getTime();
-    const now = new Date().getTime();
-    
-    return now > expiryTime;
-  }
+// ============================================================
+// EXPORTS
+// ============================================================
 
-  /**
-   * Remove cached OTC
-   * @param {string} studentId - Student ID
-   */
-  async removeCachedOTC(studentId) {
-    try {
-      const key = `${this.STORAGE_KEY}_${studentId}`;
-      await AsyncStorage.removeItem(key);
-    } catch (error) {
-      console.error('Remove cached OTC error:', error);
-    }
-  }
+export default {
+  // Generation & Verification
+  generateOTC,
+  verifyOTC,
 
-  /**
-   * Clear all cached OTCs
-   */
-  async clearAllCache() {
-    try {
-      const keys = await AsyncStorage.getAllKeys();
-      const otcKeys = keys.filter(key => key.startsWith(this.STORAGE_KEY));
-      await AsyncStorage.multiRemove(otcKeys);
-    } catch (error) {
-      console.error('Clear all cache error:', error);
-    }
-  }
+  // Retrieval
+  getMyOTCCodes,
+  getActiveOTCCodes,
+  getOTCCodes,
 
-  /**
-   * Send OTC via SMS
-   * @param {string} studentId - Student ID
-   * @param {string} phoneNumber - Phone number
-   */
-  async sendOTCViaSMS(studentId, phoneNumber) {
-    try {
-      const response = await api.post(`/students/${studentId}/otc/send-sms`, {
-        phone_number: phoneNumber,
-      });
+  // Utilities
+  validateCodeFormat,
+  getRemainingTime,
+  formatOTC,
+  isOTCExpired,
 
-      return response.data;
-    } catch (error) {
-      console.error('Send OTC via SMS error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Send OTC via Email
-   * @param {string} studentId - Student ID
-   * @param {string} email - Email address
-   */
-  async sendOTCViaEmail(studentId, email) {
-    try {
-      const response = await api.post(`/students/${studentId}/otc/send-email`, {
-        email,
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error('Send OTC via email error:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Handle API errors
-   * @param {Error} error - Error object
-   */
-  handleError(error) {
-    if (error.response) {
-      const { status, data } = error.response;
-      
-      switch (status) {
-        case 400:
-          return new Error(data.message || 'Invalid OTC data');
-        case 401:
-          return new Error('Authentication required');
-        case 403:
-          return new Error('OTC access denied');
-        case 404:
-          return new Error('OTC not found');
-        case 409:
-          return new Error('Active OTC already exists');
-        case 410:
-          return new Error('OTC has expired');
-        case 422:
-          return new Error(data.message || 'Invalid or expired code');
-        case 429:
-          return new Error('Too many attempts. Please try again later');
-        case 500:
-          return new Error('Server error. Please try again later');
-        default:
-          return new Error(data.message || 'An error occurred');
-      }
-    } else if (error.request) {
-      return new Error('Network error. Please check your connection');
-    } else {
-      return new Error(error.message || 'An unexpected error occurred');
-    }
-  }
-}
-
-export default new OTCService();
+  // Cache
+  getCachedOTC,
+  clearOTCCache,
+  clearAllOTCCaches,
+};

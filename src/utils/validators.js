@@ -1,3 +1,11 @@
+// ========================================
+// GOD'S EYE EDTECH - VALIDATORS (UPDATED WITH PAYMENTS)
+// ========================================
+
+// ============================================================
+// BASIC VALIDATORS
+// ============================================================
+
 // Email validation
 export const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -6,7 +14,7 @@ export const validateEmail = (email) => {
 
 // Phone number validation (Kenyan format)
 export const validatePhone = (phone) => {
-  const phoneRegex = /^(\+254|0)?[17]\d{8}$/;
+  const phoneRegex = /^(\+254|254|0)?[17]\d{8}$/;
   return phoneRegex.test(phone.replace(/\s/g, ''));
 };
 
@@ -28,79 +36,24 @@ export const validateName = (name) => {
   return nameRegex.test(name);
 };
 
-// Admission number validation
-export const validateAdmissionNumber = (number) => {
-  const admissionRegex = /^[a-zA-Z0-9/]{3,}$/;
-  return admissionRegex.test(number);
-};
-
-// 🇰🇪 UPI Number validation
-export const validateUPINumber = (upi) => {
-  if (!upi || upi.trim() === '') {
-    return true;
+// Required field validation
+export const validateRequired = (value) => {
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
   }
-  const upiRegex = /^[A-Z0-9]{10,}$/i;
-  return upiRegex.test(upi);
+  return value !== null && value !== undefined;
 };
 
-// 🇰🇪 Birth Certificate Number validation
-export const validateBirthCertificateNumber = (certNumber) => {
-  if (!certNumber || certNumber.trim() === '') {
-    return true;
-  }
-  const certRegex = /^\d{6,10}$/;
-  return certRegex.test(certNumber);
+// Minimum length validation
+export const validateMinLength = (value, minLength) => {
+  if (!value) return false;
+  return value.toString().length >= minLength;
 };
 
-// 🇰🇪 NEMIS Code validation
-export const validateNEMISCode = (nemis) => {
-  if (!nemis || nemis.trim() === '') {
-    return true;
-  }
-  const nemisRegex = /^\d{9}$/;
-  return nemisRegex.test(nemis);
-};
-
-// 🇰🇪 Validate Kenya Grade
-export const validateKenyaGrade = (grade) => {
-  const validGrades = [
-    'pp1', 'pp2',
-    'grade_1', 'grade_2', 'grade_3', 'grade_4', 'grade_5', 'grade_6',
-    'grade_7', 'grade_8', 'grade_9',
-    'grade_10', 'grade_11', 'grade_12',
-    'form_1', 'form_2', 'form_3', 'form_4'
-  ];
-  return validGrades.includes(grade);
-};
-
-// 🇰🇪 Validate Stream/Class name
-export const validateStream = (stream) => {
-  if (!stream || stream.trim() === '') {
-    return false;
-  }
-  const streamRegex = /^[a-zA-Z0-9\s]{1,20}$/;
-  return streamRegex.test(stream);
-};
-
-// 🇰🇪 Validate House name
-export const validateHouseName = (house) => {
-  if (!house || house.trim() === '') {
-    return true;
-  }
-  const houseRegex = /^[a-zA-Z\s]{2,30}$/;
-  return houseRegex.test(house);
-};
-
-// 🇰🇪 Validate Year of Admission
-export const validateYearOfAdmission = (year) => {
-  const currentYear = new Date().getFullYear();
-  const yearNum = parseInt(year);
-  
-  if (isNaN(yearNum)) {
-    return false;
-  }
-  
-  return yearNum >= 1990 && yearNum <= currentYear + 1;
+// Maximum length validation
+export const validateMaxLength = (value, maxLength) => {
+  if (!value) return true;
+  return value.toString().length <= maxLength;
 };
 
 // Amount validation
@@ -113,6 +66,104 @@ export const validateAmount = (amount) => {
 export const validateDate = (date) => {
   const dateObj = new Date(date);
   return dateObj instanceof Date && !isNaN(dateObj);
+};
+
+// ============================================================
+// KENYA-SPECIFIC VALIDATORS
+// ============================================================
+
+// Kenyan phone number validation (254 or 07/01 format)
+export const validateKenyanPhone = (phone) => {
+  // Remove spaces and special characters
+  const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Check format: 254XXXXXXXXX or 07XXXXXXXX or 01XXXXXXXX
+  const pattern = /^(254|0)[17]\d{8}$/;
+  
+  if (!pattern.test(cleaned)) {
+    return {
+      isValid: false,
+      message: 'Invalid Kenyan phone number format',
+    };
+  }
+  
+  return {
+    isValid: true,
+    message: null,
+  };
+};
+
+// M-Pesa phone number validation (must be 254 format)
+export const validateMpesaPhone = (phone) => {
+  // Remove spaces and special characters
+  let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Remove + if present
+  if (cleaned.startsWith('+')) {
+    cleaned = cleaned.substring(1);
+  }
+  
+  // Must start with 254
+  if (!cleaned.startsWith('254')) {
+    return {
+      isValid: false,
+      message: 'M-Pesa requires phone number in format 254XXXXXXXXX',
+    };
+  }
+  
+  // Check length and format
+  if (cleaned.length !== 12) {
+    return {
+      isValid: false,
+      message: 'Phone number must be 12 digits (254XXXXXXXXX)',
+    };
+  }
+  
+  // Check if it's a valid Safaricom number (starts with 254 7 or 254 1)
+  if (!cleaned.startsWith('2547') && !cleaned.startsWith('2541')) {
+    return {
+      isValid: false,
+      message: 'Please enter a valid Safaricom number',
+    };
+  }
+  
+  return {
+    isValid: true,
+    message: null,
+  };
+};
+
+// UPI Number validation
+export const validateUPINumber = (upi) => {
+  if (!upi || upi.trim() === '') {
+    return true;
+  }
+  const upiRegex = /^[A-Z0-9]{10,}$/i;
+  return upiRegex.test(upi);
+};
+
+// Birth Certificate Number validation
+export const validateBirthCertificateNumber = (certNumber) => {
+  if (!certNumber || certNumber.trim() === '') {
+    return true;
+  }
+  const certRegex = /^\d{6,10}$/;
+  return certRegex.test(certNumber);
+};
+
+// NEMIS Code validation
+export const validateNEMISCode = (nemis) => {
+  if (!nemis || nemis.trim() === '') {
+    return true;
+  }
+  const nemisRegex = /^\d{9}$/;
+  return nemisRegex.test(nemis);
+};
+
+// Admission number validation
+export const validateAdmissionNumber = (number) => {
+  const admissionRegex = /^[a-zA-Z0-9/]{3,}$/;
+  return admissionRegex.test(number);
 };
 
 // Date of birth validation
@@ -138,27 +189,58 @@ export const validateDateOfBirth = (dob) => {
   return age >= 3 && age <= 25;
 };
 
-// Required field validation
-export const validateRequired = (value) => {
-  if (typeof value === 'string') {
-    return value.trim().length > 0;
+// Validate Kenya Grade
+export const validateKenyaGrade = (grade) => {
+  const validGrades = [
+    'pp1', 'pp2',
+    'grade_1', 'grade_2', 'grade_3', 'grade_4', 'grade_5', 'grade_6',
+    'grade_7', 'grade_8', 'grade_9', 'grade_10', 'grade_11', 'grade_12',
+    'form_1', 'form_2', 'form_3', 'form_4',
+  ];
+  return validGrades.includes(grade);
+};
+
+// Validate Stream/Class name
+export const validateStream = (stream) => {
+  if (!stream || stream.trim() === '') {
+    return false;
   }
-  return value !== null && value !== undefined;
+  const streamRegex = /^[a-zA-Z0-9\s]{1,20}$/;
+  return streamRegex.test(stream);
 };
 
-// Minimum length validation
-export const validateMinLength = (value, minLength) => {
-  if (!value) return false;
-  return value.toString().length >= minLength;
+// Validate House name
+export const validateHouseName = (house) => {
+  if (!house || house.trim() === '') {
+    return true;
+  }
+  const houseRegex = /^[a-zA-Z\s]{2,30}$/;
+  return houseRegex.test(house);
 };
 
-// Maximum length validation
-export const validateMaxLength = (value, maxLength) => {
-  if (!value) return true;
-  return value.toString().length <= maxLength;
+// Validate Year of Admission
+export const validateYearOfAdmission = (year) => {
+  const currentYear = new Date().getFullYear();
+  const yearNum = parseInt(year);
+  
+  if (isNaN(yearNum)) {
+    return false;
+  }
+  
+  return yearNum >= 1990 && yearNum <= currentYear + 1;
 };
 
-// 🆕 NEW - Payment Amount Validation
+// ============================================================
+// PAYMENT VALIDATORS (NEW)
+// ============================================================
+
+/**
+ * Validate payment amount
+ * @param {number} amount - Amount to validate
+ * @param {number} minAmount - Minimum allowed amount
+ * @param {number} maxAmount - Maximum allowed amount
+ * @returns {Object} Validation result
+ */
 export const validatePaymentAmount = (amount, minAmount = 100, maxAmount = null) => {
   const numAmount = parseFloat(amount);
   
@@ -192,11 +274,19 @@ export const validatePaymentAmount = (amount, minAmount = 100, maxAmount = null)
   };
 };
 
-// 🆕 NEW - Validate Partial Payment
+/**
+ * Validate partial payment
+ * @param {Object} paymentRequest - Payment request object
+ * @param {number} proposedAmount - Proposed payment amount
+ * @returns {Object} Validation result
+ */
 export const validatePartialPayment = (paymentRequest, proposedAmount) => {
   const amount = parseFloat(proposedAmount);
-  const minAmount = parseFloat(paymentRequest.minimum_amount || 100);
-  const remaining = parseFloat(paymentRequest.remaining_amount || paymentRequest.amount);
+  const minAmount = parseFloat(paymentRequest.minimum_payment || 100);
+  const balance = parseFloat(
+    paymentRequest.balance || 
+    (paymentRequest.total_amount - paymentRequest.amount_paid)
+  );
   
   // Basic amount validation
   if (isNaN(amount) || amount <= 0) {
@@ -207,11 +297,11 @@ export const validatePartialPayment = (paymentRequest, proposedAmount) => {
   }
   
   // Check if partial payments are allowed
-  if (!paymentRequest.allow_partial) {
-    if (amount !== remaining) {
+  if (paymentRequest.flexibility === 'full_only') {
+    if (amount !== balance) {
       return {
         isValid: false,
-        message: `Full payment of KES ${remaining.toLocaleString()} is required`,
+        message: `Full payment of KES ${balance.toLocaleString()} is required`,
       };
     }
   }
@@ -225,10 +315,10 @@ export const validatePartialPayment = (paymentRequest, proposedAmount) => {
   }
   
   // Check if amount exceeds remaining balance
-  if (amount > remaining) {
+  if (amount > balance) {
     return {
       isValid: false,
-      message: `Amount cannot exceed remaining balance of KES ${remaining.toLocaleString()}`,
+      message: `Amount cannot exceed balance of KES ${balance.toLocaleString()}`,
     };
   }
   
@@ -238,7 +328,12 @@ export const validatePartialPayment = (paymentRequest, proposedAmount) => {
   };
 };
 
-// 🆕 NEW - Validate Minimum Payment Amount
+/**
+ * Validate minimum payment amount
+ * @param {number} amount - Minimum payment amount
+ * @param {number} originalAmount - Original payment amount
+ * @returns {Object} Validation result
+ */
 export const validateMinimumPaymentAmount = (amount, originalAmount) => {
   const numAmount = parseFloat(amount);
   const numOriginal = parseFloat(originalAmount);
@@ -281,37 +376,29 @@ export const validateMinimumPaymentAmount = (amount, originalAmount) => {
   };
 };
 
-// 🆕 NEW - Calculate Payment Percentage
-export const calculatePaymentPercentage = (paidAmount, totalAmount) => {
-  const paid = parseFloat(paidAmount);
-  const total = parseFloat(totalAmount);
-  
-  if (isNaN(paid) || isNaN(total) || total === 0) {
-    return 0;
-  }
-  
-  return Math.round((paid / total) * 100);
-};
-
-// 🆕 NEW - Validate Payment Request Creation
+/**
+ * Validate payment request creation data
+ * @param {Object} data - Payment request data
+ * @returns {Object} Validation result
+ */
 export const validatePaymentRequestCreation = (data) => {
   const errors = {};
   
   // Validate student
-  if (!data.student_id) {
+  if (!data.student) {
     errors.student = 'Please select a student';
   }
   
-  // Validate amount
-  if (!data.amount || parseFloat(data.amount) <= 0) {
-    errors.amount = 'Please enter a valid amount';
+  // Validate title
+  if (!data.title || data.title.trim() === '') {
+    errors.title = 'Please enter a title';
+  } else if (data.title.length < 5) {
+    errors.title = 'Title must be at least 5 characters';
   }
   
-  // Validate purpose
-  if (!data.purpose || data.purpose.trim() === '') {
-    errors.purpose = 'Please enter the purpose of payment';
-  } else if (data.purpose.length < 10) {
-    errors.purpose = 'Purpose must be at least 10 characters';
+  // Validate amount
+  if (!data.total_amount || parseFloat(data.total_amount) <= 0) {
+    errors.total_amount = 'Please enter a valid amount';
   }
   
   // Validate due date
@@ -327,14 +414,17 @@ export const validatePaymentRequestCreation = (data) => {
     }
   }
   
-  // Validate minimum amount if partial payments are allowed
-  if (data.allow_partial) {
-    if (!data.minimum_amount) {
-      errors.minimum_amount = 'Please enter minimum payment amount';
+  // Validate minimum amount if flexible payment
+  if (data.flexibility !== 'full_only') {
+    if (!data.minimum_payment) {
+      errors.minimum_payment = 'Please enter minimum payment amount';
     } else {
-      const validation = validateMinimumPaymentAmount(data.minimum_amount, data.amount);
+      const validation = validateMinimumPaymentAmount(
+        data.minimum_payment,
+        data.total_amount
+      );
       if (!validation.isValid) {
-        errors.minimum_amount = validation.message;
+        errors.minimum_payment = validation.message;
       }
     }
   }
@@ -345,7 +435,77 @@ export const validatePaymentRequestCreation = (data) => {
   };
 };
 
-// 🇰🇪 Validate complete student data
+/**
+ * Validate M-Pesa payment data
+ * @param {Object} data - M-Pesa payment data
+ * @returns {Object} Validation result
+ */
+export const validateMpesaPayment = (data) => {
+  const errors = {};
+  
+  // Validate phone number
+  if (!data.phone_number) {
+    errors.phone_number = 'Please enter a phone number';
+  } else {
+    const phoneValidation = validateMpesaPhone(data.phone_number);
+    if (!phoneValidation.isValid) {
+      errors.phone_number = phoneValidation.message;
+    }
+  }
+  
+  // Validate amount
+  if (!data.amount) {
+    errors.amount = 'Please enter an amount';
+  } else {
+    const amountValidation = validatePaymentAmount(data.amount, 1);
+    if (!amountValidation.isValid) {
+      errors.amount = amountValidation.message;
+    }
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+
+// ============================================================
+// UTILITY VALIDATORS
+// ============================================================
+
+/**
+ * Calculate payment percentage
+ * @param {number} paidAmount - Amount paid
+ * @param {number} totalAmount - Total amount
+ * @returns {number} Percentage
+ */
+export const calculatePaymentPercentage = (paidAmount, totalAmount) => {
+  const paid = parseFloat(paidAmount);
+  const total = parseFloat(totalAmount);
+  
+  if (isNaN(paid) || isNaN(total) || total === 0) {
+    return 0;
+  }
+  
+  return Math.round((paid / total) * 100);
+};
+
+/**
+ * Format amount for display
+ * @param {number} amount - Amount to format
+ * @returns {string} Formatted amount
+ */
+export const formatAmount = (amount) => {
+  const num = parseFloat(amount);
+  if (isNaN(num)) return 'KES 0.00';
+  return `KES ${num.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+/**
+ * Validate complete student data
+ * @param {Object} studentData - Student data object
+ * @returns {Object} Validation result
+ */
 export const validateStudentData = (studentData) => {
   const errors = {};
   
@@ -387,12 +547,6 @@ export const validateStudentData = (studentData) => {
     errors.current_grade = 'Invalid grade selection';
   }
   
-  if (!validateRequired(studentData.stream)) {
-    errors.stream = 'Stream/Class is required';
-  } else if (!validateStream(studentData.stream)) {
-    errors.stream = 'Invalid stream format';
-  }
-  
   if (!validateRequired(studentData.admission_number)) {
     errors.admission_number = 'Admission number is required';
   } else if (!validateAdmissionNumber(studentData.admission_number)) {
@@ -407,16 +561,7 @@ export const validateStudentData = (studentData) => {
     errors.year_of_admission = 'Invalid year of admission';
   }
   
-  // House System
-  if (studentData.house_name && !validateHouseName(studentData.house_name)) {
-    errors.house_name = 'Invalid house name format';
-  }
-  
   // School Information
-  if (!validateRequired(studentData.county_id)) {
-    errors.county = 'County is required';
-  }
-  
   if (!validateRequired(studentData.school_id)) {
     errors.school = 'School is required';
   }
@@ -427,7 +572,12 @@ export const validateStudentData = (studentData) => {
   };
 };
 
-// Form validation helper
+/**
+ * Form validation helper
+ * @param {Object} values - Form values
+ * @param {Object} rules - Validation rules
+ * @returns {Object} Validation result
+ */
 export const validateForm = (values, rules) => {
   const errors = {};
   
@@ -465,36 +615,6 @@ export const validateForm = (values, rules) => {
       return;
     }
     
-    if (fieldRules.admissionNumber && value && !validateAdmissionNumber(value)) {
-      errors[field] = 'Invalid admission number format';
-      return;
-    }
-    
-    if (fieldRules.upiNumber && value && !validateUPINumber(value)) {
-      errors[field] = 'Invalid UPI number format';
-      return;
-    }
-    
-    if (fieldRules.birthCertificate && value && !validateBirthCertificateNumber(value)) {
-      errors[field] = 'Invalid birth certificate format';
-      return;
-    }
-    
-    if (fieldRules.kenyaGrade && value && !validateKenyaGrade(value)) {
-      errors[field] = 'Invalid grade selection';
-      return;
-    }
-    
-    if (fieldRules.stream && value && !validateStream(value)) {
-      errors[field] = 'Invalid stream format';
-      return;
-    }
-    
-    if (fieldRules.yearOfAdmission && value && !validateYearOfAdmission(value)) {
-      errors[field] = 'Invalid year of admission';
-      return;
-    }
-    
     if (fieldRules.custom && !fieldRules.custom(value)) {
       errors[field] = fieldRules.customMessage || 'Invalid value';
       return;
@@ -507,32 +627,46 @@ export const validateForm = (values, rules) => {
   };
 };
 
-// Default export
+// ============================================================
+// EXPORTS
+// ============================================================
+
 export default {
+  // Basic validators
   validateEmail,
   validatePhone,
   validatePassword,
   validateUsername,
   validateName,
-  validateAdmissionNumber,
+  validateRequired,
+  validateMinLength,
+  validateMaxLength,
+  validateAmount,
+  validateDate,
+
+  // Kenya-specific validators
+  validateKenyanPhone,
+  validateMpesaPhone,
   validateUPINumber,
   validateBirthCertificateNumber,
   validateNEMISCode,
+  validateAdmissionNumber,
+  validateDateOfBirth,
   validateKenyaGrade,
   validateStream,
   validateHouseName,
   validateYearOfAdmission,
-  validateAmount,
-  validateDate,
-  validateDateOfBirth,
-  validateRequired,
-  validateMinLength,
-  validateMaxLength,
-  validatePaymentAmount,  // 🆕 NEW
-  validatePartialPayment,  // 🆕 NEW
-  validateMinimumPaymentAmount,  // 🆕 NEW
-  calculatePaymentPercentage,  // 🆕 NEW
-  validatePaymentRequestCreation,  // 🆕 NEW
+
+  // Payment validators
+  validatePaymentAmount,
+  validatePartialPayment,
+  validateMinimumPaymentAmount,
+  validatePaymentRequestCreation,
+  validateMpesaPayment,
+
+  // Utility functions
+  calculatePaymentPercentage,
+  formatAmount,
   validateStudentData,
   validateForm,
 };

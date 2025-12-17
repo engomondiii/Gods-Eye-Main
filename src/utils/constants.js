@@ -1,5 +1,5 @@
 // ========================================
-// GOD'S EYE EDTECH - CONSTANTS
+// GOD'S EYE EDTECH - CONSTANTS (COMPLETE WITH PHASE 5 UPDATES)
 // ========================================
 
 import { Platform } from 'react-native';
@@ -189,31 +189,28 @@ export const API_ENDPOINTS = {
     ACTIVE_CODES: `${API_BASE_URL}/otc/active_codes/`,
   },
   
-  // Payments
+  // 💰 PAYMENTS (PHASE 5 - NEW)
   PAYMENTS: {
     BASE: `${API_BASE_URL}/payments`,
+    // Fee Structures
     FEE_STRUCTURES: `${API_BASE_URL}/payments/fee-structures/`,
-    REQUESTS: {
-      BASE: `${API_BASE_URL}/payments/requests`,
-      LIST: `${API_BASE_URL}/payments/requests/`,
-      DETAIL: (id) => `${API_BASE_URL}/payments/requests/${id}/`,
-      CREATE: `${API_BASE_URL}/payments/requests/`,
-      UPDATE: (id) => `${API_BASE_URL}/payments/requests/${id}/`,
-      MY_PAYMENTS: `${API_BASE_URL}/payments/requests/my_payments/`,
-      OVERDUE: `${API_BASE_URL}/payments/requests/overdue/`,
-      STATISTICS: `${API_BASE_URL}/payments/requests/statistics/`,
-      BULK_CREATE: `${API_BASE_URL}/payments/requests/bulk_create/`,
-    },
-    PAYMENTS: {
-      LIST: `${API_BASE_URL}/payments/payments/`,
-      CREATE: `${API_BASE_URL}/payments/payments/`,
-      VERIFY: (id) => `${API_BASE_URL}/payments/payments/${id}/verify/`,
-    },
-    MPESA: {
-      INITIATE: `${API_BASE_URL}/payments/mpesa/initiate/`,
-      CALLBACK: `${API_BASE_URL}/payments/mpesa/callback/`,
-      QUERY: `${API_BASE_URL}/payments/mpesa/query/`,
-    },
+    FEE_STRUCTURE_DETAIL: (id) => `${API_BASE_URL}/payments/fee-structures/${id}/`,
+    // Payment Requests
+    REQUESTS: `${API_BASE_URL}/payments/requests/`,
+    REQUEST_DETAIL: (id) => `${API_BASE_URL}/payments/requests/${id}/`,
+    MY_PAYMENTS: `${API_BASE_URL}/payments/requests/my_payments/`,
+    OVERDUE: `${API_BASE_URL}/payments/requests/overdue/`,
+    STATISTICS: `${API_BASE_URL}/payments/requests/statistics/`,
+    BULK_CREATE: `${API_BASE_URL}/payments/requests/bulk_create/`,
+    // Payments (Transactions)
+    PAYMENTS: `${API_BASE_URL}/payments/payments/`,
+    PAYMENT_DETAIL: (id) => `${API_BASE_URL}/payments/payments/${id}/`,
+    VERIFY_PAYMENT: (id) => `${API_BASE_URL}/payments/payments/${id}/verify/`,
+    // M-Pesa
+    MPESA: `${API_BASE_URL}/payments/mpesa/`,
+    MPESA_INITIATE: `${API_BASE_URL}/payments/mpesa/initiate/`,
+    MPESA_CALLBACK: `${API_BASE_URL}/payments/mpesa/callback/`,
+    MPESA_QUERY: `${API_BASE_URL}/payments/mpesa/query/`,
   },
   
   // Notifications
@@ -689,64 +686,94 @@ export const SCREENS = {
 };
 
 // ============================================================
-// PAYMENT CONSTANTS
+// 💰 PAYMENT CONSTANTS (PHASE 5 - UPDATED)
 // ============================================================
 
 export const PAYMENT_STATUS = {
   PENDING: 'pending',
-  APPROVED: 'approved',
-  PAID: 'paid',
   PARTIALLY_PAID: 'partially_paid',
-  REJECTED: 'rejected',
+  PAID: 'paid',
   OVERDUE: 'overdue',
+  CANCELLED: 'cancelled',
 };
 
 export const PAYMENT_STATUS_LABELS = {
   [PAYMENT_STATUS.PENDING]: 'Pending',
-  [PAYMENT_STATUS.APPROVED]: 'Approved',
-  [PAYMENT_STATUS.PAID]: 'Paid',
   [PAYMENT_STATUS.PARTIALLY_PAID]: 'Partially Paid',
-  [PAYMENT_STATUS.REJECTED]: 'Rejected',
+  [PAYMENT_STATUS.PAID]: 'Paid',
   [PAYMENT_STATUS.OVERDUE]: 'Overdue',
+  [PAYMENT_STATUS.CANCELLED]: 'Cancelled',
 };
 
 export const PAYMENT_STATUS_COLORS = {
-  [PAYMENT_STATUS.PENDING]: '#FF9800',
-  [PAYMENT_STATUS.APPROVED]: '#2196F3',
-  [PAYMENT_STATUS.PAID]: '#4CAF50',
-  [PAYMENT_STATUS.PARTIALLY_PAID]: '#9C27B0',
-  [PAYMENT_STATUS.REJECTED]: '#F44336',
-  [PAYMENT_STATUS.OVERDUE]: '#D32F2F',
+  [PAYMENT_STATUS.PENDING]: '#FFA500',
+  [PAYMENT_STATUS.PARTIALLY_PAID]: '#17A2B8',
+  [PAYMENT_STATUS.PAID]: '#28A745',
+  [PAYMENT_STATUS.OVERDUE]: '#DC3545',
+  [PAYMENT_STATUS.CANCELLED]: '#6C757D',
 };
 
 export const PAYMENT_STATUS_ICONS = {
   [PAYMENT_STATUS.PENDING]: 'clock-outline',
-  [PAYMENT_STATUS.APPROVED]: 'check-circle-outline',
-  [PAYMENT_STATUS.PAID]: 'check-circle',
   [PAYMENT_STATUS.PARTIALLY_PAID]: 'progress-check',
-  [PAYMENT_STATUS.REJECTED]: 'close-circle',
+  [PAYMENT_STATUS.PAID]: 'check-circle',
   [PAYMENT_STATUS.OVERDUE]: 'alert-circle',
+  [PAYMENT_STATUS.CANCELLED]: 'close-circle',
 };
 
 export const PAYMENT_FLEXIBILITY = {
   FULL_ONLY: 'full_only',
-  PARTIAL_ALLOWED: 'partial_allowed',
-  INSTALLMENTS: 'installments',
+  FLEXIBLE: 'flexible',
+  INSTALLMENT_PLAN: 'installment_plan',
 };
 
 export const PAYMENT_FLEXIBILITY_LABELS = {
   [PAYMENT_FLEXIBILITY.FULL_ONLY]: 'Full Payment Only',
-  [PAYMENT_FLEXIBILITY.PARTIAL_ALLOWED]: 'Partial Payments Allowed',
-  [PAYMENT_FLEXIBILITY.INSTALLMENTS]: 'Installment Plan',
+  [PAYMENT_FLEXIBILITY.FLEXIBLE]: 'Flexible Payment',
+  [PAYMENT_FLEXIBILITY.INSTALLMENT_PLAN]: 'Installment Plan',
+};
+
+export const PAYMENT_METHOD = {
+  MPESA: 'mpesa',
+  BANK_TRANSFER: 'bank_transfer',
+  CASH: 'cash',
+  CHEQUE: 'cheque',
+  CARD: 'card',
+};
+
+export const PAYMENT_METHOD_LABELS = {
+  [PAYMENT_METHOD.MPESA]: 'M-Pesa',
+  [PAYMENT_METHOD.BANK_TRANSFER]: 'Bank Transfer',
+  [PAYMENT_METHOD.CASH]: 'Cash',
+  [PAYMENT_METHOD.CHEQUE]: 'Cheque',
+  [PAYMENT_METHOD.CARD]: 'Card',
+};
+
+export const PAYMENT_METHOD_ICONS = {
+  [PAYMENT_METHOD.MPESA]: 'cellphone',
+  [PAYMENT_METHOD.BANK_TRANSFER]: 'bank',
+  [PAYMENT_METHOD.CASH]: 'cash',
+  [PAYMENT_METHOD.CHEQUE]: 'checkbook',
+  [PAYMENT_METHOD.CARD]: 'credit-card',
+};
+
+export const MPESA_STATUS = {
+  PENDING: 'pending',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  CANCELLED: 'cancelled',
 };
 
 export const PAYMENT_CONFIG = {
   MIN_PAYMENT_AMOUNT: 100,
   MAX_INSTALLMENTS: 12,
-  DEFAULT_MINIMUM_PERCENTAGE: 20,
+  DEFAULT_MINIMUM_PERCENTAGE: 10,
   ALLOW_OVERPAYMENT: false,
   CURRENCY: 'KES',
-  CURRENCY_SYMBOL: 'KES',
+  CURRENCY_SYMBOL: 'KSh',
+  CURRENCY_NAME: 'Kenyan Shilling',
+  MIN_AMOUNT: 1,
+  MAX_AMOUNT: 1000000,
 };
 
 // ============================================================
@@ -902,7 +929,7 @@ export const KENYA_COUNTIES = [
   'Trans Nzoia', 'Turkana', 'Uasin Gishu', 'Vihiga', 'Wajir', 'West Pokot',
 ];
 
-// 🆕 EDUCATION LEVELS
+// EDUCATION LEVELS
 export const KENYA_EDUCATION_LEVELS = {
   PRE_PRIMARY: 'pre_primary',
   PRIMARY: 'primary',
@@ -917,7 +944,7 @@ export const KENYA_EDUCATION_LEVEL_LABELS = {
   [KENYA_EDUCATION_LEVELS.SENIOR_SECONDARY]: 'Senior Secondary',
 };
 
-// 🆕 GRADES (Kenya CBC + 8-4-4 System)
+// GRADES (Kenya CBC + 8-4-4 System)
 export const KENYA_GRADES = {
   PP1: 'pp1',
   PP2: 'pp2',
@@ -960,7 +987,7 @@ export const KENYA_GRADE_LABELS = {
   [KENYA_GRADES.FORM_4]: 'Form 4 (8-4-4)',
 };
 
-// 🆕 GRADES BY EDUCATION LEVEL
+// GRADES BY EDUCATION LEVEL
 export const KENYA_GRADES_BY_LEVEL = {
   [KENYA_EDUCATION_LEVELS.PRE_PRIMARY]: [
     KENYA_GRADES.PP1,
@@ -990,7 +1017,7 @@ export const KENYA_GRADES_BY_LEVEL = {
   ],
 };
 
-// 🆕 ACADEMIC TERMS
+// ACADEMIC TERMS
 export const KENYA_ACADEMIC_TERMS = {
   TERM_1: 'term_1',
   TERM_2: 'term_2',
@@ -1003,7 +1030,7 @@ export const KENYA_ACADEMIC_TERM_LABELS = {
   [KENYA_ACADEMIC_TERMS.TERM_3]: 'Term 3 (Sep - Nov)',
 };
 
-// 🆕 STREAM TYPES
+// STREAM TYPES
 export const KENYA_STREAM_TYPES = {
   COLORS: 'colors',
   DIRECTIONS: 'directions',
@@ -1013,7 +1040,7 @@ export const KENYA_STREAM_TYPES = {
   CUSTOM: 'custom',
 };
 
-// 🆕 COMMON STREAMS
+// COMMON STREAMS
 export const KENYA_COMMON_STREAMS = {
   colors: ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'White', 'Black'],
   directions: ['East', 'West', 'North', 'South', 'Northeast', 'Northwest', 'Southeast', 'Southwest'],
@@ -1022,7 +1049,7 @@ export const KENYA_COMMON_STREAMS = {
   places: ['Kilimanjaro', 'Kenya', 'Mara', 'Tsavo', 'Amboseli', 'Nakuru', 'Nairobi', 'Mombasa'],
 };
 
-// 🆕 COMMON HOUSES
+// COMMON HOUSES
 export const KENYA_COMMON_HOUSES = {
   mountains: ['Kilimanjaro', 'Kenya', 'Elgon', 'Longonot', 'Aberdare', 'Meru'],
   wildlifeParks: ['Mara', 'Tsavo', 'Amboseli', 'Nakuru', 'Samburu', 'Nairobi'],
@@ -1030,7 +1057,7 @@ export const KENYA_COMMON_HOUSES = {
   colors: ['Red', 'Blue', 'Green', 'Yellow'],
 };
 
-// 🆕 HOUSE COLORS
+// HOUSE COLORS
 export const KENYA_HOUSE_COLORS = [
   { name: 'Red', hex: '#F44336' },
   { name: 'Blue', hex: '#2196F3' },
@@ -1068,7 +1095,7 @@ export const KENYA_SCHOOL_BOARDING = {
 };
 
 // ============================================================
-// 🆕 STUDENT CONSTANTS
+// STUDENT CONSTANTS
 // ============================================================
 
 // Gender Options
@@ -1136,6 +1163,8 @@ export const DATE_FORMATS = {
   DISPLAY_DATE: 'MMM DD, YYYY',
   DISPLAY_TIME: 'hh:mm A',
   DISPLAY_DATETIME: 'MMM DD, YYYY hh:mm A',
+  API_DATE: 'YYYY-MM-DD',
+  API_DATETIME: 'YYYY-MM-DDTHH:mm:ss',
 };
 
 // ============================================================
@@ -1183,6 +1212,10 @@ export const VALIDATION_MESSAGES = {
   PAYMENT_AMOUNT_BELOW_MINIMUM: 'Amount must be at least',
   PAYMENT_AMOUNT_ABOVE_MAXIMUM: 'Amount cannot exceed',
   PAYMENT_AMOUNT_REQUIRED: 'Payment amount is required',
+  MIN_AMOUNT: (amount) => `Amount must be at least KES ${amount.toLocaleString()}`,
+  MAX_AMOUNT: (amount) => `Amount cannot exceed KES ${amount.toLocaleString()}`,
+  PHONE_FORMAT: 'Phone number must be in format 254XXXXXXXXX or 07XXXXXXXX',
+  MPESA_PHONE_FORMAT: 'M-Pesa requires phone number in format 254XXXXXXXXX',
 };
 
 // ============================================================
@@ -1281,6 +1314,11 @@ export const DEFAULTS = {
   REPORT_FORMAT: REPORT_FORMATS.PDF,
   ITEMS_PER_PAGE: 20,
   ANALYTICS_PERIOD: ANALYTICS_PERIODS.THIS_WEEK,
+  ACADEMIC_YEAR: '2025',
+  TERM: KENYA_ACADEMIC_TERMS.TERM_1,
+  PAYMENT_FLEXIBILITY: PAYMENT_FLEXIBILITY.FLEXIBLE,
+  MINIMUM_PAYMENT: 100,
+  PAGE_SIZE: 20,
 };
 
 export const MAX_GUARDIANS_PER_STUDENT = APP_CONFIG.MAX_GUARDIANS;
@@ -1293,4 +1331,5 @@ if (__DEV__) {
   console.log('🚀 God\'s Eye EdTech - API Configuration');
   console.log('📡 API Base URL:', API_BASE_URL);
   console.log('🔧 Platform:', Platform.OS);
+  console.log('💰 Payment System: ENABLED');
 }

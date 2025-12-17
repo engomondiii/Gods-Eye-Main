@@ -1,12 +1,18 @@
+// ========================================
+// GOD'S EYE EDTECH - OTC INPUT COMPONENT
+// ========================================
+
 import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, TextInput, Alert } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
+import * as otcService from '../../services/otcService';
 import { OTC_CONFIG } from '../../utils/constants';
 
 const OTCInput = ({ onSubmit, onCancel }) => {
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const codeLength = OTC_CONFIG?.LENGTH || 6;
+  const [code, setCode] = useState(Array(codeLength).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRefs = useRef([]);
 
@@ -27,7 +33,7 @@ const OTCInput = ({ onSubmit, onCancel }) => {
     newCode[index] = text;
     setCode(newCode);
 
-    if (text && index < (OTC_CONFIG.LENGTH || 6) - 1) {
+    if (text && index < codeLength - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -47,18 +53,24 @@ const OTCInput = ({ onSubmit, onCancel }) => {
   const handleSubmit = async () => {
     const enteredCode = code.join('');
     
-    if (enteredCode.length !== (OTC_CONFIG.LENGTH || 6)) {
-      Alert.alert('Incomplete Code', 'Please enter all 6 digits');
+    if (enteredCode.length !== codeLength) {
+      Alert.alert('Incomplete Code', `Please enter all ${codeLength} digits`);
       return;
     }
 
     setIsSubmitting(true);
     
     try {
-      await onSubmit(enteredCode);
+      const response = await otcService.verifyOTC(enteredCode);
+
+      if (response.success) {
+        await onSubmit(response);
+      } else {
+        throw new Error(response.message || 'Invalid code');
+      }
     } catch (error) {
       console.error('OTC submit error:', error);
-      Alert.alert('Error', error.message || 'Invalid code');
+      Alert.alert('Error', error.message || 'Invalid or expired code');
       handleClear();
     } finally {
       setIsSubmitting(false);
@@ -66,7 +78,7 @@ const OTCInput = ({ onSubmit, onCancel }) => {
   };
 
   const handleClear = () => {
-    setCode(['', '', '', '', '', '']);
+    setCode(Array(codeLength).fill(''));
     inputRefs.current[0]?.focus();
   };
 
@@ -80,7 +92,7 @@ const OTCInput = ({ onSubmit, onCancel }) => {
       
       <Text style={styles.title}>Enter One-Time Code</Text>
       <Text style={styles.subtitle}>
-        Enter the 6-digit code provided by the teacher
+        Enter the {codeLength}-digit code provided by the teacher
       </Text>
 
       <View style={styles.codeContainer}>
@@ -142,7 +154,7 @@ const OTCInput = ({ onSubmit, onCancel }) => {
           color={theme.colors.textSecondary} 
         />
         <Text style={styles.infoText}>
-          Codes expire after {OTC_CONFIG.EXPIRY_MINUTES || 5} minutes
+          Codes expire after {OTC_CONFIG?.EXPIRY_MINUTES || 5} minutes
         </Text>
       </View>
     </View>
@@ -169,6 +181,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
   },
   codeContainer: {
     flexDirection: 'row',

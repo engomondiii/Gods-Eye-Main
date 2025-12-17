@@ -1,3 +1,7 @@
+// ========================================
+// GOD'S EYE EDTECH - GUARDIAN NAVIGATOR
+// ========================================
+
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -10,7 +14,7 @@ import StudentDetailScreen from '../screens/guardian/StudentDetailScreen';
 import PendingApprovalsScreen from '../screens/guardian/PendingApprovalsScreen';
 import PaymentRequestsScreen from '../screens/guardian/PaymentRequestsScreen';
 
-// ✨ NEW - Attendance Screens (Guardian View)
+// Attendance Screens (Guardian View)
 import AttendanceHistoryScreen from '../screens/attendance/AttendanceHistoryScreen';
 import StudentQRCodeScreen from '../screens/attendance/StudentQRCodeScreen';
 import BiometricSetupScreen from '../screens/attendance/BiometricSetupScreen';
@@ -25,7 +29,9 @@ import { SCREENS } from '../utils/constants';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Dashboard Stack
+// ============================================================
+// DASHBOARD STACK
+// ============================================================
 const DashboardStack = () => {
   return (
     <Stack.Navigator
@@ -42,7 +48,17 @@ const DashboardStack = () => {
       <Stack.Screen 
         name={SCREENS.GUARDIAN_DASHBOARD} 
         component={GuardianDashboardScreen}
-        options={{ title: 'Dashboard' }}
+        options={{ 
+          title: 'Dashboard',
+          headerRight: () => (
+            <MaterialCommunityIcons 
+              name="bell-outline" 
+              size={24} 
+              color="#fff" 
+              style={{ marginRight: 15 }}
+            />
+          ),
+        }}
       />
       <Stack.Screen 
         name={SCREENS.NOTIFICATIONS} 
@@ -53,7 +69,9 @@ const DashboardStack = () => {
   );
 };
 
-// My Students Stack
+// ============================================================
+// MY STUDENTS STACK (WITH ATTENDANCE FEATURES)
+// ============================================================
 const StudentsStack = () => {
   return (
     <Stack.Navigator
@@ -75,31 +93,61 @@ const StudentsStack = () => {
       <Stack.Screen 
         name={SCREENS.STUDENT_DETAIL} 
         component={StudentDetailScreen}
-        options={{ title: 'Student Details' }}
+        options={{ 
+          title: 'Student Details',
+          headerRight: () => (
+            <MaterialCommunityIcons 
+              name="qrcode" 
+              size={24} 
+              color="#fff" 
+              style={{ marginRight: 15 }}
+            />
+          ),
+        }}
       />
-      {/* ✨ NEW - QR Code Screen */}
+      {/* Attendance Features */}
       <Stack.Screen 
         name={SCREENS.STUDENT_QR_CODE} 
         component={StudentQRCodeScreen}
-        options={{ title: 'Student QR Code' }}
+        options={{ 
+          title: 'Student QR Code',
+          headerRight: () => (
+            <MaterialCommunityIcons 
+              name="share-variant" 
+              size={24} 
+              color="#fff" 
+              style={{ marginRight: 15 }}
+            />
+          ),
+        }}
       />
-      {/* ✨ NEW - Biometric Setup Screen */}
       <Stack.Screen 
         name={SCREENS.BIOMETRIC_SETUP} 
         component={BiometricSetupScreen}
         options={{ title: 'Biometric Setup' }}
       />
-      {/* ✨ NEW - Attendance History Screen */}
       <Stack.Screen 
         name={SCREENS.ATTENDANCE_HISTORY} 
         component={AttendanceHistoryScreen}
-        options={{ title: 'Attendance History' }}
+        options={{ 
+          title: 'Attendance History',
+          headerRight: () => (
+            <MaterialCommunityIcons 
+              name="calendar-month" 
+              size={24} 
+              color="#fff" 
+              style={{ marginRight: 15 }}
+            />
+          ),
+        }}
       />
     </Stack.Navigator>
   );
 };
 
-// Approvals Stack
+// ============================================================
+// APPROVALS STACK
+// ============================================================
 const ApprovalsStack = () => {
   return (
     <Stack.Navigator
@@ -127,7 +175,9 @@ const ApprovalsStack = () => {
   );
 };
 
-// Payments Stack
+// ============================================================
+// PAYMENTS STACK
+// ============================================================
 const PaymentsStack = () => {
   return (
     <Stack.Navigator
@@ -155,7 +205,9 @@ const PaymentsStack = () => {
   );
 };
 
-// Profile Stack
+// ============================================================
+// PROFILE STACK
+// ============================================================
 const ProfileStack = () => {
   return (
     <Stack.Navigator
@@ -183,7 +235,9 @@ const ProfileStack = () => {
   );
 };
 
-// Main Guardian Navigator with Bottom Tabs
+// ============================================================
+// MAIN GUARDIAN NAVIGATOR WITH BOTTOM TABS
+// ============================================================
 const GuardianNavigator = () => {
   return (
     <Tab.Navigator

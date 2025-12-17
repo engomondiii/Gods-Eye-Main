@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+// ========================================
+// GOD'S EYE EDTECH - ATTENDANCE CALENDAR COMPONENT
+// ========================================
+
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
-import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_COLORS } from '../../utils/constants';
+import { ATTENDANCE_STATUS } from '../../utils/constants';
 
 const AttendanceCalendar = ({ 
   studentId, 
@@ -13,21 +17,18 @@ const AttendanceCalendar = ({
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(month));
 
-  // Helper function to get color for status
+  // Status colors
+  const STATUS_COLORS = {
+    [ATTENDANCE_STATUS.PRESENT]: '#4CAF50',
+    [ATTENDANCE_STATUS.ABSENT]: '#F44336',
+    [ATTENDANCE_STATUS.LATE]: '#FF9800',
+    [ATTENDANCE_STATUS.EXCUSED]: '#2196F3',
+    [ATTENDANCE_STATUS.UNKNOWN]: '#757575',
+  };
+
   const getColorForStatus = (status) => {
     if (!status) return null;
-    
-    // Map status strings to constants
-    const statusMap = {
-      'present': ATTENDANCE_STATUS.PRESENT,
-      'absent': ATTENDANCE_STATUS.ABSENT,
-      'late': ATTENDANCE_STATUS.LATE,
-      'excused': ATTENDANCE_STATUS.EXCUSED,
-      'unknown': ATTENDANCE_STATUS.UNKNOWN,
-    };
-    
-    const statusKey = statusMap[status.toLowerCase()] || ATTENDANCE_STATUS.UNKNOWN;
-    return ATTENDANCE_STATUS_COLORS[statusKey];
+    return STATUS_COLORS[status] || STATUS_COLORS[ATTENDANCE_STATUS.UNKNOWN];
   };
 
   const getDaysInMonth = (date) => {
@@ -118,12 +119,14 @@ const AttendanceCalendar = ({
     const firstDay = getFirstDayOfMonth(currentMonth);
     const days = [];
 
+    // Empty cells for days before month starts
     for (let i = 0; i < firstDay; i++) {
       days.push(
         <View key={`empty-${i}`} style={styles.dayCell} />
       );
     }
 
+    // Actual days
     for (let day = 1; day <= daysInMonth; day++) {
       const status = getStatusForDate(day);
       const isCurrentDay = isToday(day);
@@ -167,15 +170,15 @@ const AttendanceCalendar = ({
     return (
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: ATTENDANCE_STATUS_COLORS[ATTENDANCE_STATUS.PRESENT] }]} />
+          <View style={[styles.legendDot, { backgroundColor: STATUS_COLORS[ATTENDANCE_STATUS.PRESENT] }]} />
           <Text style={styles.legendText}>Present</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: ATTENDANCE_STATUS_COLORS[ATTENDANCE_STATUS.ABSENT] }]} />
+          <View style={[styles.legendDot, { backgroundColor: STATUS_COLORS[ATTENDANCE_STATUS.ABSENT] }]} />
           <Text style={styles.legendText}>Absent</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: ATTENDANCE_STATUS_COLORS[ATTENDANCE_STATUS.LATE] }]} />
+          <View style={[styles.legendDot, { backgroundColor: STATUS_COLORS[ATTENDANCE_STATUS.LATE] }]} />
           <Text style={styles.legendText}>Late</Text>
         </View>
       </View>

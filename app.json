@@ -19,10 +19,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.godseye.edtech",
       "infoPlist": {
-        "NSCameraUsageDescription": "God's Eye needs camera access for face recognition and QR code scanning for student attendance.",
+        "NSCameraUsageDescription": "God's Eye needs camera access for face recognition and QR code scanning for student attendance verification.",
         "NSMicrophoneUsageDescription": "God's Eye may need microphone access for video features.",
         "NSPhotoLibraryUsageDescription": "God's Eye needs access to your photo library to save QR codes and student photos.",
-        "NSFaceIDUsageDescription": "God's Eye uses Face ID for secure biometric authentication."
+        "NSPhotoLibraryAddUsageDescription": "God's Eye needs permission to save QR codes to your photo library.",
+        "NSFaceIDUsageDescription": "God's Eye uses Face ID for secure biometric authentication and student attendance verification."
       }
     },
     "android": {
@@ -53,15 +54,17 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow God's Eye to access your camera for face recognition and attendance verification."
+          "cameraPermission": "Allow God's Eye to access your camera for face recognition, QR code scanning, and student attendance verification."
         }
       ],
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Allow God's Eye to use Face ID for secure biometric authentication."
+          "faceIDPermission": "Allow God's Eye to use Face ID for secure biometric authentication and student identification."
         }
-      ]
+      ],
+      "expo-file-system",
+      "expo-sharing"
     ],
     "extra": {
       "eas": {
@@ -70,7 +73,19 @@
       "apiBaseUrl": "http://192.168.1.100:8000/api",
       "environment": "development",
       "enableBiometrics": true,
-      "enableAnalytics": true
+      "enableQRCode": true,
+      "enableFaceRecognition": true,
+      "enableOTC": true,
+      "enableAnalytics": true,
+      "otcConfig": {
+        "length": 6,
+        "expiryMinutes": 5
+      },
+      "attendanceConfig": {
+        "autoMarkAbsentTime": "16:00",
+        "gracePeriodMinutes": 15,
+        "enableGeoLocation": false
+      }
     }
   }
 }

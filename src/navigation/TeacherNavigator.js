@@ -1,3 +1,7 @@
+// ========================================
+// GOD'S EYE EDTECH - TEACHER NAVIGATOR
+// ========================================
+
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -13,14 +17,13 @@ import CreateGuardianLinkScreen from '../screens/teacher/CreateGuardianLinkScree
 import CreatePaymentRequestScreen from '../screens/teacher/CreatePaymentRequestScreen';
 import PaymentsListScreen from '../screens/teacher/PaymentsListScreen';
 
-// ✨ NEW - Attendance Screens
+// Attendance Screens
 import AttendanceDashboardScreen from '../screens/attendance/AttendanceDashboardScreen';
 import CheckInScreen from '../screens/attendance/CheckInScreen';
 import AttendanceHistoryScreen from '../screens/attendance/AttendanceHistoryScreen';
-import AttendanceReportsScreen from '../screens/attendance/AttendanceReportsScreen';
+import ManualAttendanceScreen from '../screens/attendance/ManualAttendanceScreen';
 import StudentQRCodeScreen from '../screens/attendance/StudentQRCodeScreen';
 import BiometricSetupScreen from '../screens/attendance/BiometricSetupScreen';
-import ManualAttendanceScreen from '../screens/attendance/ManualAttendanceScreen';
 
 // Shared Screens
 import NotificationsScreen from '../screens/shared/NotificationsScreen';
@@ -32,7 +35,9 @@ import { SCREENS } from '../utils/constants';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Dashboard Stack
+// ============================================================
+// DASHBOARD STACK
+// ============================================================
 const DashboardStack = () => {
   return (
     <Stack.Navigator
@@ -60,7 +65,9 @@ const DashboardStack = () => {
   );
 };
 
-// Students Stack
+// ============================================================
+// STUDENTS STACK
+// ============================================================
 const StudentsStack = () => {
   return (
     <Stack.Navigator
@@ -89,23 +96,29 @@ const StudentsStack = () => {
         component={CreateStudentScreen}
         options={{ title: 'Add New Student' }}
       />
-      {/* ✨ NEW - QR Code Screen */}
+      {/* Attendance Screens accessible from Student Detail */}
       <Stack.Screen 
         name={SCREENS.STUDENT_QR_CODE} 
         component={StudentQRCodeScreen}
         options={{ title: 'Student QR Code' }}
       />
-      {/* ✨ NEW - Biometric Setup Screen */}
       <Stack.Screen 
         name={SCREENS.BIOMETRIC_SETUP} 
         component={BiometricSetupScreen}
         options={{ title: 'Biometric Setup' }}
       />
+      <Stack.Screen 
+        name={SCREENS.ATTENDANCE_HISTORY} 
+        component={AttendanceHistoryScreen}
+        options={{ title: 'Attendance History' }}
+      />
     </Stack.Navigator>
   );
 };
 
-// ✨ NEW - Attendance Stack
+// ============================================================
+// ATTENDANCE STACK (NEW)
+// ============================================================
 const AttendanceStack = () => {
   return (
     <Stack.Navigator
@@ -122,7 +135,17 @@ const AttendanceStack = () => {
       <Stack.Screen 
         name={SCREENS.ATTENDANCE_DASHBOARD} 
         component={AttendanceDashboardScreen}
-        options={{ title: 'Attendance' }}
+        options={{ 
+          title: 'Attendance',
+          headerRight: () => (
+            <MaterialCommunityIcons 
+              name="qrcode-scan" 
+              size={24} 
+              color="#fff" 
+              style={{ marginRight: 15 }}
+            />
+          ),
+        }}
       />
       <Stack.Screen 
         name={SCREENS.CHECK_IN} 
@@ -133,11 +156,6 @@ const AttendanceStack = () => {
         name={SCREENS.ATTENDANCE_HISTORY} 
         component={AttendanceHistoryScreen}
         options={{ title: 'Attendance History' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.ATTENDANCE_REPORTS} 
-        component={AttendanceReportsScreen}
-        options={{ title: 'Attendance Reports' }}
       />
       <Stack.Screen 
         name={SCREENS.MANUAL_ATTENDANCE} 
@@ -154,11 +172,18 @@ const AttendanceStack = () => {
         component={BiometricSetupScreen}
         options={{ title: 'Biometric Setup' }}
       />
+      <Stack.Screen 
+        name={SCREENS.STUDENT_DETAIL} 
+        component={StudentDetailScreen}
+        options={{ title: 'Student Details' }}
+      />
     </Stack.Navigator>
   );
 };
 
-// Approvals Stack
+// ============================================================
+// APPROVALS STACK
+// ============================================================
 const ApprovalsStack = () => {
   return (
     <Stack.Navigator
@@ -191,7 +216,9 @@ const ApprovalsStack = () => {
   );
 };
 
-// Payments Stack
+// ============================================================
+// PAYMENTS STACK
+// ============================================================
 const PaymentsStack = () => {
   return (
     <Stack.Navigator
@@ -224,7 +251,9 @@ const PaymentsStack = () => {
   );
 };
 
-// Profile Stack
+// ============================================================
+// PROFILE STACK
+// ============================================================
 const ProfileStack = () => {
   return (
     <Stack.Navigator
@@ -252,7 +281,9 @@ const ProfileStack = () => {
   );
 };
 
-// Main Teacher Navigator with Bottom Tabs
+// ============================================================
+// MAIN TEACHER NAVIGATOR WITH BOTTOM TABS
+// ============================================================
 const TeacherNavigator = () => {
   return (
     <Tab.Navigator
@@ -294,7 +325,7 @@ const TeacherNavigator = () => {
           ),
         }}
       />
-      {/* ✨ NEW - Attendance Tab */}
+      {/* NEW - Attendance Tab */}
       <Tab.Screen 
         name="AttendanceTab" 
         component={AttendanceStack}

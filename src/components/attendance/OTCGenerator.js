@@ -1,23 +1,28 @@
+// ========================================
+// GOD'S EYE EDTECH - OTC GENERATOR COMPONENT
+// ========================================
+
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import theme from '../../styles/theme';
+import * as otcService from '../../services/otcService';
 import { OTC_CONFIG } from '../../utils/constants';
 
 const OTCGenerator = ({ studentId, onGenerate }) => {
-  const [code, setCode] = useState(null);
+  const [otcData, setOtcData] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     let interval;
-    if (code && timeLeft > 0) {
+    if (otcData && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            setCode(null);
+            setOtcData(null);
             return 0;
           }
           return prev - 1;
@@ -25,31 +30,47 @@ const OTCGenerator = ({ studentId, onGenerate }) => {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [code, timeLeft]);
+  }, [otcData, timeLeft]);
+
+  useEffect(() => {
+    // Update time left when otcData changes
+    if (otcData && otcData.expires_at) {
+      const remaining = otcService.getRemainingTime(otcData.expires_at);
+      setTimeLeft(remaining.seconds);
+    }
+  }, [otcData]);
 
   const generateCode = async () => {
     setIsGenerating(true);
     
     try {
-      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-      setCode(newCode);
-      setTimeLeft((OTC_CONFIG.EXPIRY_MINUTES || 5) * 60);
-      
-      if (onGenerate) {
-        onGenerate(newCode);
+      const response = await otcService.generateOTC(studentId);
+
+      if (response.success) {
+        setOtcData(response.data);
+        
+        // Calculate initial time left
+        const remaining = otcService.getRemainingTime(response.data.expires_at);
+        setTimeLeft(remaining.seconds);
+
+        if (onGenerate) {
+          onGenerate(response.data);
+        }
+      } else {
+        throw new Error(response.message || 'Failed to generate code');
       }
     } catch (error) {
       console.error('Generate OTC error:', error);
-      Alert.alert('Error', 'Failed to generate code');
+      Alert.alert('Error', error.message || 'Failed to generate code');
     } finally {
       setIsGenerating(false);
     }
   };
 
   const copyToClipboard = async () => {
-    if (!code) return;
+    if (!otcData || !otcData.code) return;
     
-    await Clipboard.setStringAsync(code);
+    await Clipboard.setStringAsync(otcData.code);
     Alert.alert('Copied', 'Code copied to clipboard');
   };
 
@@ -67,12 +88,12 @@ const OTCGenerator = ({ studentId, onGenerate }) => {
 
   return (
     <View style={styles.container}>
-      {code ? (
+      {otcData ? (
         <>
           <View style={styles.codeContainer}>
             <Text style={styles.codeLabel}>Your One-Time Code</Text>
             <View style={styles.codeDisplay}>
-              {code.split('').map((digit, index) => (
+              {otcData.code.split('').map((digit, index) => (
                 <View key={index} style={styles.digitBox}>
                   <Text style={styles.digitText}>{digit}</Text>
                 </View>
@@ -105,6 +126,8 @@ const OTCGenerator = ({ studentId, onGenerate }) => {
               onPress={generateCode}
               icon="refresh"
               style={styles.actionButton}
+              loading={isGenerating}
+              disabled={isGenerating}
             >
               New Code
             </Button>
@@ -130,7 +153,7 @@ const OTCGenerator = ({ studentId, onGenerate }) => {
           />
           <Text style={styles.promptTitle}>Generate One-Time Code</Text>
           <Text style={styles.promptText}>
-            Generate a 6-digit code valid for {OTC_CONFIG.EXPIRY_MINUTES || 5} minutes
+            Generate a 6-digit code valid for {OTC_CONFIG?.EXPIRY_MINUTES || 5} minutes
           </Text>
           <Button
             mode="contained"
@@ -205,7 +228,7 @@ const styles = StyleSheet.create({
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.infoLight,
+    backgroundColor: '#E3F2FD',
     padding: theme.spacing.sm,
     borderRadius: theme.borderRadius.sm,
     maxWidth: 300,
@@ -228,6 +251,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
   },
   generateButton: {
     backgroundColor: theme.colors.primary,

@@ -1,9 +1,13 @@
+// ========================================
+// GOD'S EYE EDTECH - USE ATTENDANCE HOOK
+// ========================================
+
 import { useContext, useCallback } from 'react';
 import { AttendanceContext } from '../context/AttendanceContext';
-import attendanceService from '../services/attendanceService';
 
 /**
  * Custom hook for attendance operations
+ * Provides easy access to attendance context and additional utilities
  */
 const useAttendance = () => {
   const context = useContext(AttendanceContext);
@@ -18,168 +22,48 @@ const useAttendance = () => {
     isLoading,
     error,
     selectedStudent,
+    biometricSupport,
+    setSelectedStudent,
+    setError,
     fetchDashboardData,
     fetchAttendanceHistory,
-    createAttendance,
-    checkIn,
-    checkOut,
+    markAttendance,
     scanQRCode,
     verifyFingerprint,
     verifyFace,
     submitOTC,
-    createManualEntry,
+    bulkMarkAttendance,
     getStudentAttendance,
     getStatistics,
-    getReportData,
-    setSelectedStudent,
-    setError,
   } = context;
 
   /**
-   * Get attendance by ID
+   * Mark student as present
    */
-  const getAttendanceById = useCallback(async (id) => {
-    try {
-      const data = await attendanceService.getById(id);
-      return data;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [setError]);
+  const markPresent = useCallback(async (data) => {
+    return markAttendance('present', data);
+  }, [markAttendance]);
 
   /**
-   * Update attendance record
+   * Mark student as absent
    */
-  const updateAttendance = useCallback(async (id, data) => {
-    try {
-      const result = await attendanceService.updateAttendance(id, data);
-      await fetchDashboardData();
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [fetchDashboardData, setError]);
+  const markAbsent = useCallback(async (data) => {
+    return markAttendance('absent', data);
+  }, [markAttendance]);
 
   /**
-   * Delete attendance record
+   * Mark student as late
    */
-  const deleteAttendance = useCallback(async (id) => {
-    try {
-      const result = await attendanceService.deleteAttendance(id);
-      await fetchDashboardData();
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [fetchDashboardData, setError]);
+  const markLate = useCallback(async (data) => {
+    return markAttendance('late', data);
+  }, [markAttendance]);
 
   /**
-   * Get calendar data
+   * Mark student as excused
    */
-  const getCalendarData = useCallback(async (studentId, month) => {
-    try {
-      const data = await attendanceService.getCalendarData(studentId, month);
-      return data;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [setError]);
-
-  /**
-   * Get attendance summary
-   */
-  const getAttendanceSummary = useCallback(async (studentId, startDate, endDate) => {
-    try {
-      const data = await attendanceService.getSummary(studentId, startDate, endDate);
-      return data;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [setError]);
-
-  /**
-   * Export attendance records
-   */
-  const exportRecords = useCallback(async (filters = {}, format = 'csv') => {
-    try {
-      const data = await attendanceService.exportRecords(filters, format);
-      return data;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [setError]);
-
-  /**
-   * Validate attendance time
-   */
-  const validateAttendanceTime = useCallback(async (type) => {
-    try {
-      const result = await attendanceService.validateAttendanceTime(type);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [setError]);
-
-  /**
-   * Get recent activity
-   */
-  const getRecentActivity = useCallback(async (limit = 10) => {
-    try {
-      const data = await attendanceService.getRecentActivity(limit);
-      return data;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [setError]);
-
-  /**
-   * Get attendance trends
-   */
-  const getTrends = useCallback(async (options = {}) => {
-    try {
-      const data = await attendanceService.getTrends(options);
-      return data;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [setError]);
-
-  /**
-   * Get method statistics
-   */
-  const getMethodStatistics = useCallback(async () => {
-    try {
-      const data = await attendanceService.getMethodStatistics();
-      return data;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [setError]);
-
-  /**
-   * Bulk import records
-   */
-  const bulkImport = useCallback(async (records) => {
-    try {
-      const result = await attendanceService.bulkImport(records);
-      await fetchDashboardData();
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, [fetchDashboardData, setError]);
+  const markExcused = useCallback(async (data) => {
+    return markAttendance('excused', data);
+  }, [markAttendance]);
 
   /**
    * Clear error
@@ -188,6 +72,50 @@ const useAttendance = () => {
     setError(null);
   }, [setError]);
 
+  /**
+   * Refresh all data
+   */
+  const refreshAll = useCallback(async () => {
+    await fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  /**
+   * Get attendance rate
+   */
+  const getAttendanceRate = useCallback(() => {
+    const { present, total } = dashboardData.stats;
+    if (total === 0) return 0;
+    return ((present / total) * 100).toFixed(2);
+  }, [dashboardData.stats]);
+
+  /**
+   * Get absent count
+   */
+  const getAbsentCount = useCallback(() => {
+    return dashboardData.stats.absent;
+  }, [dashboardData.stats]);
+
+  /**
+   * Check if biometrics are supported
+   */
+  const isBiometricSupported = useCallback(() => {
+    return biometricSupport.isSupported;
+  }, [biometricSupport.isSupported]);
+
+  /**
+   * Check if fingerprint is supported
+   */
+  const isFingerprintSupported = useCallback(() => {
+    return biometricSupport.hasFingerprint;
+  }, [biometricSupport.hasFingerprint]);
+
+  /**
+   * Check if face recognition is supported
+   */
+  const isFaceRecognitionSupported = useCallback(() => {
+    return biometricSupport.hasFaceRecognition;
+  }, [biometricSupport.hasFaceRecognition]);
+
   return {
     // State
     dashboardData,
@@ -195,34 +123,39 @@ const useAttendance = () => {
     isLoading,
     error,
     selectedStudent,
+    biometricSupport,
 
     // Actions
     setSelectedStudent,
     clearError,
     fetchDashboardData,
     fetchAttendanceHistory,
-    createAttendance,
-    checkIn,
-    checkOut,
+    refreshAll,
+
+    // Mark Attendance
+    markAttendance,
+    markPresent,
+    markAbsent,
+    markLate,
+    markExcused,
+    bulkMarkAttendance,
+
+    // Check-in Methods
     scanQRCode,
     verifyFingerprint,
     verifyFace,
     submitOTC,
-    createManualEntry,
+
+    // Queries
     getStudentAttendance,
     getStatistics,
-    getReportData,
-    getAttendanceById,
-    updateAttendance,
-    deleteAttendance,
-    getCalendarData,
-    getAttendanceSummary,
-    exportRecords,
-    validateAttendanceTime,
-    getRecentActivity,
-    getTrends,
-    getMethodStatistics,
-    bulkImport,
+
+    // Utilities
+    getAttendanceRate,
+    getAbsentCount,
+    isBiometricSupported,
+    isFingerprintSupported,
+    isFaceRecognitionSupported,
   };
 };
 
