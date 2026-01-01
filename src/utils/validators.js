@@ -1,100 +1,200 @@
 // ========================================
-// GOD'S EYE EDTECH - VALIDATORS (UPDATED WITH PAYMENTS)
+// GOD'S EYE EDTECH - VALIDATORS (COMPREHENSIVE UPDATE)
+// Matching Backend Validators from core/validators.py
 // ========================================
 
 // ============================================================
 // BASIC VALIDATORS
 // ============================================================
 
-// Email validation
+/**
+ * Email validation
+ * @param {string} email - Email to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateEmail = (email) => {
+  if (!email || email.trim() === '') {
+    return 'Email is required';
+  }
+  
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  if (!emailRegex.test(email)) {
+    return 'Please enter a valid email address';
+  }
+  
+  return null;
 };
 
-// Phone number validation (Kenyan format)
-export const validatePhone = (phone) => {
-  const phoneRegex = /^(\+254|254|0)?[17]\d{8}$/;
-  return phoneRegex.test(phone.replace(/\s/g, ''));
-};
-
-// Password validation
+/**
+ * Password validation
+ * Must be at least 8 characters with uppercase, lowercase, and number
+ * @param {string} password - Password to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validatePassword = (password) => {
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-  return passwordRegex.test(password);
+  if (!password || password === '') {
+    return 'Password is required';
+  }
+  
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+  
+  if (!/(?=.*[a-z])/.test(password)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+  
+  if (!/(?=.*[A-Z])/.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+  
+  if (!/(?=.*\d)/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+  
+  return null;
 };
 
-// Username validation
+/**
+ * Username validation
+ * @param {string} username - Username to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateUsername = (username) => {
+  if (!username || username.trim() === '') {
+    return 'Username is required';
+  }
+  
   const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-  return usernameRegex.test(username);
+  if (!usernameRegex.test(username)) {
+    return 'Username must be 3-20 characters (letters, numbers, underscore only)';
+  }
+  
+  return null;
 };
 
-// Name validation
+/**
+ * Name validation
+ * @param {string} name - Name to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateName = (name) => {
+  if (!name || name.trim() === '') {
+    return 'Name is required';
+  }
+  
   const nameRegex = /^[a-zA-Z\s]{2,}$/;
-  return nameRegex.test(name);
-};
-
-// Required field validation
-export const validateRequired = (value) => {
-  if (typeof value === 'string') {
-    return value.trim().length > 0;
+  if (!nameRegex.test(name)) {
+    return 'Name must contain only letters and spaces (min 2 characters)';
   }
-  return value !== null && value !== undefined;
+  
+  return null;
 };
 
-// Minimum length validation
-export const validateMinLength = (value, minLength) => {
-  if (!value) return false;
-  return value.toString().length >= minLength;
+/**
+ * Required field validation
+ * @param {any} value - Value to validate
+ * @param {string} fieldName - Field name for error message
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateRequired = (value, fieldName = 'Field') => {
+  if (value === null || value === undefined) {
+    return `${fieldName} is required`;
+  }
+  
+  if (typeof value === 'string' && value.trim().length === 0) {
+    return `${fieldName} is required`;
+  }
+  
+  return null;
 };
 
-// Maximum length validation
-export const validateMaxLength = (value, maxLength) => {
-  if (!value) return true;
-  return value.toString().length <= maxLength;
+/**
+ * Minimum length validation
+ * @param {string} value - Value to validate
+ * @param {number} minLength - Minimum length
+ * @param {string} fieldName - Field name for error message
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateMinLength = (value, minLength, fieldName = 'Field') => {
+  if (!value) return null; // Optional field
+  
+  if (value.toString().length < minLength) {
+    return `${fieldName} must be at least ${minLength} characters`;
+  }
+  
+  return null;
 };
 
-// Amount validation
-export const validateAmount = (amount) => {
-  const numAmount = parseFloat(amount);
-  return !isNaN(numAmount) && numAmount > 0;
-};
-
-// Date validation
-export const validateDate = (date) => {
-  const dateObj = new Date(date);
-  return dateObj instanceof Date && !isNaN(dateObj);
+/**
+ * Maximum length validation
+ * @param {string} value - Value to validate
+ * @param {number} maxLength - Maximum length
+ * @param {string} fieldName - Field name for error message
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateMaxLength = (value, maxLength, fieldName = 'Field') => {
+  if (!value) return null; // Optional field
+  
+  if (value.toString().length > maxLength) {
+    return `${fieldName} must not exceed ${maxLength} characters`;
+  }
+  
+  return null;
 };
 
 // ============================================================
-// KENYA-SPECIFIC VALIDATORS
+// KENYA-SPECIFIC VALIDATORS (MATCHING BACKEND)
 // ============================================================
 
-// Kenyan phone number validation (254 or 07/01 format)
+/**
+ * Kenyan phone number validation
+ * MATCHES: core/validators.py - validate_kenyan_phone
+ * Pattern: ^\+254[17]\d{8}$
+ * @param {string} phone - Phone number to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateKenyanPhone = (phone) => {
-  // Remove spaces and special characters
-  const cleaned = phone.replace(/[\s\-\(\)]/g, '');
-  
-  // Check format: 254XXXXXXXXX or 07XXXXXXXX or 01XXXXXXXX
-  const pattern = /^(254|0)[17]\d{8}$/;
-  
-  if (!pattern.test(cleaned)) {
-    return {
-      isValid: false,
-      message: 'Invalid Kenyan phone number format',
-    };
+  if (!phone || phone.trim() === '') {
+    return 'Phone number is required';
   }
   
-  return {
-    isValid: true,
-    message: null,
-  };
+  // Remove spaces and special characters
+  let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Add +254 if starts with 0
+  if (cleaned.startsWith('0')) {
+    cleaned = '+254' + cleaned.substring(1);
+  }
+  // Add + if starts with 254
+  else if (cleaned.startsWith('254')) {
+    cleaned = '+' + cleaned;
+  }
+  // Must start with +254
+  else if (!cleaned.startsWith('+254')) {
+    return 'Phone number must start with +254, 254, or 0';
+  }
+  
+  // Validate exact pattern: +254[17]XXXXXXXX
+  const pattern = /^\+254[17]\d{8}$/;
+  if (!pattern.test(cleaned)) {
+    return 'Phone number must be in format +254XXXXXXXXX (Safaricom/Airtel only)';
+  }
+  
+  return null;
 };
 
-// M-Pesa phone number validation (must be 254 format)
+/**
+ * M-Pesa phone number validation
+ * Stricter than regular Kenyan phone - must be +254 format
+ * @param {string} phone - Phone number to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateMpesaPhone = (phone) => {
+  if (!phone || phone.trim() === '') {
+    return 'M-Pesa phone number is required';
+  }
+  
   // Remove spaces and special characters
   let cleaned = phone.replace(/[\s\-\(\)]/g, '');
   
@@ -105,80 +205,134 @@ export const validateMpesaPhone = (phone) => {
   
   // Must start with 254
   if (!cleaned.startsWith('254')) {
-    return {
-      isValid: false,
-      message: 'M-Pesa requires phone number in format 254XXXXXXXXX',
-    };
+    return 'M-Pesa requires phone number in format 254XXXXXXXXX';
   }
   
-  // Check length and format
+  // Check length
   if (cleaned.length !== 12) {
-    return {
-      isValid: false,
-      message: 'Phone number must be 12 digits (254XXXXXXXXX)',
-    };
+    return 'Phone number must be 12 digits (254XXXXXXXXX)';
   }
   
   // Check if it's a valid Safaricom number (starts with 254 7 or 254 1)
   if (!cleaned.startsWith('2547') && !cleaned.startsWith('2541')) {
-    return {
-      isValid: false,
-      message: 'Please enter a valid Safaricom number',
-    };
+    return 'Please enter a valid Safaricom number';
   }
   
-  return {
-    isValid: true,
-    message: null,
-  };
+  return null;
 };
 
-// UPI Number validation
-export const validateUPINumber = (upi) => {
+/**
+ * UPI Number validation
+ * MATCHES: core/validators.py - validate_upi_number
+ * Must be at least 10 characters
+ * @param {string} upi - UPI number to validate
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateUPI = (upi) => {
   if (!upi || upi.trim() === '') {
-    return true;
+    return null; // Optional field
   }
+  
+  if (upi.length < 10) {
+    return 'UPI number must be at least 10 characters';
+  }
+  
+  // Additional validation: alphanumeric only
   const upiRegex = /^[A-Z0-9]{10,}$/i;
-  return upiRegex.test(upi);
+  if (!upiRegex.test(upi)) {
+    return 'UPI number must contain only letters and numbers';
+  }
+  
+  return null;
 };
 
-// Birth Certificate Number validation
-export const validateBirthCertificateNumber = (certNumber) => {
+// Alias for backward compatibility
+export const validateUPINumber = validateUPI;
+
+/**
+ * Birth Certificate Number validation
+ * MATCHES: core/validators.py - validate_birth_certificate
+ * Must be 6-10 digits
+ * @param {string} certNumber - Birth certificate number to validate
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateBirthCertificate = (certNumber) => {
   if (!certNumber || certNumber.trim() === '') {
-    return true;
+    return null; // Optional field
   }
+  
   const certRegex = /^\d{6,10}$/;
-  return certRegex.test(certNumber);
-};
-
-// NEMIS Code validation
-export const validateNEMISCode = (nemis) => {
-  if (!nemis || nemis.trim() === '') {
-    return true;
+  if (!certRegex.test(certNumber)) {
+    return 'Birth certificate must be 6-10 digits';
   }
+  
+  return null;
+};
+
+// Alias for backward compatibility
+export const validateBirthCertificateNumber = validateBirthCertificate;
+
+/**
+ * NEMIS Code validation
+ * MATCHES: core/validators.py - validate_nemis_code
+ * Must be exactly 9 digits
+ * @param {string} code - NEMIS code to validate
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateNEMISCode = (code) => {
+  if (!code || code.trim() === '') {
+    return null; // Optional field
+  }
+  
   const nemisRegex = /^\d{9}$/;
-  return nemisRegex.test(nemis);
+  if (!nemisRegex.test(code)) {
+    return 'NEMIS code must be exactly 9 digits';
+  }
+  
+  return null;
 };
 
-// Admission number validation
+/**
+ * Admission number validation
+ * @param {string} number - Admission number to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateAdmissionNumber = (number) => {
+  if (!number || number.trim() === '') {
+    return 'Admission number is required';
+  }
+  
   const admissionRegex = /^[a-zA-Z0-9/]{3,}$/;
-  return admissionRegex.test(number);
+  if (!admissionRegex.test(number)) {
+    return 'Admission number must be at least 3 characters (letters, numbers, slash)';
+  }
+  
+  return null;
 };
 
-// Date of birth validation
+/**
+ * Date of birth validation
+ * Must be between 3-25 years old
+ * @param {Date|string} dob - Date of birth
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateDateOfBirth = (dob) => {
+  if (!dob) {
+    return 'Date of birth is required';
+  }
+  
   const date = new Date(dob);
   const today = new Date();
   
   if (!(date instanceof Date && !isNaN(date))) {
-    return false;
+    return 'Invalid date format';
   }
   
   if (date > today) {
-    return false;
+    return 'Date of birth cannot be in the future';
   }
   
+  // Calculate age
   let age = today.getFullYear() - date.getFullYear();
   const monthDiff = today.getMonth() - date.getMonth();
   
@@ -186,99 +340,264 @@ export const validateDateOfBirth = (dob) => {
     age--;
   }
   
-  return age >= 3 && age <= 25;
+  if (age < 3) {
+    return 'Student must be at least 3 years old';
+  }
+  
+  if (age > 25) {
+    return 'Student must be 25 years or younger';
+  }
+  
+  return null;
 };
 
-// Validate Kenya Grade
+/**
+ * Age validation
+ * @param {Date|string} dateOfBirth - Date of birth
+ * @param {number} minAge - Minimum age
+ * @param {number} maxAge - Maximum age
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateAge = (dateOfBirth, minAge = 3, maxAge = 25) => {
+  if (!dateOfBirth) {
+    return 'Date of birth is required';
+  }
+  
+  const date = new Date(dateOfBirth);
+  const today = new Date();
+  
+  if (!(date instanceof Date && !isNaN(date))) {
+    return 'Invalid date format';
+  }
+  
+  if (date > today) {
+    return 'Date of birth cannot be in the future';
+  }
+  
+  // Calculate age
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    age--;
+  }
+  
+  if (age < minAge) {
+    return `Age must be at least ${minAge} years`;
+  }
+  
+  if (age > maxAge) {
+    return `Age must be ${maxAge} years or younger`;
+  }
+  
+  return null;
+};
+
+/**
+ * Date validation
+ * @param {Date|string} date - Date to validate
+ * @param {Date|string} minDate - Minimum date (optional)
+ * @param {Date|string} maxDate - Maximum date (optional)
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateDate = (date, minDate = null, maxDate = null) => {
+  if (!date) {
+    return 'Date is required';
+  }
+  
+  const dateObj = new Date(date);
+  
+  if (!(dateObj instanceof Date && !isNaN(dateObj))) {
+    return 'Invalid date format';
+  }
+  
+  if (minDate) {
+    const minDateObj = new Date(minDate);
+    if (dateObj < minDateObj) {
+      return `Date must be after ${minDateObj.toLocaleDateString()}`;
+    }
+  }
+  
+  if (maxDate) {
+    const maxDateObj = new Date(maxDate);
+    if (dateObj > maxDateObj) {
+      return `Date must be before ${maxDateObj.toLocaleDateString()}`;
+    }
+  }
+  
+  return null;
+};
+
+/**
+ * Kenya Grade validation
+ * @param {string} grade - Grade to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateKenyaGrade = (grade) => {
+  if (!grade || grade.trim() === '') {
+    return 'Grade/Class is required';
+  }
+  
   const validGrades = [
     'pp1', 'pp2',
     'grade_1', 'grade_2', 'grade_3', 'grade_4', 'grade_5', 'grade_6',
     'grade_7', 'grade_8', 'grade_9', 'grade_10', 'grade_11', 'grade_12',
     'form_1', 'form_2', 'form_3', 'form_4',
   ];
-  return validGrades.includes(grade);
+  
+  if (!validGrades.includes(grade)) {
+    return 'Invalid grade selection';
+  }
+  
+  return null;
 };
 
-// Validate Stream/Class name
+/**
+ * Stream/Class validation
+ * @param {string} stream - Stream to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateStream = (stream) => {
   if (!stream || stream.trim() === '') {
-    return false;
+    return 'Stream/Class is required';
   }
+  
   const streamRegex = /^[a-zA-Z0-9\s]{1,20}$/;
-  return streamRegex.test(stream);
+  if (!streamRegex.test(stream)) {
+    return 'Stream must be 1-20 characters (letters, numbers, spaces)';
+  }
+  
+  return null;
 };
 
-// Validate House name
+/**
+ * House name validation
+ * @param {string} house - House name to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateHouseName = (house) => {
   if (!house || house.trim() === '') {
-    return true;
+    return null; // Optional field
   }
+  
   const houseRegex = /^[a-zA-Z\s]{2,30}$/;
-  return houseRegex.test(house);
+  if (!houseRegex.test(house)) {
+    return 'House name must be 2-30 characters (letters and spaces only)';
+  }
+  
+  return null;
 };
 
-// Validate Year of Admission
+/**
+ * Year of admission validation
+ * @param {number|string} year - Year to validate
+ * @returns {string|null} Error message or null if valid
+ */
 export const validateYearOfAdmission = (year) => {
+  if (!year) {
+    return null; // Optional field
+  }
+  
   const currentYear = new Date().getFullYear();
   const yearNum = parseInt(year);
   
   if (isNaN(yearNum)) {
-    return false;
+    return 'Invalid year format';
   }
   
-  return yearNum >= 1990 && yearNum <= currentYear + 1;
+  if (yearNum < 1990) {
+    return 'Year must be 1990 or later';
+  }
+  
+  if (yearNum > currentYear + 1) {
+    return `Year cannot be beyond ${currentYear + 1}`;
+  }
+  
+  return null;
 };
 
 // ============================================================
-// PAYMENT VALIDATORS (NEW)
+// PAYMENT VALIDATORS
 // ============================================================
 
 /**
- * Validate payment amount
- * @param {number} amount - Amount to validate
- * @param {number} minAmount - Minimum allowed amount
- * @param {number} maxAmount - Maximum allowed amount
- * @returns {Object} Validation result
+ * Payment amount validation
+ * @param {number|string} amount - Amount to validate
+ * @param {number} min - Minimum amount (default: 1)
+ * @param {number} max - Maximum amount (optional)
+ * @returns {string|null} Error message or null if valid
  */
-export const validatePaymentAmount = (amount, minAmount = 100, maxAmount = null) => {
+export const validateAmount = (amount, min = 1, max = null) => {
+  if (!amount) {
+    return 'Amount is required';
+  }
+  
   const numAmount = parseFloat(amount);
   
-  // Check if amount is a valid number
   if (isNaN(numAmount) || numAmount <= 0) {
-    return {
-      isValid: false,
-      message: 'Please enter a valid amount',
-    };
+    return 'Please enter a valid amount';
   }
   
-  // Check minimum amount
-  if (numAmount < minAmount) {
-    return {
-      isValid: false,
-      message: `Amount must be at least KES ${minAmount.toLocaleString()}`,
-    };
+  if (numAmount < min) {
+    return `Amount must be at least KES ${min.toLocaleString()}`;
   }
   
-  // Check maximum amount if provided
-  if (maxAmount && numAmount > maxAmount) {
-    return {
-      isValid: false,
-      message: `Amount cannot exceed KES ${maxAmount.toLocaleString()}`,
-    };
+  if (max && numAmount > max) {
+    return `Amount cannot exceed KES ${max.toLocaleString()}`;
   }
   
-  return {
-    isValid: true,
-    message: null,
-  };
+  return null;
 };
 
 /**
- * Validate partial payment
+ * Payment amount validation (alias for validateAmount)
+ * @param {number|string} amount - Amount to validate
+ * @param {number} minAmount - Minimum amount
+ * @param {number} maxAmount - Maximum amount
+ * @returns {string|null} Error message or null if valid
+ */
+export const validatePaymentAmount = (amount, minAmount = 100, maxAmount = null) => {
+  return validateAmount(amount, minAmount, maxAmount);
+};
+
+/**
+ * Minimum payment amount validation
+ * @param {number|string} minAmount - Minimum amount to validate
+ * @param {number|string} totalAmount - Total amount
+ * @returns {string|null} Error message or null if valid
+ */
+export const validateMinimumPaymentAmount = (minAmount, totalAmount) => {
+  if (!minAmount) {
+    return 'Minimum payment amount is required';
+  }
+  
+  const min = parseFloat(minAmount);
+  const total = parseFloat(totalAmount);
+  
+  if (isNaN(min) || min <= 0) {
+    return 'Please enter a valid minimum amount';
+  }
+  
+  if (isNaN(total) || total <= 0) {
+    return 'Invalid total amount';
+  }
+  
+  if (min > total) {
+    return 'Minimum payment cannot exceed total amount';
+  }
+  
+  if (min < 100) {
+    return 'Minimum payment must be at least KES 100';
+  }
+  
+  return null;
+};
+
+/**
+ * Partial payment validation
  * @param {Object} paymentRequest - Payment request object
- * @param {number} proposedAmount - Proposed payment amount
- * @returns {Object} Validation result
+ * @param {number|string} proposedAmount - Proposed payment amount
+ * @returns {string|null} Error message or null if valid
  */
 export const validatePartialPayment = (paymentRequest, proposedAmount) => {
   const amount = parseFloat(proposedAmount);
@@ -288,120 +607,110 @@ export const validatePartialPayment = (paymentRequest, proposedAmount) => {
     (paymentRequest.total_amount - paymentRequest.amount_paid)
   );
   
-  // Basic amount validation
   if (isNaN(amount) || amount <= 0) {
-    return {
-      isValid: false,
-      message: 'Please enter a valid amount',
-    };
+    return 'Please enter a valid amount';
   }
   
-  // Check if partial payments are allowed
-  if (paymentRequest.flexibility === 'full_only') {
-    if (amount !== balance) {
-      return {
-        isValid: false,
-        message: `Full payment of KES ${balance.toLocaleString()} is required`,
-      };
-    }
-  }
-  
-  // Check minimum payment
   if (amount < minAmount) {
-    return {
-      isValid: false,
-      message: `Minimum payment is KES ${minAmount.toLocaleString()}`,
-    };
+    return `Amount must be at least KES ${minAmount.toLocaleString()} (minimum payment)`;
   }
   
-  // Check if amount exceeds remaining balance
   if (amount > balance) {
-    return {
-      isValid: false,
-      message: `Amount cannot exceed balance of KES ${balance.toLocaleString()}`,
-    };
+    return `Amount cannot exceed balance of KES ${balance.toLocaleString()}`;
   }
   
-  return {
-    isValid: true,
-    message: null,
-  };
+  return null;
 };
 
+// ============================================================
+// COMPLEX VALIDATORS
+// ============================================================
+
 /**
- * Validate minimum payment amount
- * @param {number} amount - Minimum payment amount
- * @param {number} originalAmount - Original payment amount
- * @returns {Object} Validation result
+ * Validate student data
+ * @param {Object} studentData - Student data object
+ * @returns {Object} { isValid: boolean, errors: Object }
  */
-export const validateMinimumPaymentAmount = (amount, originalAmount) => {
-  const numAmount = parseFloat(amount);
-  const numOriginal = parseFloat(originalAmount);
+export const validateStudentData = (studentData) => {
+  const errors = {};
   
-  if (isNaN(numAmount) || isNaN(numOriginal)) {
-    return {
-      isValid: false,
-      message: 'Invalid amount',
-    };
+  // Personal Information
+  const firstNameError = validateName(studentData.first_name);
+  if (firstNameError) errors.first_name = firstNameError;
+  
+  if (studentData.middle_name) {
+    const middleNameError = validateName(studentData.middle_name);
+    if (middleNameError) errors.middle_name = middleNameError;
   }
   
-  // Minimum should be at least KES 100
-  if (numAmount < 100) {
-    return {
-      isValid: false,
-      message: 'Minimum payment must be at least KES 100',
-    };
+  const lastNameError = validateName(studentData.last_name);
+  if (lastNameError) errors.last_name = lastNameError;
+  
+  const dobError = validateDateOfBirth(studentData.date_of_birth);
+  if (dobError) errors.date_of_birth = dobError;
+  
+  if (studentData.birth_certificate_number) {
+    const certError = validateBirthCertificate(studentData.birth_certificate_number);
+    if (certError) errors.birth_certificate_number = certError;
   }
   
-  // Minimum cannot be more than the original amount
-  if (numAmount > numOriginal) {
-    return {
-      isValid: false,
-      message: 'Minimum payment cannot exceed the total amount',
-    };
+  // Academic Information
+  if (!studentData.education_level) {
+    errors.education_level = 'Education level is required';
   }
   
-  // Minimum should be at least 10% of original amount
-  const tenPercent = numOriginal * 0.1;
-  if (numAmount < tenPercent) {
-    return {
-      isValid: false,
-      message: `Minimum payment should be at least 10% (KES ${Math.ceil(tenPercent).toLocaleString()})`,
-    };
+  const gradeError = validateKenyaGrade(studentData.current_grade);
+  if (gradeError) errors.current_grade = gradeError;
+  
+  const admissionError = validateAdmissionNumber(studentData.admission_number);
+  if (admissionError) errors.admission_number = admissionError;
+  
+  if (studentData.upi_number) {
+    const upiError = validateUPI(studentData.upi_number);
+    if (upiError) errors.upi_number = upiError;
+  }
+  
+  if (studentData.year_of_admission) {
+    const yearError = validateYearOfAdmission(studentData.year_of_admission);
+    if (yearError) errors.year_of_admission = yearError;
+  }
+  
+  // School Information
+  if (!studentData.school_id) {
+    errors.school = 'School is required';
   }
   
   return {
-    isValid: true,
-    message: null,
+    isValid: Object.keys(errors).length === 0,
+    errors,
   };
 };
 
 /**
- * Validate payment request creation data
+ * Validate payment request creation
  * @param {Object} data - Payment request data
- * @returns {Object} Validation result
+ * @returns {Object} { isValid: boolean, errors: Object }
  */
 export const validatePaymentRequestCreation = (data) => {
   const errors = {};
   
-  // Validate student
+  // Student
   if (!data.student) {
     errors.student = 'Please select a student';
   }
   
-  // Validate title
+  // Title
   if (!data.title || data.title.trim() === '') {
     errors.title = 'Please enter a title';
   } else if (data.title.length < 5) {
     errors.title = 'Title must be at least 5 characters';
   }
   
-  // Validate amount
-  if (!data.total_amount || parseFloat(data.total_amount) <= 0) {
-    errors.total_amount = 'Please enter a valid amount';
-  }
+  // Amount
+  const amountError = validateAmount(data.total_amount, 1);
+  if (amountError) errors.total_amount = amountError;
   
-  // Validate due date
+  // Due date
   if (!data.due_date) {
     errors.due_date = 'Please select a due date';
   } else {
@@ -414,19 +723,13 @@ export const validatePaymentRequestCreation = (data) => {
     }
   }
   
-  // Validate minimum amount if flexible payment
-  if (data.flexibility !== 'full_only') {
-    if (!data.minimum_payment) {
-      errors.minimum_payment = 'Please enter minimum payment amount';
-    } else {
-      const validation = validateMinimumPaymentAmount(
-        data.minimum_payment,
-        data.total_amount
-      );
-      if (!validation.isValid) {
-        errors.minimum_payment = validation.message;
-      }
-    }
+  // Minimum amount if flexible payment
+  if (data.flexibility !== 'full_only' && data.minimum_payment) {
+    const minError = validateMinimumPaymentAmount(
+      data.minimum_payment,
+      data.total_amount
+    );
+    if (minError) errors.minimum_payment = minError;
   }
   
   return {
@@ -436,32 +739,96 @@ export const validatePaymentRequestCreation = (data) => {
 };
 
 /**
- * Validate M-Pesa payment data
+ * Validate M-Pesa payment
  * @param {Object} data - M-Pesa payment data
- * @returns {Object} Validation result
+ * @returns {Object} { isValid: boolean, errors: Object }
  */
 export const validateMpesaPayment = (data) => {
   const errors = {};
   
-  // Validate phone number
-  if (!data.phone_number) {
-    errors.phone_number = 'Please enter a phone number';
-  } else {
-    const phoneValidation = validateMpesaPhone(data.phone_number);
-    if (!phoneValidation.isValid) {
-      errors.phone_number = phoneValidation.message;
-    }
-  }
+  // Phone number
+  const phoneError = validateMpesaPhone(data.phone_number);
+  if (phoneError) errors.phone_number = phoneError;
   
-  // Validate amount
-  if (!data.amount) {
-    errors.amount = 'Please enter an amount';
-  } else {
-    const amountValidation = validatePaymentAmount(data.amount, 1);
-    if (!amountValidation.isValid) {
-      errors.amount = amountValidation.message;
+  // Amount
+  const amountError = validateAmount(data.amount, 1);
+  if (amountError) errors.amount = amountError;
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
+
+/**
+ * Generic form validation
+ * @param {Object} values - Form values
+ * @param {Object} rules - Validation rules
+ * @returns {Object} { isValid: boolean, errors: Object }
+ */
+export const validateForm = (values, rules) => {
+  const errors = {};
+  
+  Object.keys(rules).forEach((field) => {
+    const fieldRules = rules[field];
+    const value = values[field];
+    
+    // Required validation
+    if (fieldRules.required) {
+      const requiredError = validateRequired(value, fieldRules.label || field);
+      if (requiredError) {
+        errors[field] = requiredError;
+        return;
+      }
     }
-  }
+    
+    // Skip other validations if field is empty and not required
+    if (!value) return;
+    
+    // Email validation
+    if (fieldRules.email) {
+      const emailError = validateEmail(value);
+      if (emailError) errors[field] = emailError;
+      return;
+    }
+    
+    // Phone validation
+    if (fieldRules.phone) {
+      const phoneError = validateKenyanPhone(value);
+      if (phoneError) errors[field] = phoneError;
+      return;
+    }
+    
+    // Password validation
+    if (fieldRules.password) {
+      const passwordError = validatePassword(value);
+      if (passwordError) errors[field] = passwordError;
+      return;
+    }
+    
+    // Min length validation
+    if (fieldRules.minLength) {
+      const minError = validateMinLength(value, fieldRules.minLength, fieldRules.label || field);
+      if (minError) errors[field] = minError;
+      return;
+    }
+    
+    // Max length validation
+    if (fieldRules.maxLength) {
+      const maxError = validateMaxLength(value, fieldRules.maxLength, fieldRules.label || field);
+      if (maxError) errors[field] = maxError;
+      return;
+    }
+    
+    // Custom validation
+    if (fieldRules.custom) {
+      const customError = fieldRules.custom(value);
+      if (customError) {
+        errors[field] = customError;
+        return;
+      }
+    }
+  });
   
   return {
     isValid: Object.keys(errors).length === 0,
@@ -470,7 +837,7 @@ export const validateMpesaPayment = (data) => {
 };
 
 // ============================================================
-// UTILITY VALIDATORS
+// UTILITY FUNCTIONS
 // ============================================================
 
 /**
@@ -498,133 +865,31 @@ export const calculatePaymentPercentage = (paidAmount, totalAmount) => {
 export const formatAmount = (amount) => {
   const num = parseFloat(amount);
   if (isNaN(num)) return 'KES 0.00';
-  return `KES ${num.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `KES ${num.toLocaleString('en-KE', { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  })}`;
 };
 
 /**
- * Validate complete student data
- * @param {Object} studentData - Student data object
- * @returns {Object} Validation result
+ * Format Kenyan phone to +254 format
+ * @param {string} phone - Phone number
+ * @returns {string} Formatted phone
  */
-export const validateStudentData = (studentData) => {
-  const errors = {};
+export const formatKenyanPhone = (phone) => {
+  if (!phone) return '';
   
-  // Personal Information
-  if (!validateRequired(studentData.first_name)) {
-    errors.first_name = 'First name is required';
-  } else if (!validateName(studentData.first_name)) {
-    errors.first_name = 'Invalid first name format';
+  let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  
+  if (cleaned.startsWith('0')) {
+    return '+254' + cleaned.substring(1);
+  } else if (cleaned.startsWith('254')) {
+    return '+' + cleaned;
+  } else if (cleaned.startsWith('+254')) {
+    return cleaned;
   }
   
-  if (studentData.middle_name && !validateName(studentData.middle_name)) {
-    errors.middle_name = 'Invalid middle name format';
-  }
-  
-  if (!validateRequired(studentData.last_name)) {
-    errors.last_name = 'Last name is required';
-  } else if (!validateName(studentData.last_name)) {
-    errors.last_name = 'Invalid last name format';
-  }
-  
-  if (!validateRequired(studentData.date_of_birth)) {
-    errors.date_of_birth = 'Date of birth is required';
-  } else if (!validateDateOfBirth(studentData.date_of_birth)) {
-    errors.date_of_birth = 'Invalid date of birth (age must be 3-25 years)';
-  }
-  
-  if (studentData.birth_certificate_number && !validateBirthCertificateNumber(studentData.birth_certificate_number)) {
-    errors.birth_certificate_number = 'Invalid birth certificate format';
-  }
-  
-  // Academic Information
-  if (!validateRequired(studentData.education_level)) {
-    errors.education_level = 'Education level is required';
-  }
-  
-  if (!validateRequired(studentData.current_grade)) {
-    errors.current_grade = 'Grade/Class is required';
-  } else if (!validateKenyaGrade(studentData.current_grade)) {
-    errors.current_grade = 'Invalid grade selection';
-  }
-  
-  if (!validateRequired(studentData.admission_number)) {
-    errors.admission_number = 'Admission number is required';
-  } else if (!validateAdmissionNumber(studentData.admission_number)) {
-    errors.admission_number = 'Invalid admission number format';
-  }
-  
-  if (studentData.upi_number && !validateUPINumber(studentData.upi_number)) {
-    errors.upi_number = 'Invalid UPI number format (min 10 characters)';
-  }
-  
-  if (studentData.year_of_admission && !validateYearOfAdmission(studentData.year_of_admission)) {
-    errors.year_of_admission = 'Invalid year of admission';
-  }
-  
-  // School Information
-  if (!validateRequired(studentData.school_id)) {
-    errors.school = 'School is required';
-  }
-  
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
-};
-
-/**
- * Form validation helper
- * @param {Object} values - Form values
- * @param {Object} rules - Validation rules
- * @returns {Object} Validation result
- */
-export const validateForm = (values, rules) => {
-  const errors = {};
-  
-  Object.keys(rules).forEach((field) => {
-    const fieldRules = rules[field];
-    const value = values[field];
-    
-    if (fieldRules.required && !validateRequired(value)) {
-      errors[field] = fieldRules.requiredMessage || `${field} is required`;
-      return;
-    }
-    
-    if (fieldRules.email && value && !validateEmail(value)) {
-      errors[field] = 'Invalid email address';
-      return;
-    }
-    
-    if (fieldRules.phone && value && !validatePhone(value)) {
-      errors[field] = 'Invalid phone number';
-      return;
-    }
-    
-    if (fieldRules.password && value && !validatePassword(value)) {
-      errors[field] = 'Password must be at least 8 characters with uppercase, lowercase, and number';
-      return;
-    }
-    
-    if (fieldRules.minLength && value && !validateMinLength(value, fieldRules.minLength)) {
-      errors[field] = `Minimum length is ${fieldRules.minLength} characters`;
-      return;
-    }
-    
-    if (fieldRules.maxLength && value && !validateMaxLength(value, fieldRules.maxLength)) {
-      errors[field] = `Maximum length is ${fieldRules.maxLength} characters`;
-      return;
-    }
-    
-    if (fieldRules.custom && !fieldRules.custom(value)) {
-      errors[field] = fieldRules.customMessage || 'Invalid value';
-      return;
-    }
-  });
-  
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return phone;
 };
 
 // ============================================================
@@ -634,7 +899,6 @@ export const validateForm = (values, rules) => {
 export default {
   // Basic validators
   validateEmail,
-  validatePhone,
   validatePassword,
   validateUsername,
   validateName,
@@ -643,12 +907,15 @@ export default {
   validateMaxLength,
   validateAmount,
   validateDate,
+  validateAge,
 
-  // Kenya-specific validators
+  // Kenya-specific validators (matching backend)
   validateKenyanPhone,
   validateMpesaPhone,
-  validateUPINumber,
-  validateBirthCertificateNumber,
+  validateUPI,
+  validateUPINumber, // Alias
+  validateBirthCertificate,
+  validateBirthCertificateNumber, // Alias
   validateNEMISCode,
   validateAdmissionNumber,
   validateDateOfBirth,
@@ -664,9 +931,12 @@ export default {
   validatePaymentRequestCreation,
   validateMpesaPayment,
 
+  // Complex validators
+  validateStudentData,
+  validateForm,
+
   // Utility functions
   calculatePaymentPercentage,
   formatAmount,
-  validateStudentData,
-  validateForm,
+  formatKenyanPhone,
 };

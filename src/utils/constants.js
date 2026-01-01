@@ -882,20 +882,133 @@ export const OTC_CONFIG = {
   MAX_ATTEMPTS: 3,
 };
 
+// ============================================================
+// REPORT CONSTANTS - COMPLETE & UPDATED
+// ============================================================
+
 export const REPORT_TYPES = {
+  ATTENDANCE: 'attendance',
+  PAYMENT: 'payment',
+  STUDENT: 'student',
+  ACADEMIC: 'academic',
+  COMPREHENSIVE: 'comprehensive',
+  // Legacy types (keep for backward compatibility)
   DAILY: 'daily',
   WEEKLY: 'weekly',
   MONTHLY: 'monthly',
   CUSTOM: 'custom',
-  STUDENT: 'student',
   CLASS: 'class',
 };
+
+export const REPORT_TYPE_OPTIONS = [
+  { 
+    value: 'attendance', 
+    label: 'Attendance Report', 
+    icon: 'clipboard-check', 
+    color: '#2196F3',
+    description: 'Detailed attendance records and statistics'
+  },
+  { 
+    value: 'payment', 
+    label: 'Payment Report', 
+    icon: 'cash-multiple', 
+    color: '#4CAF50',
+    description: 'Payment history and financial summaries'
+  },
+  { 
+    value: 'student', 
+    label: 'Student Report', 
+    icon: 'account-school', 
+    color: '#FF9800',
+    description: 'Student information and performance data'
+  },
+  { 
+    value: 'academic', 
+    label: 'Academic Report', 
+    icon: 'school', 
+    color: '#9C27B0',
+    description: 'Academic performance and progress tracking'
+  },
+  { 
+    value: 'comprehensive', 
+    label: 'Comprehensive Report', 
+    icon: 'file-chart', 
+    color: '#00BCD4',
+    description: 'Complete overview of all school activities'
+  },
+];
 
 export const REPORT_FORMATS = {
   PDF: 'pdf',
   EXCEL: 'excel',
   CSV: 'csv',
+  JSON: 'json',
 };
+
+export const REPORT_FORMAT_OPTIONS = [
+  { 
+    value: 'pdf', 
+    label: 'PDF', 
+    icon: 'file-pdf-box', 
+    color: '#F44336',
+    extension: '.pdf',
+    mimeType: 'application/pdf'
+  },
+  { 
+    value: 'excel', 
+    label: 'Excel', 
+    icon: 'file-excel', 
+    color: '#4CAF50',
+    extension: '.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  },
+  { 
+    value: 'csv', 
+    label: 'CSV', 
+    icon: 'file-delimited', 
+    color: '#2196F3',
+    extension: '.csv',
+    mimeType: 'text/csv'
+  },
+  { 
+    value: 'json', 
+    label: 'JSON', 
+    icon: 'code-json', 
+    color: '#FF9800',
+    extension: '.json',
+    mimeType: 'application/json'
+  },
+];
+
+export const REPORT_FREQUENCIES = {
+  DAILY: 'daily',
+  WEEKLY: 'weekly',
+  MONTHLY: 'monthly',
+  QUARTERLY: 'quarterly',
+};
+
+export const REPORT_FREQUENCY_OPTIONS = [
+  { value: 'daily', label: 'Daily', description: 'Generate report every day' },
+  { value: 'weekly', label: 'Weekly', description: 'Generate report every week' },
+  { value: 'monthly', label: 'Monthly', description: 'Generate report every month' },
+  { value: 'quarterly', label: 'Quarterly', description: 'Generate report every quarter' },
+];
+
+export const REPORT_PERIODS = {
+  TODAY: 'today',
+  THIS_WEEK: 'this_week',
+  THIS_MONTH: 'this_month',
+  THIS_TERM: 'this_term',
+  CUSTOM: 'custom',
+};
+
+export const REPORT_PERIOD_OPTIONS = [
+  { value: 'today', label: 'Today' },
+  { value: 'this_week', label: 'This Week' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'this_term', label: 'This Term' },
+  { value: 'custom', label: 'Custom Date Range' },
+];
 
 export const ATTENDANCE_TIME_WINDOWS = {
   EARLY_CHECKIN_MINUTES: 30,

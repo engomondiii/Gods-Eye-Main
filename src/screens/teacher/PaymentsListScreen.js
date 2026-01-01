@@ -4,16 +4,18 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  Text,
 } from 'react-native';
 import { Searchbar, Chip, FAB } from 'react-native-paper';
 import PaymentRequestCard from '../../components/guardian/PaymentRequestCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
+import { useAuth } from '../../hooks/useAuth';
 import { SCREENS, PAYMENT_STATUS } from '../../utils/constants';
+import * as paymentService from '../../services/paymentService';
 
 const PaymentsListScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [payments, setPayments] = useState([]);
   const [filteredPayments, setFilteredPayments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,102 +23,44 @@ const PaymentsListScreen = ({ navigation }) => {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    page_size: 20,
+    total: 0,
+  });
 
-  // Fetch payment requests
-  const fetchPayments = async () => {
+  // Fetch payment requests from API
+  const fetchPayments = async (page = 1, resetData = false) => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await paymentService.getPaymentRequests();
       
-      // Mock data for development - 🆕 UPDATED with partial payment examples
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await paymentService.getPaymentRequests({
+        page: page,
+        page_size: pagination.page_size,
+        status: selectedFilter !== 'all' ? selectedFilter : undefined,
+        school: user.school?.id,
+        search: searchQuery || undefined,
+      });
       
-      const mockPayments = [
-        {
-          id: 1,
-          student: {
-            id: 1,
-            first_name: 'John',
-            last_name: 'Doe',
-            admission_number: 'NPS001',
-          },
-          amount: 5000.00,
-          purpose: 'School fees for Term 1, 2025',
-          created_at: '2025-10-25T10:00:00Z',
-          due_date: '2025-11-15',
-          status: PAYMENT_STATUS.PENDING,
-          mpesa_ref: null,
-          // 🆕 NEW - Partial payment fields
-          allow_partial: true,
-          minimum_amount: 1000.00,
-          paid_amount: 0.00,
-          remaining_amount: 5000.00,
-          installment_count: 0,
-          payment_history: [],
-        },
-        {
-          id: 2,
-          student: {
-            id: 2,
-            first_name: 'Sarah',
-            last_name: 'Smith',
-            admission_number: 'NPS002',
-          },
-          amount: 3500.00,
-          purpose: 'Exam fees for November 2025',
-          created_at: '2025-10-24T14:30:00Z',
-          due_date: '2025-11-10',
-          status: PAYMENT_STATUS.PARTIALLY_PAID,  // 🆕 NEW
-          mpesa_ref: null,
-          // 🆕 NEW - Partial payment fields
-          allow_partial: true,
-          minimum_amount: 1000.00,
-          paid_amount: 1500.00,
-          remaining_amount: 2000.00,
-          installment_count: 1,
-          payment_history: [
-            {
-              id: 1,
-              amount: 1500.00,
-              payment_date: '2025-10-26T10:30:00Z',
-              mpesa_ref: 'QJK789ABC456',
-            },
-          ],
-        },
-        {
-          id: 3,
-          student: {
-            id: 3,
-            first_name: 'David',
-            last_name: 'Johnson',
-            admission_number: 'NPS003',
-          },
-          amount: 2000.00,
-          purpose: 'Field trip to museum',
-          created_at: '2025-10-20T09:00:00Z',
-          due_date: '2025-11-05',
-          status: PAYMENT_STATUS.PAID,
-          mpesa_ref: 'RKJ123XYZ789',
-          // 🆕 NEW - Partial payment fields
-          allow_partial: false,
-          minimum_amount: 2000.00,
-          paid_amount: 2000.00,
-          remaining_amount: 0.00,
-          installment_count: 1,
-          payment_history: [
-            {
-              id: 2,
-              amount: 2000.00,
-              payment_date: '2025-10-22T15:30:00Z',
-              mpesa_ref: 'RKJ123XYZ789',
-            },
-          ],
-        },
-      ];
-      
-      setPayments(mockPayments);
-      applyFilter(selectedFilter, mockPayments);
+      if (response.success) {
+        const newPayments = response.data.results || [];
+        
+        if (resetData || page === 1) {
+          setPayments(newPayments);
+          setFilteredPayments(newPayments);
+        } else {
+          setPayments(prev => [...prev, ...newPayments]);
+          setFilteredPayments(prev => [...prev, ...newPayments]);
+        }
+        
+        setPagination({
+          page: page,
+          page_size: pagination.page_size,
+          total: response.data.count || 0,
+        });
+      } else {
+        setError(response.message || 'Failed to load payment requests');
+      }
     } catch (err) {
       setError('Failed to load payment requests. Please try again.');
       console.error('Fetch payments error:', err);
@@ -127,66 +71,35 @@ const PaymentsListScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    fetchPayments();
-  }, []);
+    fetchPayments(1, true);
+  }, [selectedFilter]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchPayments();
-  }, []);
+    fetchPayments(1, true);
+  }, [selectedFilter, searchQuery]);
 
   // Search functionality
   const handleSearch = (query) => {
     setSearchQuery(query);
-    
-    if (query.trim() === '') {
-      applyFilter(selectedFilter);
-      return;
+  };
+
+  // Execute search
+  const executeSearch = () => {
+    setIsLoading(true);
+    fetchPayments(1, true);
+  };
+
+  // Load more data
+  const handleLoadMore = () => {
+    if (!isLoading && payments.length < pagination.total) {
+      fetchPayments(pagination.page + 1, false);
     }
-    
-    const filtered = payments.filter((payment) => {
-      const studentName = `${payment.student.first_name} ${payment.student.last_name}`.toLowerCase();
-      const admissionNumber = payment.student.admission_number.toLowerCase();
-      const purpose = payment.purpose.toLowerCase();
-      const searchLower = query.toLowerCase();
-      
-      return (
-        studentName.includes(searchLower) ||
-        admissionNumber.includes(searchLower) ||
-        purpose.includes(searchLower)
-      );
-    });
-    
-    setFilteredPayments(filtered);
   };
 
   // Filter functionality
-  const applyFilter = (filter, paymentsList = payments) => {
+  const applyFilter = (filter) => {
     setSelectedFilter(filter);
-    
-    let filtered = paymentsList;
-    
-    if (filter !== 'all') {
-      filtered = paymentsList.filter(p => p.status === filter);
-    }
-    
-    // Apply search if active
-    if (searchQuery.trim() !== '') {
-      filtered = filtered.filter((payment) => {
-        const studentName = `${payment.student.first_name} ${payment.student.last_name}`.toLowerCase();
-        const admissionNumber = payment.student.admission_number.toLowerCase();
-        const purpose = payment.purpose.toLowerCase();
-        const searchLower = searchQuery.toLowerCase();
-        
-        return (
-          studentName.includes(searchLower) ||
-          admissionNumber.includes(searchLower) ||
-          purpose.includes(searchLower)
-        );
-      });
-    }
-    
-    setFilteredPayments(filtered);
   };
 
   const handlePaymentPress = (payment) => {
@@ -200,11 +113,16 @@ const PaymentsListScreen = ({ navigation }) => {
       payment={item}
       onPress={() => handlePaymentPress(item)}
       showActions={false}
-      userRole="teacher"  // 🆕 NEW
+      userRole="teacher"
     />
   );
 
-  if (isLoading) {
+  const renderFooter = () => {
+    if (!isLoading || pagination.page === 1) return null;
+    return <LoadingSpinner />;
+  };
+
+  if (isLoading && pagination.page === 1) {
     return <LoadingSpinner />;
   }
 
@@ -215,19 +133,20 @@ const PaymentsListScreen = ({ navigation }) => {
         <Searchbar
           placeholder="Search by student or purpose"
           onChangeText={handleSearch}
+          onSubmitEditing={executeSearch}
           value={searchQuery}
           style={styles.searchBar}
         />
       </View>
 
-      {/* Filter Chips - 🆕 UPDATED with partial paid */}
+      {/* Filter Chips */}
       <View style={styles.filterContainer}>
         <Chip
           selected={selectedFilter === 'all'}
           onPress={() => applyFilter('all')}
           style={styles.filterChip}
         >
-          All ({payments.length})
+          All ({pagination.total})
         </Chip>
         <Chip
           selected={selectedFilter === PAYMENT_STATUS.PENDING}
@@ -260,7 +179,7 @@ const PaymentsListScreen = ({ navigation }) => {
       </View>
 
       {/* Error Message */}
-      {error ? <ErrorMessage message={error} onRetry={fetchPayments} /> : null}
+      {error ? <ErrorMessage message={error} onRetry={() => fetchPayments(1, true)} /> : null}
 
       {/* Payments List */}
       {filteredPayments.length > 0 ? (
@@ -272,6 +191,9 @@ const PaymentsListScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
           }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
         />
       ) : (
@@ -320,11 +242,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    flexWrap: 'wrap',  // 🆕 NEW - Allow wrapping
+    flexWrap: 'wrap',
   },
   filterChip: {
     marginRight: 8,
-    marginBottom: 8,  // 🆕 NEW
+    marginBottom: 8,
   },
   listContent: {
     padding: 16,

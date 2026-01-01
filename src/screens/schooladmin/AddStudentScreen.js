@@ -10,12 +10,12 @@ import {
 import { TextInput, Button, HelperText, Text, RadioButton } from 'react-native-paper';
 import DatePicker from '../../components/form/DatePicker';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { KENYA_GRADES, KENYA_EDUCATION_LEVELS } from '../../utils/constants';
+import { KENYA_GRADES } from '../../utils/constants';
+import * as schoolAdminService from '../../services/schoolAdminService';
 
 const AddStudentScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   
-  // Form state
   const [formData, setFormData] = useState({
     first_name: '',
     middle_name: '',
@@ -29,10 +29,8 @@ const AddStudentScreen = ({ navigation }) => {
     upi_number: '',
   });
 
-  // Error state
   const [errors, setErrors] = useState({});
 
-  // Update form field
   const updateField = (field, value) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) {
@@ -40,7 +38,6 @@ const AddStudentScreen = ({ navigation }) => {
     }
   };
 
-  // Validation
   const validateForm = () => {
     const newErrors = {};
 
@@ -68,7 +65,6 @@ const AddStudentScreen = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle submit
   const handleSubmit = async () => {
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please check the form and try again');
@@ -86,22 +82,39 @@ const AddStudentScreen = ({ navigation }) => {
             try {
               setIsLoading(true);
               
-              // TODO: Replace with actual API call
-              // await schoolAdminService.addStudent(formData);
+              const studentData = {
+                first_name: formData.first_name.trim(),
+                middle_name: formData.middle_name.trim(),
+                last_name: formData.last_name.trim(),
+                date_of_birth: formData.date_of_birth.toISOString().split('T')[0],
+                gender: formData.gender,
+                birth_certificate_number: formData.birth_certificate_number.trim(),
+                admission_number: formData.admission_number.trim(),
+                upi_number: formData.upi_number.trim(),
+                current_grade: formData.current_grade,
+                stream: formData.stream.trim(),
+                is_active: true,
+              };
               
-              // Mock API call
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              const response = await schoolAdminService.createStudent(studentData);
               
-              Alert.alert(
-                'Success',
-                'Student added successfully!',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack(),
-                  },
-                ]
-              );
+              if (response.success) {
+                Alert.alert(
+                  'Success',
+                  'Student added successfully!',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => navigation.goBack(),
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert(
+                  'Error',
+                  response.message || 'Failed to add student. Please try again.'
+                );
+              }
             } catch (error) {
               Alert.alert('Error', 'Failed to add student. Please try again.');
               console.error('Add student error:', error);
@@ -130,7 +143,6 @@ const AddStudentScreen = ({ navigation }) => {
       >
         <Text style={styles.sectionTitle}>Personal Information</Text>
 
-        {/* First Name */}
         <TextInput
           label="First Name *"
           mode="outlined"
@@ -138,21 +150,21 @@ const AddStudentScreen = ({ navigation }) => {
           onChangeText={(text) => updateField('first_name', text)}
           error={!!errors.first_name}
           style={styles.input}
+          autoCapitalize="words"
         />
         {errors.first_name && (
           <HelperText type="error">{errors.first_name}</HelperText>
         )}
 
-        {/* Middle Name */}
         <TextInput
           label="Middle Name"
           mode="outlined"
           value={formData.middle_name}
           onChangeText={(text) => updateField('middle_name', text)}
           style={styles.input}
+          autoCapitalize="words"
         />
 
-        {/* Last Name */}
         <TextInput
           label="Last Name *"
           mode="outlined"
@@ -160,12 +172,12 @@ const AddStudentScreen = ({ navigation }) => {
           onChangeText={(text) => updateField('last_name', text)}
           error={!!errors.last_name}
           style={styles.input}
+          autoCapitalize="words"
         />
         {errors.last_name && (
           <HelperText type="error">{errors.last_name}</HelperText>
         )}
 
-        {/* Date of Birth */}
         <DatePicker
           label="Date of Birth *"
           value={formData.date_of_birth}
@@ -177,7 +189,6 @@ const AddStudentScreen = ({ navigation }) => {
           <HelperText type="error">{errors.date_of_birth}</HelperText>
         )}
 
-        {/* Gender */}
         <Text style={styles.label}>Gender *</Text>
         <RadioButton.Group
           onValueChange={(value) => updateField('gender', value)}
@@ -195,7 +206,6 @@ const AddStudentScreen = ({ navigation }) => {
           </View>
         </RadioButton.Group>
 
-        {/* Birth Certificate Number */}
         <TextInput
           label="Birth Certificate Number"
           mode="outlined"
@@ -207,7 +217,6 @@ const AddStudentScreen = ({ navigation }) => {
 
         <Text style={styles.sectionTitle}>School Information</Text>
 
-        {/* Admission Number */}
         <TextInput
           label="Admission Number *"
           mode="outlined"
@@ -222,7 +231,6 @@ const AddStudentScreen = ({ navigation }) => {
           <HelperText type="error">{errors.admission_number}</HelperText>
         )}
 
-        {/* UPI Number */}
         <TextInput
           label="UPI Number"
           mode="outlined"
@@ -233,7 +241,6 @@ const AddStudentScreen = ({ navigation }) => {
           placeholder="UPI1234567890"
         />
 
-        {/* Current Grade */}
         <TextInput
           label="Current Grade *"
           mode="outlined"
@@ -248,7 +255,6 @@ const AddStudentScreen = ({ navigation }) => {
           <HelperText type="error">{errors.current_grade}</HelperText>
         )}
 
-        {/* Stream */}
         <TextInput
           label="Stream/Class"
           mode="outlined"
@@ -259,7 +265,6 @@ const AddStudentScreen = ({ navigation }) => {
           placeholder="Red, Blue, Green, etc."
         />
 
-        {/* Submit Button */}
         <Button
           mode="contained"
           onPress={handleSubmit}
@@ -271,7 +276,6 @@ const AddStudentScreen = ({ navigation }) => {
           Add Student
         </Button>
 
-        {/* Cancel Button */}
         <Button
           mode="outlined"
           onPress={() => navigation.goBack()}

@@ -4,7 +4,7 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  ScrollView,
+  Alert,
 } from 'react-native';
 import { Searchbar, FAB, Chip } from 'react-native-paper';
 import GuardianCard from '../../components/schooladmin/GuardianCard';
@@ -12,6 +12,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
 import { SCREENS } from '../../utils/constants';
+import * as schoolAdminService from '../../services/schoolAdminService';
 
 const ManageGuardiansScreen = ({ navigation }) => {
   const [guardians, setGuardians] = useState([]);
@@ -21,98 +22,42 @@ const ManageGuardiansScreen = ({ navigation }) => {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    page_size: 20,
+    total: 0,
+  });
 
-  // Fetch guardians
-  const fetchGuardians = async () => {
+  const fetchGuardians = async (page = 1, resetData = false) => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await schoolAdminService.getGuardians();
       
-      // Mock data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await schoolAdminService.getGuardians({
+        page: page,
+        page_size: pagination.page_size,
+        search: searchQuery || null,
+        is_primary: selectedFilter === 'all' ? null : selectedFilter === 'primary',
+      });
       
-      const mockGuardians = [
-        {
-          id: 1,
-          first_name: 'Jane',
-          middle_name: 'Wanjiru',
-          last_name: 'Mwangi',
-          email: 'jane.mwangi@email.com',
-          phone: '+254712345678',
-          relationship: 'Mother',
-          students: [
-            {
-              id: 1,
-              first_name: 'John',
-              last_name: 'Mwangi',
-              admission_number: 'ADM/2020/001',
-            },
-          ],
-          is_primary: true,
-          date_registered: '2023-01-15',
-        },
-        {
-          id: 2,
-          first_name: 'Michael',
-          middle_name: 'Kipchoge',
-          last_name: 'Mwangi',
-          email: 'michael.mwangi@email.com',
-          phone: '+254723456789',
-          relationship: 'Father',
-          students: [
-            {
-              id: 1,
-              first_name: 'John',
-              last_name: 'Mwangi',
-              admission_number: 'ADM/2020/001',
-            },
-          ],
-          is_primary: false,
-          date_registered: '2023-01-15',
-        },
-        {
-          id: 3,
-          first_name: 'Emily',
-          middle_name: 'Atieno',
-          last_name: 'Odhiambo',
-          email: 'emily.odhiambo@email.com',
-          phone: '+254734567890',
-          relationship: 'Mother',
-          students: [
-            {
-              id: 2,
-              first_name: 'Sarah',
-              last_name: 'Odhiambo',
-              admission_number: 'ADM/2020/002',
-            },
-          ],
-          is_primary: true,
-          date_registered: '2023-02-20',
-        },
-        {
-          id: 4,
-          first_name: 'Robert',
-          middle_name: 'Cheruiyot',
-          last_name: 'Kibet',
-          email: 'robert.kibet@email.com',
-          phone: '+254745678901',
-          relationship: 'Father',
-          students: [
-            {
-              id: 3,
-              first_name: 'David',
-              last_name: 'Kibet',
-              admission_number: 'ADM/2021/003',
-            },
-          ],
-          is_primary: true,
-          date_registered: '2023-03-10',
-        },
-      ];
-      
-      setGuardians(mockGuardians);
-      applyFilter(selectedFilter, mockGuardians);
+      if (response.success) {
+        const newGuardians = response.data.results || [];
+        
+        if (resetData || page === 1) {
+          setGuardians(newGuardians);
+          setFilteredGuardians(newGuardians);
+        } else {
+          setGuardians(prev => [...prev, ...newGuardians]);
+          setFilteredGuardians(prev => [...prev, ...newGuardians]);
+        }
+        
+        setPagination({
+          page: page,
+          page_size: pagination.page_size,
+          total: response.data.count || 0,
+        });
+      } else {
+        setError(response.message || 'Failed to load guardians');
+      }
     } catch (err) {
       setError('Failed to load guardians. Please try again.');
       console.error('Fetch guardians error:', err);
@@ -123,73 +68,79 @@ const ManageGuardiansScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    fetchGuardians();
-  }, []);
+    fetchGuardians(1, true);
+  }, [selectedFilter]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchGuardians();
-  }, []);
+    fetchGuardians(1, true);
+  }, [selectedFilter, searchQuery]);
 
-  // Search functionality
   const handleSearch = (query) => {
     setSearchQuery(query);
-    
-    if (query.trim() === '') {
-      applyFilter(selectedFilter);
-      return;
-    }
-    
-    const filtered = guardians.filter((guardian) => {
-      const fullName = `${guardian.first_name} ${guardian.middle_name} ${guardian.last_name}`.toLowerCase();
-      const email = guardian.email.toLowerCase();
-      const phone = guardian.phone.toLowerCase();
-      const searchLower = query.toLowerCase();
-      
-      return (
-        fullName.includes(searchLower) ||
-        email.includes(searchLower) ||
-        phone.includes(searchLower)
-      );
-    });
-    
-    setFilteredGuardians(filtered);
   };
 
-  // Filter functionality
-  const applyFilter = (filter, guardiansList = guardians) => {
+  const executeSearch = () => {
+    setIsLoading(true);
+    fetchGuardians(1, true);
+  };
+
+  const handleLoadMore = () => {
+    if (!isLoading && guardians.length < pagination.total) {
+      fetchGuardians(pagination.page + 1, false);
+    }
+  };
+
+  const applyFilter = (filter) => {
     setSelectedFilter(filter);
-    
-    let filtered = guardiansList;
-    
-    if (filter === 'primary') {
-      filtered = guardiansList.filter(g => g.is_primary);
-    } else if (filter === 'secondary') {
-      filtered = guardiansList.filter(g => !g.is_primary);
-    }
-    
-    // Apply search if active
-    if (searchQuery.trim() !== '') {
-      filtered = filtered.filter((guardian) => {
-        const fullName = `${guardian.first_name} ${guardian.middle_name} ${guardian.last_name}`.toLowerCase();
-        const email = guardian.email.toLowerCase();
-        const phone = guardian.phone.toLowerCase();
-        const searchLower = searchQuery.toLowerCase();
-        
-        return (
-          fullName.includes(searchLower) ||
-          email.includes(searchLower) ||
-          phone.includes(searchLower)
-        );
-      });
-    }
-    
-    setFilteredGuardians(filtered);
   };
 
   const handleGuardianPress = (guardian) => {
-    // Navigate to guardian detail screen
-    console.log('Guardian pressed:', guardian);
+    const studentsText = guardian.students && guardian.students.length > 0
+      ? guardian.students.map(s => `${s.first_name} ${s.last_name}`).join('\n')
+      : 'No students linked';
+
+    Alert.alert(
+      `${guardian.first_name} ${guardian.last_name}`,
+      `Relationship: ${guardian.relationship}\nEmail: ${guardian.email}\nPhone: ${guardian.phone}\n\nLinked Students:\n${studentsText}`,
+      [
+        {
+          text: 'Edit',
+          onPress: () => {
+            Alert.alert('Edit Guardian', 'Edit functionality coming soon!');
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleDeleteGuardian(guardian),
+        },
+        { text: 'Close', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleDeleteGuardian = (guardian) => {
+    Alert.alert(
+      'Delete Guardian',
+      `Are you sure you want to delete ${guardian.first_name} ${guardian.last_name}?\n\nThis will remove all links to students.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const response = await schoolAdminService.deleteGuardian(guardian.id);
+            if (response.success) {
+              Alert.alert('Success', 'Guardian deleted successfully');
+              onRefresh();
+            } else {
+              Alert.alert('Error', response.message || 'Failed to delete guardian');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderGuardian = ({ item }) => (
@@ -199,30 +150,34 @@ const ManageGuardiansScreen = ({ navigation }) => {
     />
   );
 
-  if (isLoading) {
+  const renderFooter = () => {
+    if (!isLoading || pagination.page === 1) return null;
+    return <LoadingSpinner />;
+  };
+
+  if (isLoading && pagination.page === 1) {
     return <LoadingSpinner />;
   }
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Searchbar
           placeholder="Search guardians by name, email, or phone"
           onChangeText={handleSearch}
+          onSubmitEditing={executeSearch}
           value={searchQuery}
           style={styles.searchBar}
         />
       </View>
 
-      {/* Filter Chips */}
       <View style={styles.filterContainer}>
         <Chip
           selected={selectedFilter === 'all'}
           onPress={() => applyFilter('all')}
           style={styles.filterChip}
         >
-          All ({guardians.length})
+          All ({pagination.total})
         </Chip>
         <Chip
           selected={selectedFilter === 'primary'}
@@ -240,10 +195,8 @@ const ManageGuardiansScreen = ({ navigation }) => {
         </Chip>
       </View>
 
-      {/* Error Message */}
-      {error ? <ErrorMessage message={error} onRetry={fetchGuardians} /> : null}
+      {error ? <ErrorMessage message={error} onRetry={() => fetchGuardians(1, true)} /> : null}
 
-      {/* Guardians List */}
       {filteredGuardians.length > 0 ? (
         <FlatList
           data={filteredGuardians}
@@ -253,6 +206,9 @@ const ManageGuardiansScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
           }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
         />
       ) : (
@@ -269,7 +225,6 @@ const ManageGuardiansScreen = ({ navigation }) => {
         />
       )}
 
-      {/* Floating Action Button */}
       <FAB
         style={styles.fab}
         icon="account-plus"

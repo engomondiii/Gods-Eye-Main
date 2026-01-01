@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+// ========================================
+// CREATE PAYMENT REQUEST SCREEN - TEACHER
+// Backend Integration: POST /api/payments/requests/
+// ========================================
+
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,32 +12,98 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { TextInput, Button, HelperText, Text, Searchbar, Switch, RadioButton } from 'react-native-paper';
+import {
+  TextInput,
+  Button,
+  HelperText,
+  Text,
+  Switch,
+  RadioButton,
+  Card,
+} from 'react-native-paper';
+import { Picker } from '@react-native-picker/picker';
 import DatePicker from '../../components/form/DatePicker';
 import StudentCard from '../../components/student/StudentCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { PAYMENT_FLEXIBILITY } from '../../utils/constants';
-import { validatePaymentRequestCreation } from '../../utils/validators';
+import {
+  PAYMENT_FLEXIBILITY,
+  PAYMENT_FLEXIBILITY_LABELS,
+  KENYA_ACADEMIC_TERMS,
+  KENYA_ACADEMIC_TERM_LABELS,
+} from '../../utils/constants';
+import {
+  validatePaymentAmount,
+  validateMinimumPaymentAmount,
+  validatePaymentRequestCreation,
+} from '../../utils/validators';
+import * as paymentService from '../../services/paymentService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CreatePaymentRequestScreen = ({ route, navigation }) => {
+  const { user } = useAuth();
   const preSelectedStudent = route.params?.student || null;
-  
+
   const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // Form state - 🆕 UPDATED with partial payment fields
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form state
   const [formData, setFormData] = useState({
     student: preSelectedStudent,
-    amount: '',
-    purpose: '',
+    guardian: null, // Will be selected from student's guardians
+    title: '',
+    description: '',
+    total_amount: '',
+    flexibility: PAYMENT_FLEXIBILITY.FLEXIBLE,
+    minimum_payment: '',
     due_date: null,
-    allow_partial: false,  // 🆕 NEW
-    payment_flexibility: PAYMENT_FLEXIBILITY.FULL_ONLY,  // 🆕 NEW
-    minimum_amount: '',  // 🆕 NEW
+    academic_year: new Date().getFullYear().toString(),
+    term: KENYA_ACADEMIC_TERMS.TERM_1,
   });
+
+  // Available guardians for selected student
+  const [guardians, setGuardians] = useState([]);
 
   // Error state
   const [errors, setErrors] = useState({});
+
+  // Load student's guardians when student is selected
+  useEffect(() => {
+    if (formData.student) {
+      loadStudentGuardians();
+    }
+  }, [formData.student]);
+
+  const loadStudentGuardians = async () => {
+    try {
+      setIsLoading(true);
+      // Fetch guardians linked to this student
+      // In real implementation, this would call studentService.getStudentGuardians(studentId)
+      // For now, using mock data
+      const mockGuardians = [
+        {
+          id: 1,
+          user: {
+            first_name: 'Jane',
+            last_name: 'Doe',
+            phone: '254712345678',
+          },
+          relationship: 'mother',
+        },
+      ];
+
+      setGuardians(mockGuardians);
+
+      // Auto-select first guardian if only one
+      if (mockGuardians.length === 1) {
+        updateField('guardian', mockGuardians[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading guardians:', error);
+      Alert.alert('Error', 'Failed to load student guardians');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Update form field
   const updateField = (field, value) => {
@@ -40,126 +111,210 @@ const CreatePaymentRequestScreen = ({ route, navigation }) => {
     if (errors[field]) {
       setErrors({ ...errors, [field]: '' });
     }
-  };
 
-  // 🆕 NEW - Handle allow partial toggle
-  const handleAllowPartialToggle = (value) => {
-    const updates = {
-      allow_partial: value,
-      payment_flexibility: value ? PAYMENT_FLEXIBILITY.PARTIAL_ALLOWED : PAYMENT_FLEXIBILITY.FULL_ONLY,
-    };
-    
-    // Reset minimum amount if disabling partial
-    if (!value) {
-      updates.minimum_amount = '';
-    } else if (formData.amount) {
-      // Set default minimum to 20% of amount
-      const defaultMin = Math.round(parseFloat(formData.amount) * 0.2);
-      updates.minimum_amount = defaultMin.toString();
-    }
-    
-    setFormData({ ...formData, ...updates });
-    if (errors.minimum_amount) {
-      setErrors({ ...errors, minimum_amount: '' });
+    // Auto-calculate minimum payment when flexibility changes or amount changes
+    if (field === 'flexibility' || field === 'total_amount') {
+      handleFlexibilityChange(
+        field === 'flexibility' ? value : formData.flexibility,
+        field === 'total_amount' ? value : formData.total_amount
+      );
     }
   };
 
-  // 🆕 NEW - Calculate suggested minimum amount
+  // Handle flexibility change
+  const handleFlexibilityChange = (flexibility, amount) => {
+    if (flexibility === PAYMENT_FLEXIBILITY.FULL_ONLY) {
+      // Reset minimum payment for full_only
+      setFormData((prev) => ({
+        ...prev,
+        minimum_payment: '',
+        flexibility,
+      }));
+    } else if (amount) {
+      // Calculate default minimum (20% of total)
+      const totalAmount = parseFloat(amount);
+      if (!isNaN(totalAmount)) {
+        const defaultMin = Math.round(totalAmount * 0.2);
+        setFormData((prev) => ({
+          ...prev,
+          minimum_payment: defaultMin.toString(),
+          flexibility,
+        }));
+      }
+    }
+  };
+
+  // Calculate suggested minimum amounts
   const calculateSuggestedMinimum = () => {
-    if (!formData.amount) return null;
-    const amount = parseFloat(formData.amount);
+    if (!formData.total_amount) return null;
+    const amount = parseFloat(formData.total_amount);
+    if (isNaN(amount)) return null;
+
     return {
+      ten: Math.round(amount * 0.1),
       twenty: Math.round(amount * 0.2),
       thirty: Math.round(amount * 0.3),
       fifty: Math.round(amount * 0.5),
     };
   };
 
-  // Validation - 🆕 UPDATED
+  // Validation
   const validateForm = () => {
-    const validation = validatePaymentRequestCreation({
-      student_id: formData.student?.id,
-      amount: formData.amount,
-      purpose: formData.purpose,
-      due_date: formData.due_date,
-      allow_partial: formData.allow_partial,
-      minimum_amount: formData.minimum_amount,
-    });
+    const newErrors = {};
 
-    setErrors(validation.errors);
-    return validation.isValid;
+    // Student validation
+    if (!formData.student) {
+      newErrors.student = 'Please select a student';
+    }
+
+    // Guardian validation
+    if (!formData.guardian) {
+      newErrors.guardian = 'Please select a guardian';
+    }
+
+    // Title validation
+    if (!formData.title || formData.title.trim().length < 5) {
+      newErrors.title = 'Title must be at least 5 characters';
+    }
+
+    // Amount validation
+    const amountValidation = validatePaymentAmount(
+      formData.total_amount,
+      100
+    );
+    if (!amountValidation.isValid) {
+      newErrors.total_amount = amountValidation.message;
+    }
+
+    // Due date validation
+    if (!formData.due_date) {
+      newErrors.due_date = 'Please select a due date';
+    } else {
+      const dueDate = new Date(formData.due_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dueDate < today) {
+        newErrors.due_date = 'Due date cannot be in the past';
+      }
+    }
+
+    // Minimum payment validation (for flexible/installment)
+    if (
+      formData.flexibility !== PAYMENT_FLEXIBILITY.FULL_ONLY &&
+      formData.total_amount
+    ) {
+      const minValidation = validateMinimumPaymentAmount(
+        formData.minimum_payment,
+        formData.total_amount
+      );
+      if (!minValidation.isValid) {
+        newErrors.minimum_payment = minValidation.message;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  // Handle submit - 🆕 UPDATED
+  // Handle submit
   const handleSubmit = async () => {
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please check the form and try again');
       return;
     }
 
-    const amount = parseFloat(formData.amount);
-    const minAmount = formData.allow_partial ? parseFloat(formData.minimum_amount) : amount;
-    
-    // 🆕 UPDATED confirmation message
-    const confirmMessage = formData.allow_partial
-      ? `Create payment request of KES ${amount.toFixed(2)} for ${formData.student.first_name} ${formData.student.last_name}?\n\n✓ Partial payments allowed\n✓ Minimum payment: KES ${minAmount.toFixed(2)}\n\nAll guardians will be notified.`
-      : `Create payment request of KES ${amount.toFixed(2)} for ${formData.student.first_name} ${formData.student.last_name}?\n\n⚠️ Full payment required\n\nAll guardians will be notified.`;
-    
-    Alert.alert(
-      'Confirm Payment Request',
-      confirmMessage,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Create Request',
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              
-              // 🆕 UPDATED - Include partial payment fields in request
-              const paymentData = {
-                student_id: formData.student.id,
-                amount: amount,
-                purpose: formData.purpose,
-                due_date: formData.due_date,
-                allow_partial: formData.allow_partial,
-                payment_flexibility: formData.payment_flexibility,
-                minimum_amount: minAmount,
-              };
-              
-              // TODO: Replace with actual API call
-              // await paymentService.createPaymentRequest(paymentData);
-              
-              // Mock API call
-              await new Promise(resolve => setTimeout(resolve, 1500));
-              
-              Alert.alert(
-                'Success',
-                'Payment request created successfully! All guardians have been notified.',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack(),
-                  },
-                ]
-              );
-            } catch (error) {
-              Alert.alert('Error', 'Failed to create payment request. Please try again.');
-              console.error('Create payment error:', error);
-            } finally {
-              setIsLoading(false);
-            }
-          },
-        },
-      ]
-    );
+    const amount = parseFloat(formData.total_amount);
+    const minAmount =
+      formData.flexibility !== PAYMENT_FLEXIBILITY.FULL_ONLY
+        ? parseFloat(formData.minimum_payment)
+        : amount;
+
+    // Build confirmation message
+    const studentName = `${formData.student.first_name} ${formData.student.last_name}`;
+    const flexibilityLabel =
+      PAYMENT_FLEXIBILITY_LABELS[formData.flexibility];
+
+    let confirmMessage = `Create payment request:\n\n`;
+    confirmMessage += `Student: ${studentName}\n`;
+    confirmMessage += `Amount: KES ${amount.toLocaleString()}\n`;
+    confirmMessage += `Flexibility: ${flexibilityLabel}\n`;
+
+    if (formData.flexibility !== PAYMENT_FLEXIBILITY.FULL_ONLY) {
+      confirmMessage += `Minimum Payment: KES ${minAmount.toLocaleString()}\n`;
+    }
+
+    confirmMessage += `\nAll linked guardians will be notified.`;
+
+    Alert.alert('Confirm Payment Request', confirmMessage, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Create Request',
+        onPress: submitPaymentRequest,
+      },
+    ]);
+  };
+
+  const submitPaymentRequest = async () => {
+    try {
+      setIsSubmitting(true);
+
+      // Prepare data for backend
+      const paymentData = {
+        student: formData.student.id,
+        guardian: formData.guardian,
+        school: user.school, // From auth context
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        total_amount: formData.total_amount,
+        flexibility: formData.flexibility,
+        minimum_payment:
+          formData.flexibility !== PAYMENT_FLEXIBILITY.FULL_ONLY
+            ? formData.minimum_payment
+            : formData.total_amount,
+        due_date: formData.due_date,
+        academic_year: formData.academic_year,
+        term: formData.term,
+      };
+
+      if (__DEV__) {
+        console.log('Creating payment request:', paymentData);
+      }
+
+      // Call backend API
+      const response = await paymentService.createPaymentRequest(paymentData);
+
+      if (response.success) {
+        Alert.alert(
+          'Success',
+          'Payment request created successfully! All guardians have been notified.',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      } else {
+        throw new Error(response.message || 'Failed to create payment request');
+      }
+    } catch (error) {
+      console.error('Create payment error:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to create payment request. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
-    return <LoadingSpinner message="Creating payment request..." />;
+    return <LoadingSpinner message="Loading student details..." />;
   }
 
   const suggestedMinimums = calculateSuggestedMinimum();
+  const isFlexible = formData.flexibility !== PAYMENT_FLEXIBILITY.FULL_ONLY;
 
   return (
     <KeyboardAvoidingView
@@ -171,69 +326,91 @@ const CreatePaymentRequestScreen = ({ route, navigation }) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.sectionTitle}>Select Student</Text>
+        {/* Student Selection */}
+        <Text style={styles.sectionTitle}>Student</Text>
 
         {preSelectedStudent ? (
           <StudentCard student={preSelectedStudent} onPress={null} />
         ) : (
-          <>
-            <Searchbar
-              placeholder="Search students"
-              onChangeText={setSearchQuery}
-              value={searchQuery}
-              style={styles.searchBar}
-            />
-            <Text style={styles.helperText}>
-              Search and select a student to create payment request
-            </Text>
-          </>
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.helperText}>
+                Please select a student from the Students screen first
+              </Text>
+            </Card.Content>
+          </Card>
         )}
         {errors.student && (
           <HelperText type="error">{errors.student}</HelperText>
         )}
 
+        {/* Guardian Selection */}
+        {guardians.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Guardian</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={formData.guardian}
+                onValueChange={(value) => updateField('guardian', value)}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select Guardian..." value={null} />
+                {guardians.map((guardian) => (
+                  <Picker.Item
+                    key={guardian.id}
+                    label={`${guardian.user.first_name} ${guardian.user.last_name} (${guardian.relationship})`}
+                    value={guardian.id}
+                  />
+                ))}
+              </Picker>
+            </View>
+            {errors.guardian && (
+              <HelperText type="error">{errors.guardian}</HelperText>
+            )}
+          </>
+        )}
+
+        {/* Payment Details */}
         <Text style={styles.sectionTitle}>Payment Details</Text>
+
+        {/* Title */}
+        <TextInput
+          label="Payment Title *"
+          mode="outlined"
+          value={formData.title}
+          onChangeText={(text) => updateField('title', text)}
+          error={!!errors.title}
+          style={styles.input}
+          placeholder="e.g., Term 1 School Fees"
+        />
+        {errors.title && <HelperText type="error">{errors.title}</HelperText>}
+
+        {/* Description */}
+        <TextInput
+          label="Description (Optional)"
+          mode="outlined"
+          value={formData.description}
+          onChangeText={(text) => updateField('description', text)}
+          style={styles.input}
+          multiline
+          numberOfLines={4}
+          placeholder="Additional details about this payment..."
+        />
 
         {/* Amount */}
         <TextInput
-          label="Amount (KES) *"
+          label="Total Amount (KES) *"
           mode="outlined"
-          value={formData.amount}
-          onChangeText={(text) => {
-            updateField('amount', text);
-            // Auto-calculate minimum if partial enabled
-            if (formData.allow_partial && text) {
-              const amount = parseFloat(text);
-              if (!isNaN(amount)) {
-                const defaultMin = Math.round(amount * 0.2);
-                updateField('minimum_amount', defaultMin.toString());
-              }
-            }
-          }}
-          error={!!errors.amount}
+          value={formData.total_amount}
+          onChangeText={(text) => updateField('total_amount', text)}
+          error={!!errors.total_amount}
           style={styles.input}
           keyboardType="decimal-pad"
           left={<TextInput.Icon icon="currency-usd" />}
           placeholder="0.00"
         />
-        {errors.amount && (
-          <HelperText type="error">{errors.amount}</HelperText>
-        )}
-
-        {/* Purpose */}
-        <TextInput
-          label="Payment Purpose *"
-          mode="outlined"
-          value={formData.purpose}
-          onChangeText={(text) => updateField('purpose', text)}
-          error={!!errors.purpose}
-          style={styles.input}
-          multiline
-          numberOfLines={4}
-          placeholder="e.g., School fees for Term 1, 2025"
-        />
-        {errors.purpose && (
-          <HelperText type="error">{errors.purpose}</HelperText>
+        {errors.total_amount && (
+          <HelperText type="error">{errors.total_amount}</HelperText>
         )}
 
         {/* Due Date */}
@@ -248,75 +425,114 @@ const CreatePaymentRequestScreen = ({ route, navigation }) => {
           <HelperText type="error">{errors.due_date}</HelperText>
         )}
 
-        {/* 🆕 NEW - Payment Flexibility Section */}
-        <Text style={styles.sectionTitle}>Payment Flexibility</Text>
+        {/* Academic Period */}
+        <Text style={styles.sectionTitle}>Academic Period</Text>
 
-        <View style={styles.switchContainer}>
-          <View style={styles.switchLeft}>
-            <Text style={styles.switchLabel}>Allow Partial Payments</Text>
-            <Text style={styles.switchDescription}>
-              Let guardians pay in installments
-            </Text>
-          </View>
-          <Switch
-            value={formData.allow_partial}
-            onValueChange={handleAllowPartialToggle}
-            color="#6200EE"
-          />
+        <TextInput
+          label="Academic Year *"
+          mode="outlined"
+          value={formData.academic_year}
+          onChangeText={(text) => updateField('academic_year', text)}
+          style={styles.input}
+          placeholder="2025"
+          keyboardType="number-pad"
+        />
+
+        <View style={styles.pickerContainer}>
+          <Text style={styles.pickerLabel}>Term *</Text>
+          <Picker
+            selectedValue={formData.term}
+            onValueChange={(value) => updateField('term', value)}
+            style={styles.picker}
+          >
+            {Object.entries(KENYA_ACADEMIC_TERM_LABELS).map(([key, label]) => (
+              <Picker.Item key={key} label={label} value={key} />
+            ))}
+          </Picker>
         </View>
 
-        {formData.allow_partial && (
+        {/* Payment Flexibility */}
+        <Text style={styles.sectionTitle}>Payment Flexibility</Text>
+
+        <RadioButton.Group
+          onValueChange={(value) => updateField('flexibility', value)}
+          value={formData.flexibility}
+        >
+          {Object.entries(PAYMENT_FLEXIBILITY_LABELS).map(([key, label]) => (
+            <View key={key} style={styles.radioContainer}>
+              <RadioButton value={key} />
+              <Text style={styles.radioLabel}>{label}</Text>
+            </View>
+          ))}
+        </RadioButton.Group>
+
+        {/* Minimum Payment (for flexible/installment) */}
+        {isFlexible && (
           <>
-            {/* Minimum Amount */}
             <TextInput
               label="Minimum Payment Amount (KES) *"
               mode="outlined"
-              value={formData.minimum_amount}
-              onChangeText={(text) => updateField('minimum_amount', text)}
-              error={!!errors.minimum_amount}
+              value={formData.minimum_payment}
+              onChangeText={(text) => updateField('minimum_payment', text)}
+              error={!!errors.minimum_payment}
               style={styles.input}
               keyboardType="decimal-pad"
               left={<TextInput.Icon icon="cash-minus" />}
               placeholder="0.00"
             />
-            {errors.minimum_amount && (
-              <HelperText type="error">{errors.minimum_amount}</HelperText>
+            {errors.minimum_payment && (
+              <HelperText type="error">{errors.minimum_payment}</HelperText>
             )}
 
             {/* Suggested Minimums */}
             {suggestedMinimums && (
               <View style={styles.suggestionsContainer}>
-                <Text style={styles.suggestionsLabel}>Quick set:</Text>
+                <Text style={styles.suggestionsLabel}>Quick suggestions:</Text>
                 <View style={styles.suggestionsButtons}>
                   <Button
                     mode="outlined"
                     compact
-                    onPress={() => updateField('minimum_amount', suggestedMinimums.twenty.toString())}
+                    onPress={() =>
+                      updateField(
+                        'minimum_payment',
+                        suggestedMinimums.ten.toString()
+                      )
+                    }
                     style={styles.suggestionButton}
                   >
-                    20% (KES {suggestedMinimums.twenty})
+                    10% (KES {suggestedMinimums.ten.toLocaleString()})
                   </Button>
                   <Button
                     mode="outlined"
                     compact
-                    onPress={() => updateField('minimum_amount', suggestedMinimums.thirty.toString())}
+                    onPress={() =>
+                      updateField(
+                        'minimum_payment',
+                        suggestedMinimums.twenty.toString()
+                      )
+                    }
                     style={styles.suggestionButton}
                   >
-                    30% (KES {suggestedMinimums.thirty})
+                    20% (KES {suggestedMinimums.twenty.toLocaleString()})
                   </Button>
                   <Button
                     mode="outlined"
                     compact
-                    onPress={() => updateField('minimum_amount', suggestedMinimums.fifty.toString())}
+                    onPress={() =>
+                      updateField(
+                        'minimum_payment',
+                        suggestedMinimums.thirty.toString()
+                      )
+                    }
                     style={styles.suggestionButton}
                   >
-                    50% (KES {suggestedMinimums.fifty})
+                    30% (KES {suggestedMinimums.thirty.toLocaleString()})
                   </Button>
                 </View>
               </View>
             )}
 
-            {/* Info Box for Partial Payments */}
+            {/* Info Box */}
             <View style={[styles.infoBox, { backgroundColor: '#E8F5E9' }]}>
               <Text style={[styles.infoBoxText, { color: '#2E7D32' }]}>
                 ✓ Guardians can pay in multiple installments{'\n'}
@@ -327,24 +543,25 @@ const CreatePaymentRequestScreen = ({ route, navigation }) => {
           </>
         )}
 
-        {!formData.allow_partial && (
+        {!isFlexible && (
           <View style={[styles.infoBox, { backgroundColor: '#FFF3E0' }]}>
             <Text style={[styles.infoBoxText, { color: '#E65100' }]}>
-              ⚠️ Full payment will be required. Guardians cannot pay in installments.
+              ⚠️ Full payment required. Guardians cannot pay in installments.
             </Text>
           </View>
         )}
 
-        {/* General Info Box */}
+        {/* General Info */}
         <View style={styles.infoBox}>
           <Text style={styles.infoBoxText}>
-            ℹ️ All linked guardians will receive a notification about this payment
-            request. They can view and pay it through their guardian portal.
+            ℹ️ All linked guardians will receive a notification about this
+            payment request. They can view and pay through their guardian
+            portal.
           </Text>
         </View>
 
-        {/* Preview Box - 🆕 UPDATED */}
-        {formData.amount && formData.student && (
+        {/* Payment Summary Preview */}
+        {formData.total_amount && formData.student && (
           <View style={styles.previewBox}>
             <Text style={styles.previewTitle}>Payment Summary</Text>
             <View style={styles.previewRow}>
@@ -354,16 +571,23 @@ const CreatePaymentRequestScreen = ({ route, navigation }) => {
               </Text>
             </View>
             <View style={styles.previewRow}>
+              <Text style={styles.previewLabel}>Title:</Text>
+              <Text style={styles.previewValue}>{formData.title || 'N/A'}</Text>
+            </View>
+            <View style={styles.previewRow}>
               <Text style={styles.previewLabel}>Total Amount:</Text>
               <Text style={[styles.previewValue, styles.amountText]}>
-                KES {parseFloat(formData.amount || 0).toFixed(2)}
+                KES {parseFloat(formData.total_amount || 0).toLocaleString()}
               </Text>
             </View>
-            {formData.allow_partial && formData.minimum_amount && (
+            {isFlexible && formData.minimum_payment && (
               <View style={styles.previewRow}>
                 <Text style={styles.previewLabel}>Minimum Payment:</Text>
                 <Text style={[styles.previewValue, styles.minAmountText]}>
-                  KES {parseFloat(formData.minimum_amount || 0).toFixed(2)}
+                  KES{' '}
+                  {parseFloat(
+                    formData.minimum_payment || 0
+                  ).toLocaleString()}
                 </Text>
               </View>
             )}
@@ -376,9 +600,9 @@ const CreatePaymentRequestScreen = ({ route, navigation }) => {
               </View>
             )}
             <View style={styles.previewRow}>
-              <Text style={styles.previewLabel}>Payment Type:</Text>
+              <Text style={styles.previewLabel}>Flexibility:</Text>
               <Text style={[styles.previewValue, { fontWeight: 'bold' }]}>
-                {formData.allow_partial ? 'Partial Allowed ✓' : 'Full Payment Only'}
+                {PAYMENT_FLEXIBILITY_LABELS[formData.flexibility]}
               </Text>
             </View>
           </View>
@@ -390,7 +614,8 @@ const CreatePaymentRequestScreen = ({ route, navigation }) => {
           onPress={handleSubmit}
           style={styles.submitButton}
           contentStyle={styles.submitButtonContent}
-          disabled={isLoading}
+          disabled={isSubmitting}
+          loading={isSubmitting}
           icon="cash-plus"
         >
           Create Payment Request
@@ -401,7 +626,7 @@ const CreatePaymentRequestScreen = ({ route, navigation }) => {
           mode="outlined"
           onPress={() => navigation.goBack()}
           style={styles.cancelButton}
-          disabled={isLoading}
+          disabled={isSubmitting}
         >
           Cancel
         </Button>
@@ -423,49 +648,46 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#212121',
     marginTop: 16,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  searchBar: {
+  card: {
     marginBottom: 16,
-    elevation: 0,
-    backgroundColor: '#FFFFFF',
   },
   helperText: {
     fontSize: 14,
     color: '#757575',
-    marginBottom: 16,
+    textAlign: 'center',
   },
   input: {
     marginBottom: 8,
     backgroundColor: '#FFFFFF',
   },
-  // 🆕 NEW - Switch styles
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  pickerContainer: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#BDBDBD',
+    marginBottom: 8,
   },
-  switchLeft: {
-    flex: 1,
-    marginRight: 16,
-  },
-  switchLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#212121',
-    marginBottom: 4,
-  },
-  switchDescription: {
-    fontSize: 13,
+  pickerLabel: {
+    fontSize: 12,
     color: '#757575',
+    paddingHorizontal: 12,
+    paddingTop: 8,
   },
-  // 🆕 NEW - Suggestions styles
+  picker: {
+    height: 50,
+  },
+  radioContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  radioLabel: {
+    fontSize: 15,
+    color: '#212121',
+    marginLeft: 8,
+  },
   suggestionsContainer: {
     marginBottom: 16,
   },
@@ -488,7 +710,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3F2FD',
     padding: 12,
     borderRadius: 8,
-    marginVertical: 16,
+    marginVertical: 12,
   },
   infoBoxText: {
     fontSize: 13,

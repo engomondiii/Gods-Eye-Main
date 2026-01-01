@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Menu, Button } from 'react-native-paper';
+import { Text, Menu, Button, HelperText } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
 import {
@@ -15,14 +15,23 @@ const GradePicker = ({
   value, 
   onGradeChange, 
   onLevelChange, 
-  error = false,
-  disabled = false 
+  error = null, // String error message
+  disabled = false,
+  required = false, // NEW
+  helperText = '', // NEW
+  onBlur, // NEW
 }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(null);
 
   const openMenu = () => setMenuVisible(true);
-  const closeMenu = () => setMenuVisible(false);
+  
+  const closeMenu = () => {
+    setMenuVisible(false);
+    if (onBlur) {
+      onBlur();
+    }
+  };
 
   const handleGradeSelect = (grade, level) => {
     onGradeChange(grade);
@@ -33,14 +42,17 @@ const GradePicker = ({
 
   const getDisplayValue = () => {
     if (!value) {
-      return 'Select Grade/Class *';
+      return required ? 'Select Grade/Class *' : 'Select Grade/Class';
     }
     return KENYA_GRADE_LABELS[value] || value;
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Grade/Class (CBC System) *</Text>
+      <Text style={styles.label}>
+        Grade/Class (CBC System)
+        {required && <Text style={styles.required}> *</Text>}
+      </Text>
       
       <Menu
         visible={menuVisible}
@@ -53,7 +65,7 @@ const GradePicker = ({
             disabled={disabled}
             style={[
               styles.button,
-              error && styles.buttonError,
+              !!error && styles.buttonError,
             ]}
             contentStyle={styles.buttonContent}
             labelStyle={[
@@ -137,9 +149,13 @@ const GradePicker = ({
         </View>
       </Menu>
 
-      <Text style={styles.helperText}>
-        Select the student's current grade level in the CBC system
-      </Text>
+      {/* Helper Text */}
+      <HelperText 
+        type={error ? 'error' : 'info'} 
+        visible={!!(error || helperText)}
+      >
+        {error || helperText || 'Select the student\'s current grade level in the CBC system'}
+      </HelperText>
     </View>
   );
 };
@@ -153,6 +169,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginBottom: theme.spacing.xs,
     fontWeight: '500',
+  },
+  required: {
+    color: theme.colors.error,
   },
   button: {
     justifyContent: 'flex-start',
@@ -195,11 +214,6 @@ const styles = StyleSheet.create({
   },
   selectedItemBackground: {
     backgroundColor: theme.colors.primaryLight || theme.colors.primary + '10',
-  },
-  helperText: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
   },
 });
 

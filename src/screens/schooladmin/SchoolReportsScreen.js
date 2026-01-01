@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,59 +6,66 @@ import {
   Text,
   TouchableOpacity,
   Alert,
+  FlatList,
+  RefreshControl,
 } from 'react-native';
-import { Card, Title, Button, SegmentedButtons } from 'react-native-paper';
+import { Card, Title, Button, SegmentedButtons, ActivityIndicator, Chip } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import DatePicker from '../../components/form/DatePicker';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorMessage from '../../components/common/ErrorMessage';
+import * as reportService from '../../services/reportService';
+import { REPORT_TYPE_OPTIONS, REPORT_FORMAT_OPTIONS } from '../../utils/constants';
 import theme from '../../styles/theme';
 
 const SchoolReportsScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [reportType, setReportType] = useState('attendance');
+  const [reportFormat, setReportFormat] = useState('pdf');
   const [reportPeriod, setReportPeriod] = useState('this_month');
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoadingReports, setIsLoadingReports] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [recentReports, setRecentReports] = useState([]);
+  const [error, setError] = useState('');
 
-  const reportTypes = [
-    {
-      id: 'attendance',
-      title: 'Attendance Report',
-      description: 'Detailed attendance statistics by class, grade, and individual students',
-      icon: 'clipboard-check',
-      color: '#2196F3',
-    },
-    {
-      id: 'academic',
-      title: 'Academic Performance',
-      description: 'Student performance analysis and grade distribution',
-      icon: 'school',
-      color: '#4CAF50',
-    },
-    {
-      id: 'financial',
-      title: 'Financial Report',
-      description: 'Payment collections, pending fees, and financial overview',
-      icon: 'cash-multiple',
-      color: '#FF9800',
-    },
-    {
-      id: 'enrollment',
-      title: 'Enrollment Report',
-      description: 'Student enrollment trends and demographics',
-      icon: 'account-multiple',
-      color: '#9C27B0',
-    },
-    {
-      id: 'teacher',
-      title: 'Teacher Report',
-      description: 'Teacher assignments, class loads, and performance',
-      icon: 'account-tie',
-      color: '#00BCD4',
-    },
-  ];
+  useEffect(() => {
+    fetchRecentReports();
+  }, []);
 
+  // Fetch recent reports
+  const fetchRecentReports = async () => {
+    try {
+      setError('');
+      const response = await reportService.getReports({
+        page: 1,
+        page_size: 10,
+        school: user.school?.id,
+      });
+
+      if (response.success) {
+        setRecentReports(response.data.results || []);
+      } else {
+        setError(response.message || 'Failed to load recent reports');
+      }
+    } catch (err) {
+      setError('Failed to load recent reports');
+      console.error('Fetch reports error:', err);
+    } finally {
+      setIsLoadingReports(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchRecentReports();
+  };
+
+  // Generate report
   const handleGenerateReport = async () => {
     if (reportPeriod === 'custom' && (!startDate || !endDate)) {
       Alert.alert('Error', 'Please select start and end dates for custom period');
@@ -68,31 +75,37 @@ const SchoolReportsScreen = ({ navigation }) => {
     setIsGenerating(true);
     
     try {
-      // TODO: Replace with actual API call
-      // const response = await schoolAdminService.generateReport({
-      //   schoolId: user.school.id,
-      //   reportType,
-      //   reportPeriod,
-      //   startDate,
-      //   endDate,
-      // });
+      const { start, end } = getDateRange();
       
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Report Generated',
-        'Your report has been generated successfully. You can download it now.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Download',
-            onPress: () => {
-              Alert.alert('Download', 'Report download functionality coming soon!');
+      const response = await reportService.generateReport({
+        report_type: reportType,
+        title: `${getReportTypeLabel(reportType)} - ${reportPeriod}`,
+        description: `Generated for ${user.school?.name}`,
+        start_date: start,
+        end_date: end,
+        report_format: reportFormat,
+        filters: {
+          school: user.school?.id,
+        },
+      });
+
+      if (response.success) {
+        const genTime = reportService.formatGenerationTime(response.data.generation_time);
+        
+        Alert.alert(
+          'Report Generated',
+          `Your ${reportFormat.toUpperCase()} report has been generated successfully in ${genTime}.`,
+          [
+            { text: 'View Reports', onPress: () => fetchRecentReports() },
+            {
+              text: 'Download',
+              onPress: () => handleDownloadReport(response.data.report_id),
             },
-          },
-        ]
-      );
+          ]
+        );
+      } else {
+        Alert.alert('Error', response.message || 'Failed to generate report');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to generate report. Please try again.');
       console.error('Generate report error:', error);
@@ -101,7 +114,155 @@ const SchoolReportsScreen = ({ navigation }) => {
     }
   };
 
-  const selectedReportType = reportTypes.find(r => r.id === reportType);
+  // Download report
+  const handleDownloadReport = async (reportId) => {
+    try {
+      const response = await reportService.downloadReport(reportId);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Report downloaded successfully!');
+        // In a real app, you would open the file or share it
+      } else {
+        Alert.alert('Error', 'Failed to download report');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to download report');
+      console.error('Download error:', error);
+    }
+  };
+
+  // Delete report
+  const handleDeleteReport = async (reportId) => {
+    Alert.alert(
+      'Delete Report',
+      'Are you sure you want to delete this report?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const response = await reportService.deleteReport(reportId);
+            if (response.success) {
+              Alert.alert('Success', 'Report deleted successfully');
+              fetchRecentReports();
+            } else {
+              Alert.alert('Error', 'Failed to delete report');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Get date range based on period
+  const getDateRange = () => {
+    const now = new Date();
+    let start, end;
+
+    switch (reportPeriod) {
+      case 'this_week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        start = weekStart.toISOString().split('T')[0];
+        end = now.toISOString().split('T')[0];
+        break;
+      case 'this_month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        start = monthStart.toISOString().split('T')[0];
+        end = now.toISOString().split('T')[0];
+        break;
+      case 'this_term':
+        // Assuming 3-month term
+        const termStart = new Date(now);
+        termStart.setMonth(now.getMonth() - 3);
+        start = termStart.toISOString().split('T')[0];
+        end = now.toISOString().split('T')[0];
+        break;
+      case 'custom':
+        start = startDate ? startDate.toISOString().split('T')[0] : now.toISOString().split('T')[0];
+        end = endDate ? endDate.toISOString().split('T')[0] : now.toISOString().split('T')[0];
+        break;
+      default:
+        start = end = now.toISOString().split('T')[0];
+    }
+
+    return { start, end };
+  };
+
+  // Get report type label
+  const getReportTypeLabel = (type) => {
+    const option = REPORT_TYPE_OPTIONS.find(opt => opt.value === type);
+    return option ? option.label : type;
+  };
+
+  // Get report type info
+  const getReportTypeInfo = (type) => {
+    return REPORT_TYPE_OPTIONS.find(opt => opt.value === type);
+  };
+
+  // Get format info
+  const getFormatInfo = (format) => {
+    return REPORT_FORMAT_OPTIONS.find(opt => opt.value === format);
+  };
+
+  // Render recent report item
+  const renderReportItem = ({ item }) => {
+    const formatInfo = getFormatInfo(item.report_format);
+    const typeInfo = getReportTypeInfo(item.report_type);
+    
+    return (
+      <Card style={styles.recentReportCard}>
+        <Card.Content>
+          <View style={styles.recentReportRow}>
+            <MaterialCommunityIcons 
+              name={formatInfo?.icon || 'file-document'} 
+              size={32} 
+              color={formatInfo?.color || '#757575'} 
+            />
+            <View style={styles.recentReportInfo}>
+              <Text style={styles.recentReportTitle}>{item.title}</Text>
+              <Text style={styles.recentReportDate}>
+                Generated on {new Date(item.created_at).toLocaleDateString()}
+              </Text>
+              {item.generation_time && (
+                <Text style={styles.recentReportTime}>
+                  Generation time: {reportService.formatGenerationTime(item.generation_time)}
+                </Text>
+              )}
+              <View style={styles.recentReportChips}>
+                <Chip 
+                  icon={typeInfo?.icon}
+                  style={[styles.chip, { backgroundColor: typeInfo?.color + '20' }]}
+                  textStyle={{ color: typeInfo?.color, fontSize: 11 }}
+                >
+                  {getReportTypeLabel(item.report_type)}
+                </Chip>
+              </View>
+            </View>
+            <View style={styles.reportActions}>
+              <TouchableOpacity onPress={() => handleDownloadReport(item.id)}>
+                <MaterialCommunityIcons name="download" size={24} color="#2196F3" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => handleDeleteReport(item.id)}
+                style={styles.deleteButton}
+              >
+                <MaterialCommunityIcons name="delete" size={24} color="#F44336" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Card.Content>
+      </Card>
+    );
+  };
+
+  if (isLoadingReports) {
+    return <LoadingSpinner />;
+  }
+
+  const selectedTypeInfo = getReportTypeInfo(reportType);
+  const selectedFormatInfo = getFormatInfo(reportFormat);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -121,14 +282,14 @@ const SchoolReportsScreen = ({ navigation }) => {
       {/* Report Type Selection */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Select Report Type</Text>
-        {reportTypes.map((type) => (
+        {REPORT_TYPE_OPTIONS.map((type) => (
           <TouchableOpacity
-            key={type.id}
+            key={type.value}
             style={[
               styles.reportTypeCard,
-              reportType === type.id && styles.reportTypeCardSelected,
+              reportType === type.value && styles.reportTypeCardSelected,
             ]}
-            onPress={() => setReportType(type.id)}
+            onPress={() => setReportType(type.value)}
           >
             <View style={styles.reportTypeLeft}>
               <View
@@ -144,15 +305,47 @@ const SchoolReportsScreen = ({ navigation }) => {
                 />
               </View>
               <View style={styles.reportTypeText}>
-                <Text style={styles.reportTypeTitle}>{type.title}</Text>
+                <Text style={styles.reportTypeTitle}>{type.label}</Text>
                 <Text style={styles.reportTypeDescription}>{type.description}</Text>
               </View>
             </View>
-            {reportType === type.id && (
+            {reportType === type.value && (
               <MaterialCommunityIcons name="check-circle" size={24} color={type.color} />
             )}
           </TouchableOpacity>
         ))}
+      </View>
+
+      {/* Report Format Selection */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Select Format</Text>
+        <View style={styles.formatButtons}>
+          {REPORT_FORMAT_OPTIONS.map((format) => (
+            <TouchableOpacity
+              key={format.value}
+              style={[
+                styles.formatButton,
+                reportFormat === format.value && styles.formatButtonSelected,
+                { borderColor: format.color },
+              ]}
+              onPress={() => setReportFormat(format.value)}
+            >
+              <MaterialCommunityIcons 
+                name={format.icon} 
+                size={24} 
+                color={reportFormat === format.value ? format.color : '#757575'} 
+              />
+              <Text 
+                style={[
+                  styles.formatButtonText,
+                  { color: reportFormat === format.value ? format.color : '#757575' }
+                ]}
+              >
+                {format.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Report Period Selection */}
@@ -196,13 +389,17 @@ const SchoolReportsScreen = ({ navigation }) => {
       </View>
 
       {/* Selected Report Summary */}
-      {selectedReportType && (
+      {selectedTypeInfo && selectedFormatInfo && (
         <Card style={styles.summaryCard}>
           <Card.Content>
             <Text style={styles.summaryTitle}>Report Summary</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Report Type:</Text>
-              <Text style={styles.summaryValue}>{selectedReportType.title}</Text>
+              <Text style={styles.summaryValue}>{selectedTypeInfo.label}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Format:</Text>
+              <Text style={styles.summaryValue}>{selectedFormatInfo.label}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>School:</Text>
@@ -218,10 +415,6 @@ const SchoolReportsScreen = ({ navigation }) => {
                   `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`}
                 {reportPeriod === 'custom' && (!startDate || !endDate) && 'Select dates'}
               </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Format:</Text>
-              <Text style={styles.summaryValue}>PDF</Text>
             </View>
           </Card.Content>
         </Card>
@@ -240,38 +433,35 @@ const SchoolReportsScreen = ({ navigation }) => {
         {isGenerating ? 'Generating Report...' : 'Generate Report'}
       </Button>
 
+      {/* Error Message */}
+      {error ? <ErrorMessage message={error} onRetry={fetchRecentReports} /> : null}
+
       {/* Recent Reports */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Reports</Text>
-        <Card style={styles.recentReportCard}>
-          <Card.Content>
-            <View style={styles.recentReportRow}>
-              <MaterialCommunityIcons name="file-pdf-box" size={32} color="#F44336" />
-              <View style={styles.recentReportInfo}>
-                <Text style={styles.recentReportTitle}>Attendance Report - November 2025</Text>
-                <Text style={styles.recentReportDate}>Generated on Nov 10, 2025</Text>
-              </View>
-              <TouchableOpacity>
-                <MaterialCommunityIcons name="download" size={24} color="#2196F3" />
-              </TouchableOpacity>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <Card style={styles.recentReportCard}>
-          <Card.Content>
-            <View style={styles.recentReportRow}>
-              <MaterialCommunityIcons name="file-pdf-box" size={32} color="#F44336" />
-              <View style={styles.recentReportInfo}>
-                <Text style={styles.recentReportTitle}>Financial Report - Term 3 2025</Text>
-                <Text style={styles.recentReportDate}>Generated on Nov 5, 2025</Text>
-              </View>
-              <TouchableOpacity>
-                <MaterialCommunityIcons name="download" size={24} color="#2196F3" />
-              </TouchableOpacity>
-            </View>
-          </Card.Content>
-        </Card>
+        <View style={styles.recentReportsHeader}>
+          <Text style={styles.sectionTitle}>Recent Reports ({recentReports.length})</Text>
+          <TouchableOpacity onPress={onRefresh}>
+            <MaterialCommunityIcons name="refresh" size={24} color="#2196F3" />
+          </TouchableOpacity>
+        </View>
+        
+        {recentReports.length > 0 ? (
+          <FlatList
+            data={recentReports}
+            renderItem={renderReportItem}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+            }
+          />
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content>
+              <Text style={styles.emptyText}>No recent reports found</Text>
+            </Card.Content>
+          </Card>
+        )}
       </View>
     </ScrollView>
   );
@@ -358,6 +548,31 @@ const styles = StyleSheet.create({
     color: '#757575',
     lineHeight: 16,
   },
+  formatButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  formatButton: {
+    flex: 1,
+    minWidth: '45%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  formatButtonSelected: {
+    backgroundColor: '#FFF3E0',
+  },
+  formatButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
   segmentedButtons: {
     marginBottom: 16,
   },
@@ -406,6 +621,12 @@ const styles = StyleSheet.create({
   generateButtonContent: {
     height: 50,
   },
+  recentReportsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   recentReportCard: {
     marginBottom: 12,
     elevation: 1,
@@ -427,6 +648,36 @@ const styles = StyleSheet.create({
   recentReportDate: {
     fontSize: 12,
     color: '#757575',
+    marginBottom: 2,
+  },
+  recentReportTime: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    marginBottom: 4,
+  },
+  recentReportChips: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  chip: {
+    height: 24,
+  },
+  reportActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    marginLeft: 16,
+  },
+  emptyCard: {
+    elevation: 0,
+    backgroundColor: '#FAFAFA',
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#757575',
+    padding: 16,
   },
 });
 

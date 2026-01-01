@@ -3,77 +3,71 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
-import { Text, Card, Button, SegmentedButtons } from 'react-native-paper';
+import { Text, Card, Button, SegmentedButtons, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
 import AttendanceStats from '../../components/attendance/AttendanceStats';
 import AttendanceCalendar from '../../components/attendance/AttendanceCalendar';
+import ChartCard from '../../components/common/ChartCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import * as reportService from '../../services/reportService';
+import { useAuth } from '../../hooks/useAuth';
 
 const AttendanceReportsScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
   const [reportType, setReportType] = useState('overview');
   const [selectedPeriod, setSelectedPeriod] = useState('today');
-  const [reportData, setReportData] = useState({
-    stats: {
-      present: 0,
-      absent: 0,
-      late: 0,
-      excused: 0,
-      total: 0,
-    },
-    attendanceData: {},
-    trends: [],
-    topMethods: [],
-  });
+  const [reportData, setReportData] = useState(null);
+  const [generatedReportId, setGeneratedReportId] = useState(null);
 
   useEffect(() => {
-    fetchReportData();
+    generateAndFetchReport();
   }, [selectedPeriod]);
 
-  const fetchReportData = async () => {
+  // Generate report and fetch data
+  const generateAndFetchReport = async () => {
     try {
+      setIsLoading(true);
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await attendanceService.getReportData(selectedPeriod);
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockData = {
-        stats: {
-          present: 35,
-          absent: 5,
-          late: 3,
-          excused: 2,
-          total: 45,
+
+      // Calculate date range based on selected period
+      const { startDate, endDate } = getDateRange(selectedPeriod);
+
+      // Generate attendance report
+      const response = await reportService.generateReport({
+        report_type: 'attendance',
+        title: `Attendance Report - ${selectedPeriod}`,
+        description: `Attendance data for ${selectedPeriod}`,
+        start_date: startDate,
+        end_date: endDate,
+        report_format: 'json', // Get JSON data for display
+        filters: {
+          school: user.school?.id,
         },
-        attendanceData: {
-          '2025-11-01': 'present',
-          '2025-11-02': 'present',
-          '2025-11-03': 'absent',
-          '2025-11-04': 'present',
-          '2025-11-05': 'late',
-        },
-        trends: [
-          { label: 'Mon', present: 40, absent: 5 },
-          { label: 'Tue', present: 38, absent: 7 },
-          { label: 'Wed', present: 42, absent: 3 },
-          { label: 'Thu', present: 35, absent: 10 },
-          { label: 'Fri', present: 39, absent: 6 },
-        ],
-        topMethods: [
-          { method: 'QR Code', count: 120, percentage: 60 },
-          { method: 'Fingerprint', count: 50, percentage: 25 },
-          { method: 'Manual', count: 30, percentage: 15 },
-        ],
-      };
-      
-      setReportData(mockData);
+      });
+
+      if (response.success) {
+        setGeneratedReportId(response.data.report_id);
+        
+        // If we got data directly, use it
+        if (response.data.data) {
+          setReportData(response.data.data);
+        } else {
+          // Otherwise fetch the report
+          const reportResponse = await reportService.getReportById(response.data.report_id);
+          if (reportResponse.success) {
+            setReportData(reportResponse.data.data);
+          }
+        }
+      } else {
+        setError(response.message || 'Failed to generate report');
+      }
     } catch (err) {
       setError('Failed to load report data. Please try again.');
       console.error('Report error:', err);
@@ -82,155 +76,264 @@ const AttendanceReportsScreen = ({ navigation }) => {
     }
   };
 
-  const handleExportReport = (format) => {
-    Alert.alert(
-      `Export as ${format.toUpperCase()}`,
-      `Export functionality will be implemented for ${format} format.`,
-      [{ text: 'OK' }]
+  // Get date range based on period
+  const getDateRange = (period) => {
+    const now = new Date();
+    let startDate, endDate;
+
+    switch (period) {
+      case 'today':
+        startDate = endDate = now.toISOString().split('T')[0];
+        break;
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        startDate = weekStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = monthStart.toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      default:
+        startDate = endDate = now.toISOString().split('T')[0];
+    }
+
+    return { startDate, endDate };
+  };
+
+  // Handle export report
+  const handleExportReport = async (format) => {
+    try {
+      setIsGenerating(true);
+      
+      const { startDate, endDate } = getDateRange(selectedPeriod);
+
+      const response = await reportService.generateReport({
+        report_type: 'attendance',
+        title: `Attendance Report - ${selectedPeriod}`,
+        description: `Attendance data for ${selectedPeriod}`,
+        start_date: startDate,
+        end_date: endDate,
+        report_format: format,
+        filters: {
+          school: user.school?.id,
+        },
+      });
+
+      if (response.success) {
+        // Download the file
+        const downloadResponse = await reportService.downloadReport(response.data.report_id);
+        
+        if (downloadResponse.success) {
+          Alert.alert(
+            'Success',
+            `Report exported as ${format.toUpperCase()}. Generation time: ${reportService.formatGenerationTime(response.data.generation_time)}`,
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert('Error', 'Failed to download report');
+        }
+      } else {
+        Alert.alert('Error', response.message || 'Failed to export report');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to export report');
+      console.error('Export error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Render overview report
+  const renderOverviewReport = () => {
+    if (!reportData || !reportData.summary) {
+      return <Text style={styles.noDataText}>No data available</Text>;
+    }
+
+    const { summary, by_method, trends } = reportData;
+
+    return (
+      <View>
+        {/* Statistics */}
+        <AttendanceStats
+          present={summary.present || 0}
+          absent={summary.absent || 0}
+          late={summary.late || 0}
+          excused={summary.excused || 0}
+          total={summary.total_records || 0}
+          dateRange={selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'week' ? 'This Week' : 'This Month'}
+          showPercentage={true}
+        />
+
+        {/* Top Methods */}
+        {by_method && by_method.length > 0 && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardTitle}>Most Used Methods</Text>
+              {by_method.map((item, index) => (
+                <View key={index} style={styles.methodRow}>
+                  <View style={styles.methodLeft}>
+                    <MaterialCommunityIcons
+                      name={getMethodIcon(item.method)}
+                      size={24}
+                      color={theme.colors.primary}
+                    />
+                    <Text style={styles.methodName}>{item.method}</Text>
+                  </View>
+                  <View style={styles.methodRight}>
+                    <Text style={styles.methodCount}>{item.count}</Text>
+                    <Text style={styles.methodPercentage}>
+                      ({((item.count / summary.total_records) * 100).toFixed(1)}%)
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Weekly Trends Chart */}
+        {trends && trends.length > 0 && (
+          <ChartCard
+            title="Attendance Trends"
+            type="line"
+            data={{
+              labels: trends.map(t => t.label || t.date),
+              datasets: [
+                {
+                  data: trends.map(t => t.present || 0),
+                  color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+                  strokeWidth: 2,
+                },
+              ],
+              legend: ['Present'],
+            }}
+            height={220}
+          />
+        )}
+
+        {/* Status Distribution Pie Chart */}
+        {summary && (
+          <ChartCard
+            title="Attendance Distribution"
+            type="pie"
+            data={[
+              {
+                name: 'Present',
+                population: summary.present || 0,
+                color: '#4CAF50',
+                legendFontColor: '#212121',
+              },
+              {
+                name: 'Absent',
+                population: summary.absent || 0,
+                color: '#F44336',
+                legendFontColor: '#212121',
+              },
+              {
+                name: 'Late',
+                population: summary.late || 0,
+                color: '#FF9800',
+                legendFontColor: '#212121',
+              },
+              {
+                name: 'Excused',
+                population: summary.excused || 0,
+                color: '#2196F3',
+                legendFontColor: '#212121',
+              },
+            ].filter(item => item.population > 0)}
+            height={220}
+          />
+        )}
+      </View>
     );
   };
 
-  const renderOverviewReport = () => (
-    <View>
-      {/* Statistics */}
-      <AttendanceStats
-        present={reportData.stats.present}
-        absent={reportData.stats.absent}
-        late={reportData.stats.late}
-        excused={reportData.stats.excused}
-        total={reportData.stats.total}
-        dateRange={selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'week' ? 'This Week' : 'This Month'}
-        showPercentage={true}
-      />
+  // Render calendar report
+  const renderCalendarReport = () => {
+    if (!reportData || !reportData.by_date) {
+      return <Text style={styles.noDataText}>No calendar data available</Text>;
+    }
 
-      {/* Top Methods */}
+    return (
       <Card style={styles.card}>
         <Card.Content>
-          <Text style={styles.cardTitle}>Most Used Methods</Text>
-          {reportData.topMethods.map((item, index) => (
-            <View key={index} style={styles.methodRow}>
-              <View style={styles.methodLeft}>
-                <MaterialCommunityIcons
-                  name={
-                    item.method === 'QR Code' ? 'qrcode' :
-                    item.method === 'Fingerprint' ? 'fingerprint' :
-                    'pencil'
-                  }
-                  size={24}
-                  color={theme.colors.primary}
-                />
-                <Text style={styles.methodName}>{item.method}</Text>
-              </View>
-              <View style={styles.methodRight}>
-                <Text style={styles.methodCount}>{item.count}</Text>
-                <Text style={styles.methodPercentage}>({item.percentage}%)</Text>
-              </View>
-            </View>
-          ))}
+          <AttendanceCalendar
+            studentId={null}
+            month={new Date()}
+            attendanceData={reportData.by_date}
+            onDatePress={(day, month) => console.log('Date pressed:', day, month)}
+          />
         </Card.Content>
       </Card>
+    );
+  };
 
-      {/* Weekly Trends */}
+  // Render detailed report
+  const renderDetailedReport = () => {
+    if (!reportData) {
+      return <Text style={styles.noDataText}>No detailed data available</Text>;
+    }
+
+    const { by_grade, by_time } = reportData;
+
+    return (
       <Card style={styles.card}>
         <Card.Content>
-          <Text style={styles.cardTitle}>Weekly Trends</Text>
-          <View style={styles.trendsContainer}>
-            {reportData.trends.map((day, index) => (
-              <View key={index} style={styles.trendItem}>
-                <Text style={styles.trendLabel}>{day.label}</Text>
-                <View style={styles.trendBars}>
-                  <View 
-                    style={[
-                      styles.trendBar,
-                      { 
-                        height: (day.present / reportData.stats.total) * 100,
-                        backgroundColor: theme.colors.success 
-                      }
-                    ]} 
-                  />
-                  <View 
-                    style={[
-                      styles.trendBar,
-                      { 
-                        height: (day.absent / reportData.stats.total) * 100,
-                        backgroundColor: theme.colors.error 
-                      }
-                    ]} 
-                  />
+          <Text style={styles.cardTitle}>Detailed Breakdown</Text>
+          
+          {/* By Grade */}
+          {by_grade && by_grade.length > 0 && (
+            <View style={styles.detailSection}>
+              <Text style={styles.detailSectionTitle}>By Grade</Text>
+              {by_grade.map((grade, index) => (
+                <View key={index} style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{grade.grade}</Text>
+                  <Text style={styles.detailValue}>
+                    {grade.attendance_rate ? `${grade.attendance_rate.toFixed(1)}%` : 'N/A'}
+                  </Text>
                 </View>
-                <Text style={styles.trendValue}>{day.present}</Text>
-              </View>
-            ))}
-          </View>
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: theme.colors.success }]} />
-              <Text style={styles.legendText}>Present</Text>
+              ))}
             </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: theme.colors.error }]} />
-              <Text style={styles.legendText}>Absent</Text>
+          )}
+
+          {/* By Time */}
+          {by_time && by_time.length > 0 && (
+            <View style={styles.detailSection}>
+              <Text style={styles.detailSectionTitle}>Peak Check-in Times</Text>
+              {by_time.map((time, index) => (
+                <View key={index} style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{time.time_range}</Text>
+                  <Text style={styles.detailValue}>{time.percentage}%</Text>
+                </View>
+              ))}
             </View>
-          </View>
+          )}
         </Card.Content>
       </Card>
-    </View>
-  );
+    );
+  };
 
-  const renderCalendarReport = () => (
-    <Card style={styles.card}>
-      <Card.Content>
-        <AttendanceCalendar
-          studentId={null}
-          month={new Date()}
-          attendanceData={reportData.attendanceData}
-          onDatePress={(day, month) => console.log('Date pressed:', day, month)}
-        />
-      </Card.Content>
-    </Card>
-  );
-
-  const renderDetailedReport = () => (
-    <Card style={styles.card}>
-      <Card.Content>
-        <Text style={styles.cardTitle}>Detailed Breakdown</Text>
-        
-        {/* By Class */}
-        <View style={styles.detailSection}>
-          <Text style={styles.detailSectionTitle}>By Class</Text>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Grade 1</Text>
-            <Text style={styles.detailValue}>95% attendance</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Grade 2</Text>
-            <Text style={styles.detailValue}>88% attendance</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Grade 3</Text>
-            <Text style={styles.detailValue}>92% attendance</Text>
-          </View>
-        </View>
-
-        {/* By Time */}
-        <View style={styles.detailSection}>
-          <Text style={styles.detailSectionTitle}>Peak Check-in Times</Text>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>7:00 - 8:00 AM</Text>
-            <Text style={styles.detailValue}>60%</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>8:00 - 9:00 AM</Text>
-            <Text style={styles.detailValue}>35%</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>After 9:00 AM</Text>
-            <Text style={styles.detailValue}>5%</Text>
-          </View>
-        </View>
-      </Card.Content>
-    </Card>
-  );
+  // Get method icon
+  const getMethodIcon = (method) => {
+    const icons = {
+      'QR Code': 'qrcode',
+      'qr': 'qrcode',
+      'Fingerprint': 'fingerprint',
+      'fingerprint': 'fingerprint',
+      'biometric': 'fingerprint',
+      'Manual': 'pencil',
+      'manual': 'pencil',
+      'Face Recognition': 'face-recognition',
+      'face': 'face-recognition',
+      'OTC': 'numeric',
+      'otc': 'numeric',
+    };
+    return icons[method] || 'checkbox-marked-circle';
+  };
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -269,7 +372,7 @@ const AttendanceReportsScreen = ({ navigation }) => {
         </View>
 
         {/* Error Message */}
-        {error ? <ErrorMessage message={error} onRetry={fetchReportData} /> : null}
+        {error ? <ErrorMessage message={error} onRetry={generateAndFetchReport} /> : null}
 
         {/* Report Content */}
         <View style={styles.reportContent}>
@@ -282,12 +385,19 @@ const AttendanceReportsScreen = ({ navigation }) => {
         <Card style={styles.card}>
           <Card.Content>
             <Text style={styles.cardTitle}>Export Report</Text>
+            {isGenerating && (
+              <View style={styles.generatingContainer}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={styles.generatingText}>Generating report...</Text>
+              </View>
+            )}
             <View style={styles.exportButtons}>
               <Button
                 mode="outlined"
                 icon="file-pdf-box"
                 onPress={() => handleExportReport('pdf')}
                 style={styles.exportButton}
+                disabled={isGenerating}
               >
                 PDF
               </Button>
@@ -296,6 +406,7 @@ const AttendanceReportsScreen = ({ navigation }) => {
                 icon="file-excel"
                 onPress={() => handleExportReport('excel')}
                 style={styles.exportButton}
+                disabled={isGenerating}
               >
                 Excel
               </Button>
@@ -304,6 +415,7 @@ const AttendanceReportsScreen = ({ navigation }) => {
                 icon="file-document"
                 onPress={() => handleExportReport('csv')}
                 style={styles.exportButton}
+                disabled={isGenerating}
               >
                 CSV
               </Button>
@@ -378,57 +490,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.sm,
     color: theme.colors.textSecondary,
   },
-  trendsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-end',
-    height: 150,
-    marginBottom: theme.spacing.md,
-  },
-  trendItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  trendLabel: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  trendBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: 100,
-    gap: 2,
-  },
-  trendBar: {
-    width: 15,
-    borderRadius: theme.borderRadius.sm,
-  },
-  trendValue: {
-    fontSize: theme.fontSizes.sm,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginTop: theme.spacing.xs,
-  },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: theme.spacing.md,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: theme.spacing.xs,
-  },
-  legendText: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text,
-  },
   detailSection: {
     marginBottom: theme.spacing.lg,
   },
@@ -461,6 +522,23 @@ const styles = StyleSheet.create({
   },
   exportButton: {
     flex: 1,
+  },
+  noDataText: {
+    textAlign: 'center',
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+    padding: theme.spacing.xl,
+  },
+  generatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  generatingText: {
+    marginLeft: theme.spacing.sm,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
   },
 });
 

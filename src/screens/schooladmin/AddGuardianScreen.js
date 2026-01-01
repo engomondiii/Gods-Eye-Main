@@ -9,11 +9,11 @@ import {
 } from 'react-native';
 import { TextInput, Button, HelperText, Text, Switch } from 'react-native-paper';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import * as schoolAdminService from '../../services/schoolAdminService';
 
 const AddGuardianScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   
-  // Form state
   const [formData, setFormData] = useState({
     first_name: '',
     middle_name: '',
@@ -24,10 +24,8 @@ const AddGuardianScreen = ({ navigation }) => {
     is_primary: true,
   });
 
-  // Error state
   const [errors, setErrors] = useState({});
 
-  // Update form field
   const updateField = (field, value) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) {
@@ -35,7 +33,6 @@ const AddGuardianScreen = ({ navigation }) => {
     }
   };
 
-  // Validation
   const validateForm = () => {
     const newErrors = {};
 
@@ -67,7 +64,6 @@ const AddGuardianScreen = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle submit
   const handleSubmit = async () => {
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please check the form and try again');
@@ -85,22 +81,38 @@ const AddGuardianScreen = ({ navigation }) => {
             try {
               setIsLoading(true);
               
-              // TODO: Replace with actual API call
-              // await schoolAdminService.addGuardian(formData);
+              const guardianData = {
+                user: {
+                  email: formData.email.trim(),
+                  first_name: formData.first_name.trim(),
+                  middle_name: formData.middle_name.trim(),
+                  last_name: formData.last_name.trim(),
+                  phone: formData.phone.trim(),
+                  password: 'ChangeMe123!',
+                },
+                relationship: formData.relationship.trim(),
+                is_primary: formData.is_primary,
+              };
               
-              // Mock API call
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              const response = await schoolAdminService.createGuardian(guardianData);
               
-              Alert.alert(
-                'Success',
-                'Guardian added successfully! You can now link them to a student.',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack(),
-                  },
-                ]
-              );
+              if (response.success) {
+                Alert.alert(
+                  'Success',
+                  `Guardian added successfully!\n\nDefault password: ChangeMe123!\n\nYou can now link them to a student from the student's profile page.`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => navigation.goBack(),
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert(
+                  'Error',
+                  response.message || 'Failed to add guardian. Please try again.'
+                );
+              }
             } catch (error) {
               Alert.alert('Error', 'Failed to add guardian. Please try again.');
               console.error('Add guardian error:', error);
@@ -129,7 +141,6 @@ const AddGuardianScreen = ({ navigation }) => {
       >
         <Text style={styles.sectionTitle}>Personal Information</Text>
 
-        {/* First Name */}
         <TextInput
           label="First Name *"
           mode="outlined"
@@ -137,21 +148,21 @@ const AddGuardianScreen = ({ navigation }) => {
           onChangeText={(text) => updateField('first_name', text)}
           error={!!errors.first_name}
           style={styles.input}
+          autoCapitalize="words"
         />
         {errors.first_name && (
           <HelperText type="error">{errors.first_name}</HelperText>
         )}
 
-        {/* Middle Name */}
         <TextInput
           label="Middle Name"
           mode="outlined"
           value={formData.middle_name}
           onChangeText={(text) => updateField('middle_name', text)}
           style={styles.input}
+          autoCapitalize="words"
         />
 
-        {/* Last Name */}
         <TextInput
           label="Last Name *"
           mode="outlined"
@@ -159,6 +170,7 @@ const AddGuardianScreen = ({ navigation }) => {
           onChangeText={(text) => updateField('last_name', text)}
           error={!!errors.last_name}
           style={styles.input}
+          autoCapitalize="words"
         />
         {errors.last_name && (
           <HelperText type="error">{errors.last_name}</HelperText>
@@ -166,7 +178,6 @@ const AddGuardianScreen = ({ navigation }) => {
 
         <Text style={styles.sectionTitle}>Contact Information</Text>
 
-        {/* Email */}
         <TextInput
           label="Email *"
           mode="outlined"
@@ -182,7 +193,6 @@ const AddGuardianScreen = ({ navigation }) => {
           <HelperText type="error">{errors.email}</HelperText>
         )}
 
-        {/* Phone */}
         <TextInput
           label="Phone Number *"
           mode="outlined"
@@ -200,7 +210,6 @@ const AddGuardianScreen = ({ navigation }) => {
 
         <Text style={styles.sectionTitle}>Relationship to Student</Text>
 
-        {/* Relationship */}
         <TextInput
           label="Relationship *"
           mode="outlined"
@@ -215,7 +224,6 @@ const AddGuardianScreen = ({ navigation }) => {
           <HelperText type="error">{errors.relationship}</HelperText>
         )}
 
-        {/* Primary Guardian */}
         <View style={styles.switchContainer}>
           <View style={styles.switchLeft}>
             <Text style={styles.switchLabel}>Primary Guardian</Text>
@@ -236,7 +244,12 @@ const AddGuardianScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* Submit Button */}
+        <View style={styles.infoBox}>
+          <Text style={styles.infoBoxText}>
+            🔐 A default password "ChangeMe123!" will be assigned. The guardian should change this on first login.
+          </Text>
+        </View>
+
         <Button
           mode="contained"
           onPress={handleSubmit}
@@ -248,7 +261,6 @@ const AddGuardianScreen = ({ navigation }) => {
           Add Guardian
         </Button>
 
-        {/* Cancel Button */}
         <Button
           mode="outlined"
           onPress={() => navigation.goBack()}
@@ -310,7 +322,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3F2FD',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   infoBoxText: {
     fontSize: 13,

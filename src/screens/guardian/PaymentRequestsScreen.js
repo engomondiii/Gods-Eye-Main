@@ -8,10 +8,12 @@ import {
 } from 'react-native';
 import { Chip } from 'react-native-paper';
 import PaymentRequestCard from '../../components/guardian/PaymentRequestCard';
+import MpesaPaymentModal from '../../components/payment/MpesaPaymentModal';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
 import { PAYMENT_STATUS } from '../../utils/constants';
+import * as paymentService from '../../services/paymentService';
 
 const PaymentRequestsScreen = ({ navigation }) => {
   const [payments, setPayments] = useState([]);
@@ -20,145 +22,48 @@ const PaymentRequestsScreen = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('pending');
+  
+  // M-Pesa modal state
+  const [showMpesaModal, setShowMpesaModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [customAmount, setCustomAmount] = useState(null);
 
-  // Fetch payment requests
-  const fetchPayments = async () => {
+  const [pagination, setPagination] = useState({
+    page: 1,
+    page_size: 20,
+    total: 0,
+  });
+
+  // Fetch payment requests from API
+  const fetchPayments = async (page = 1, resetData = false) => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await guardianService.getPaymentRequests();
       
-      // Mock data for development - 🆕 UPDATED with partial payment examples
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await paymentService.getMyPayments({
+        page: page,
+        page_size: pagination.page_size,
+        status: selectedFilter !== 'all' ? selectedFilter : undefined,
+      });
       
-      const mockPayments = [
-        {
-          id: 1,
-          student: {
-            id: 1,
-            first_name: 'John',
-            last_name: 'Doe',
-            admission_number: 'NPS001',
-          },
-          amount: 5000.00,
-          purpose: 'School fees for Term 1, 2025',
-          created_at: '2025-10-25T10:00:00Z',
-          due_date: '2025-11-15',
-          status: PAYMENT_STATUS.PENDING,
-          requested_by: {
-            first_name: 'Mrs.',
-            last_name: 'Teacher',
-          },
-          // 🆕 NEW - Partial payment fields
-          allow_partial: true,
-          minimum_amount: 1000.00,
-          paid_amount: 0.00,
-          remaining_amount: 5000.00,
-          installment_count: 0,
-          payment_history: [],
-        },
-        {
-          id: 2,
-          student: {
-            id: 2,
-            first_name: 'Sarah',
-            last_name: 'Smith',
-            admission_number: 'NPS002',
-          },
-          amount: 3500.00,
-          purpose: 'Exam fees for November 2025',
-          created_at: '2025-10-24T14:30:00Z',
-          due_date: '2025-11-10',
-          status: PAYMENT_STATUS.PARTIALLY_PAID,
-          requested_by: {
-            first_name: 'Mr.',
-            last_name: 'Johnson',
-          },
-          // 🆕 NEW - Partial payment fields
-          allow_partial: true,
-          minimum_amount: 1000.00,
-          paid_amount: 1500.00,
-          remaining_amount: 2000.00,
-          installment_count: 1,
-          payment_history: [
-            {
-              id: 1,
-              amount: 1500.00,
-              payment_date: '2025-10-26T10:30:00Z',
-              mpesa_ref: 'QJK789ABC456',
-              guardian: {
-                first_name: 'Jane',
-                last_name: 'Doe',
-              },
-            },
-          ],
-        },
-        {
-          id: 3,
-          student: {
-            id: 1,
-            first_name: 'John',
-            last_name: 'Doe',
-            admission_number: 'NPS001',
-          },
-          amount: 2000.00,
-          purpose: 'Field trip to museum',
-          created_at: '2025-10-20T09:00:00Z',
-          due_date: '2025-11-05',
-          status: PAYMENT_STATUS.PAID,
-          mpesa_ref: 'RKJ123XYZ789',
-          requested_by: {
-            first_name: 'Mrs.',
-            last_name: 'Teacher',
-          },
-          // 🆕 NEW - Partial payment fields
-          allow_partial: false,
-          minimum_amount: 2000.00,
-          paid_amount: 2000.00,
-          remaining_amount: 0.00,
-          installment_count: 1,
-          payment_history: [
-            {
-              id: 2,
-              amount: 2000.00,
-              payment_date: '2025-10-22T15:30:00Z',
-              mpesa_ref: 'RKJ123XYZ789',
-              guardian: {
-                first_name: 'Jane',
-                last_name: 'Doe',
-              },
-            },
-          ],
-        },
-        {
-          id: 4,
-          student: {
-            id: 1,
-            first_name: 'John',
-            last_name: 'Doe',
-            admission_number: 'NPS001',
-          },
-          amount: 1200.00,
-          purpose: 'School Uniform - Full Set',
-          created_at: '2025-11-01T10:00:00Z',
-          due_date: '2025-11-20',
-          status: PAYMENT_STATUS.PENDING,
-          requested_by: {
-            first_name: 'Mrs.',
-            last_name: 'Teacher',
-          },
-          // 🆕 NEW - Full payment only example
-          allow_partial: false,
-          minimum_amount: 1200.00,
-          paid_amount: 0.00,
-          remaining_amount: 1200.00,
-          installment_count: 0,
-          payment_history: [],
-        },
-      ];
-      
-      setPayments(mockPayments);
-      applyFilter(selectedFilter, mockPayments);
+      if (response.success) {
+        const newPayments = response.data.results || [];
+        
+        if (resetData || page === 1) {
+          setPayments(newPayments);
+          applyFilter(selectedFilter, newPayments);
+        } else {
+          setPayments(prev => [...prev, ...newPayments]);
+          setFilteredPayments(prev => [...prev, ...newPayments]);
+        }
+        
+        setPagination({
+          page: page,
+          page_size: pagination.page_size,
+          total: response.data.count || 0,
+        });
+      } else {
+        setError(response.message || 'Failed to load payment requests');
+      }
     } catch (err) {
       setError('Failed to load payment requests. Please try again.');
       console.error('Fetch payments error:', err);
@@ -169,13 +74,20 @@ const PaymentRequestsScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    fetchPayments();
-  }, []);
+    fetchPayments(1, true);
+  }, [selectedFilter]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchPayments();
-  }, []);
+    fetchPayments(1, true);
+  }, [selectedFilter]);
+
+  // Load more data
+  const handleLoadMore = () => {
+    if (!isLoading && payments.length < pagination.total) {
+      fetchPayments(pagination.page + 1, false);
+    }
+  };
 
   // Filter functionality
   const applyFilter = (filter, paymentsList = payments) => {
@@ -189,78 +101,54 @@ const PaymentRequestsScreen = ({ navigation }) => {
     }
   };
 
-  // 🆕 UPDATED - Handle pay with custom amount support
-  const handlePay = async (payment, customAmount = null) => {
-    const amountToPay = customAmount || payment.remaining_amount;
+  // Handle pay with M-Pesa modal
+  const handlePay = (payment, amount = null) => {
+    setSelectedPayment(payment);
+    setCustomAmount(amount);
+    setShowMpesaModal(true);
+  };
+
+  // Handle successful payment
+  const handlePaymentSuccess = () => {
+    setShowMpesaModal(false);
+    setSelectedPayment(null);
+    setCustomAmount(null);
     
-    // Build payment confirmation message
-    let confirmMessage = `Pay KES ${amountToPay.toFixed(2)} for ${payment.purpose}?`;
-    
-    if (payment.allow_partial && customAmount) {
-      const remainingAfterPayment = payment.remaining_amount - amountToPay;
-      confirmMessage += `\n\n✓ Partial payment\n`;
-      confirmMessage += `✓ Remaining balance: KES ${remainingAfterPayment.toFixed(2)}`;
-    } else if (payment.allow_partial && !customAmount) {
-      confirmMessage += `\n\n✓ Full remaining balance`;
-    }
-    
-    confirmMessage += `\n\nThis will redirect you to M-Pesa payment.`;
+    // Refresh the list
+    fetchPayments(1, true);
     
     Alert.alert(
-      'Make Payment',
-      confirmMessage,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Pay Now',
-          onPress: async () => {
-            try {
-              // TODO: Replace with actual M-Pesa integration
-              // await paymentService.submitPartialPayment(payment.id, amountToPay);
-              
-              // Mock payment
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              
-              const remainingAfterPayment = payment.remaining_amount - amountToPay;
-              const isFullyPaid = remainingAfterPayment <= 0;
-              
-              Alert.alert(
-                'Payment Initiated',
-                isFullyPaid
-                  ? 'Please complete the payment on your phone. Payment will be marked as fully paid once confirmed.'
-                  : `Please complete the payment on your phone.\n\nRemaining balance: KES ${remainingAfterPayment.toFixed(2)}`
-              );
-              fetchPayments();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to initiate payment. Please try again.');
-              console.error('Payment error:', error);
-            }
-          },
-        },
-      ]
+      'Payment Initiated',
+      'Please complete the payment on your phone. The payment status will be updated once confirmed.',
+      [{ text: 'OK' }]
     );
   };
 
   const renderPayment = ({ item }) => (
     <PaymentRequestCard
       payment={item}
-      onPay={handlePay}  // 🆕 UPDATED - Now supports custom amounts
+      onPay={handlePay}
       showActions={
         item.status === PAYMENT_STATUS.PENDING || 
         item.status === PAYMENT_STATUS.APPROVED ||
-        item.status === PAYMENT_STATUS.PARTIALLY_PAID  // 🆕 NEW
+        item.status === PAYMENT_STATUS.PARTIALLY_PAID
       }
-      userRole="guardian"  // 🆕 NEW
+      userRole="guardian"
     />
   );
 
-  if (isLoading) {
+  const renderFooter = () => {
+    if (!isLoading || pagination.page === 1) return null;
+    return <LoadingSpinner />;
+  };
+
+  if (isLoading && pagination.page === 1) {
     return <LoadingSpinner />;
   }
 
   return (
     <View style={styles.container}>
-      {/* Filter Chips - 🆕 UPDATED with partial paid */}
+      {/* Filter Chips */}
       <View style={styles.filterContainer}>
         <Chip
           selected={selectedFilter === 'pending'}
@@ -300,7 +188,7 @@ const PaymentRequestsScreen = ({ navigation }) => {
       </View>
 
       {/* Error Message */}
-      {error ? <ErrorMessage message={error} onRetry={fetchPayments} /> : null}
+      {error ? <ErrorMessage message={error} onRetry={() => fetchPayments(1, true)} /> : null}
 
       {/* Payments List */}
       {filteredPayments.length > 0 ? (
@@ -312,6 +200,9 @@ const PaymentRequestsScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
           }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
         />
       ) : (
@@ -325,6 +216,19 @@ const PaymentRequestsScreen = ({ navigation }) => {
           }
         />
       )}
+
+      {/* M-Pesa Payment Modal */}
+      <MpesaPaymentModal
+        visible={showMpesaModal}
+        onDismiss={() => {
+          setShowMpesaModal(false);
+          setSelectedPayment(null);
+          setCustomAmount(null);
+        }}
+        paymentRequest={selectedPayment}
+        customAmount={customAmount}
+        onSuccess={handlePaymentSuccess}
+      />
     </View>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Platform, Text, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Button } from 'react-native-paper';
+import { Button, HelperText } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatDate } from '../../utils/formatters';
 
@@ -9,10 +9,13 @@ const DatePicker = ({
   label,
   value,
   onChange,
-  error = false,
+  error = null, // String error message
   minimumDate,
   maximumDate,
   mode = 'date',
+  required = false, // NEW
+  helperText = '', // NEW
+  onBlur, // NEW
 }) => {
   const [show, setShow] = useState(false);
   const [tempDate, setTempDate] = useState(value || new Date());
@@ -20,6 +23,9 @@ const DatePicker = ({
   const handleChange = (event, selectedDate) => {
     if (Platform.OS === 'android') {
       setShow(false);
+      if (onBlur) {
+        onBlur();
+      }
     }
     
     if (event.type === 'set' && selectedDate) {
@@ -31,19 +37,30 @@ const DatePicker = ({
   const handleConfirm = () => {
     onChange(tempDate);
     setShow(false);
+    if (onBlur) {
+      onBlur();
+    }
   };
 
   const handleCancel = () => {
     setTempDate(value || new Date());
     setShow(false);
+    if (onBlur) {
+      onBlur();
+    }
   };
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <Text style={styles.label}>
+          {label}
+          {required && <Text style={styles.required}> *</Text>}
+        </Text>
+      )}
       
       <TouchableOpacity
-        style={[styles.button, error && styles.errorButton]}
+        style={[styles.button, !!error && styles.errorButton]}
         onPress={() => setShow(true)}
       >
         <View style={styles.buttonContent}>
@@ -54,6 +71,14 @@ const DatePicker = ({
           <MaterialCommunityIcons name="menu-down" size={24} color="#757575" />
         </View>
       </TouchableOpacity>
+
+      {/* Helper Text */}
+      <HelperText 
+        type={error ? 'error' : 'info'} 
+        visible={!!(error || helperText)}
+      >
+        {error || helperText}
+      </HelperText>
 
       {show && (
         <View>
@@ -87,6 +112,9 @@ const styles = StyleSheet.create({
     color: '#212121',
     marginBottom: 8,
     fontWeight: '500',
+  },
+  required: {
+    color: '#F44336',
   },
   button: {
     backgroundColor: '#FFFFFF',

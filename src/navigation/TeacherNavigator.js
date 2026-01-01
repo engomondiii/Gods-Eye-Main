@@ -1,11 +1,9 @@
-// ========================================
-// GOD'S EYE EDTECH - TEACHER NAVIGATOR
-// ========================================
-
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View } from 'react-native';
+import { useUnreadCount } from '../components/common/NotificationBadge';
 
 // Teacher Screens
 import TeacherDashboardScreen from '../screens/teacher/TeacherDashboardScreen';
@@ -35,10 +33,10 @@ import { SCREENS } from '../utils/constants';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// ============================================================
-// DASHBOARD STACK
-// ============================================================
+// Dashboard Stack
 const DashboardStack = () => {
+  const { unreadCount } = useUnreadCount();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -54,7 +52,37 @@ const DashboardStack = () => {
       <Stack.Screen 
         name={SCREENS.TEACHER_DASHBOARD} 
         component={TeacherDashboardScreen}
-        options={{ title: 'Dashboard' }}
+        options={{ 
+          title: 'Dashboard',
+          headerRight: () => (
+            <View style={{ marginRight: 15, position: 'relative' }}>
+              <MaterialCommunityIcons 
+                name="bell-outline" 
+                size={24} 
+                color="#fff"
+                onPress={() => {}} 
+              />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  right: -6,
+                  top: -3,
+                  backgroundColor: '#F44336',
+                  borderRadius: 10,
+                  minWidth: 18,
+                  height: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
+        }}
       />
       <Stack.Screen 
         name={SCREENS.NOTIFICATIONS} 
@@ -65,9 +93,7 @@ const DashboardStack = () => {
   );
 };
 
-// ============================================================
-// STUDENTS STACK
-// ============================================================
+// Students Stack
 const StudentsStack = () => {
   return (
     <Stack.Navigator
@@ -96,7 +122,6 @@ const StudentsStack = () => {
         component={CreateStudentScreen}
         options={{ title: 'Add New Student' }}
       />
-      {/* Attendance Screens accessible from Student Detail */}
       <Stack.Screen 
         name={SCREENS.STUDENT_QR_CODE} 
         component={StudentQRCodeScreen}
@@ -116,9 +141,7 @@ const StudentsStack = () => {
   );
 };
 
-// ============================================================
-// ATTENDANCE STACK (NEW)
-// ============================================================
+// Attendance Stack
 const AttendanceStack = () => {
   return (
     <Stack.Navigator
@@ -181,9 +204,7 @@ const AttendanceStack = () => {
   );
 };
 
-// ============================================================
-// APPROVALS STACK
-// ============================================================
+// Approvals Stack
 const ApprovalsStack = () => {
   return (
     <Stack.Navigator
@@ -216,9 +237,7 @@ const ApprovalsStack = () => {
   );
 };
 
-// ============================================================
-// PAYMENTS STACK
-// ============================================================
+// Payments Stack
 const PaymentsStack = () => {
   return (
     <Stack.Navigator
@@ -251,9 +270,7 @@ const PaymentsStack = () => {
   );
 };
 
-// ============================================================
-// PROFILE STACK
-// ============================================================
+// Profile Stack
 const ProfileStack = () => {
   return (
     <Stack.Navigator
@@ -281,10 +298,10 @@ const ProfileStack = () => {
   );
 };
 
-// ============================================================
-// MAIN TEACHER NAVIGATOR WITH BOTTOM TABS
-// ============================================================
+// Main Teacher Navigator with Bottom Tabs
 const TeacherNavigator = () => {
+  const { unreadCount } = useUnreadCount();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -313,6 +330,7 @@ const TeacherNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
           ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tab.Screen 
@@ -325,7 +343,6 @@ const TeacherNavigator = () => {
           ),
         }}
       />
-      {/* NEW - Attendance Tab */}
       <Tab.Screen 
         name="AttendanceTab" 
         component={AttendanceStack}
@@ -344,7 +361,6 @@ const TeacherNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="check-circle" size={size} color={color} />
           ),
-          tabBarBadge: null, // Can add badge count here for pending approvals
         }}
       />
       <Tab.Screen 

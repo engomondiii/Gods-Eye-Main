@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Keyboard, TouchableOpacity } from 'react-native';
-import { Text, TextInput, Chip } from 'react-native-paper';
+import { Text, TextInput, Chip, HelperText } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
 import { KENYA_COMMON_STREAMS } from '../../utils/constants';
@@ -8,8 +8,11 @@ import { KENYA_COMMON_STREAMS } from '../../utils/constants';
 const StreamPicker = ({ 
   value, 
   onChange, 
-  error = false,
-  disabled = false 
+  error = null, // String error message
+  disabled = false,
+  required = false, // NEW
+  helperText = '', // NEW
+  onBlur, // NEW
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -83,6 +86,9 @@ const StreamPicker = ({
     // Delay to allow item selection
     setTimeout(() => {
       setShowSuggestions(false);
+      if (onBlur) {
+        onBlur();
+      }
     }, 200);
   };
 
@@ -116,7 +122,10 @@ const StreamPicker = ({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.label}>Stream/Class *</Text>
+        <Text style={styles.label}>
+          Stream/Class
+          {required && <Text style={styles.required}> *</Text>}
+        </Text>
         {value && (
           <Chip
             mode="flat"
@@ -140,7 +149,7 @@ const StreamPicker = ({
         onChangeText={handleInputChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        error={error}
+        error={!!error}
         disabled={disabled}
         style={styles.input}
         placeholder="e.g., Red, East, A, Lion..."
@@ -231,13 +240,18 @@ const StreamPicker = ({
       )}
 
       {/* Helper Text */}
-      <Text style={styles.helperText}>
-        {value 
-          ? isCommonStream(value)
-            ? `Selected: ${value} (${getStreamCategory(value)})`
-            : `Custom entry: ${value}`
-          : 'Type to search common streams or enter your own'}
-      </Text>
+      <HelperText 
+        type={error ? 'error' : 'info'} 
+        visible={!!(error || helperText || value)}
+      >
+        {error || helperText || (
+          value 
+            ? isCommonStream(value)
+              ? `Selected: ${value} (${getStreamCategory(value)})`
+              : `Custom entry: ${value}`
+            : 'Type to search common streams or enter your own'
+        )}
+      </HelperText>
 
       {value && !isCommonStream(value) && (
         <View style={styles.customBadge}>
@@ -270,6 +284,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
     color: theme.colors.text,
     fontWeight: '500',
+  },
+  required: {
+    color: theme.colors.error,
   },
   clearChip: {
     height: 28,
@@ -356,11 +373,6 @@ const styles = StyleSheet.create({
     color: theme.colors.success,
     textAlign: 'center',
     fontWeight: '500',
-    marginTop: theme.spacing.xs,
-  },
-  helperText: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   customBadge: {

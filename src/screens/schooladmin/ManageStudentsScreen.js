@@ -1,3 +1,8 @@
+// ========================================
+// MANAGE STUDENTS SCREEN - FULLY INTEGRATED
+// Backend: GET /api/students/
+// ========================================
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -5,6 +10,7 @@ import {
   FlatList,
   RefreshControl,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Searchbar, FAB, Chip } from 'react-native-paper';
 import StudentCard from '../../components/student/StudentCard';
@@ -12,7 +18,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
 import { SCREENS, KENYA_GRADES } from '../../utils/constants';
-import { mockStudents } from '../../utils/mockData';
+import * as schoolAdminService from '../../services/schoolAdminService';
 
 const ManageStudentsScreen = ({ navigation }) => {
   const [students, setStudents] = useState([]);
@@ -22,19 +28,44 @@ const ManageStudentsScreen = ({ navigation }) => {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    page_size: 20,
+    total: 0,
+  });
 
-  // Fetch students
-  const fetchStudents = async () => {
+  // Fetch students from API
+  const fetchStudents = async (page = 1, resetData = false) => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await schoolAdminService.getStudents();
       
-      // Mock data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await schoolAdminService.getStudents({
+        page: page,
+        page_size: pagination.page_size,
+        search: searchQuery || null,
+        grade: selectedFilter === 'all' ? null : selectedFilter,
+        is_active: true,
+      });
       
-      setStudents(mockStudents);
-      applyFilter(selectedFilter, mockStudents);
+      if (response.success) {
+        const newStudents = response.data.results || [];
+        
+        if (resetData || page === 1) {
+          setStudents(newStudents);
+          setFilteredStudents(newStudents);
+        } else {
+          setStudents(prev => [...prev, ...newStudents]);
+          setFilteredStudents(prev => [...prev, ...newStudents]);
+        }
+        
+        setPagination({
+          page: page,
+          page_size: pagination.page_size,
+          total: response.data.count || 0,
+        });
+      } else {
+        setError(response.message || 'Failed to load students');
+      }
     } catch (err) {
       setError('Failed to load students. Please try again.');
       console.error('Fetch students error:', err);
@@ -45,62 +76,35 @@ const ManageStudentsScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    fetchStudents();
-  }, []);
+    fetchStudents(1, true);
+  }, [selectedFilter]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchStudents();
-  }, []);
+    fetchStudents(1, true);
+  }, [selectedFilter, searchQuery]);
 
   // Search functionality
   const handleSearch = (query) => {
     setSearchQuery(query);
-    
-    if (query.trim() === '') {
-      applyFilter(selectedFilter);
-      return;
+  };
+
+  // Execute search
+  const executeSearch = () => {
+    setIsLoading(true);
+    fetchStudents(1, true);
+  };
+
+  // Load more data
+  const handleLoadMore = () => {
+    if (!isLoading && students.length < pagination.total) {
+      fetchStudents(pagination.page + 1, false);
     }
-    
-    const filtered = students.filter((student) => {
-      const fullName = `${student.first_name} ${student.middle_name} ${student.last_name}`.toLowerCase();
-      const admissionNumber = student.admission_number.toLowerCase();
-      const searchLower = query.toLowerCase();
-      
-      return (
-        fullName.includes(searchLower) ||
-        admissionNumber.includes(searchLower)
-      );
-    });
-    
-    setFilteredStudents(filtered);
   };
 
   // Filter functionality
-  const applyFilter = (filter, studentsList = students) => {
+  const applyFilter = (filter) => {
     setSelectedFilter(filter);
-    
-    let filtered = studentsList;
-    
-    if (filter !== 'all') {
-      filtered = studentsList.filter(s => s.current_grade === filter);
-    }
-    
-    // Apply search if active
-    if (searchQuery.trim() !== '') {
-      filtered = filtered.filter((student) => {
-        const fullName = `${student.first_name} ${student.middle_name} ${student.last_name}`.toLowerCase();
-        const admissionNumber = student.admission_number.toLowerCase();
-        const searchLower = searchQuery.toLowerCase();
-        
-        return (
-          fullName.includes(searchLower) ||
-          admissionNumber.includes(searchLower)
-        );
-      });
-    }
-    
-    setFilteredStudents(filtered);
   };
 
   const handleStudentPress = (student) => {
@@ -109,14 +113,43 @@ const ManageStudentsScreen = ({ navigation }) => {
     });
   };
 
+  const handleDeleteStudent = (student) => {
+    Alert.alert(
+      'Delete Student',
+      `Are you sure you want to delete ${student.first_name} ${student.last_name}?\n\nThis action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const response = await schoolAdminService.deleteStudent(student.id);
+            if (response.success) {
+              Alert.alert('Success', 'Student deleted successfully');
+              onRefresh();
+            } else {
+              Alert.alert('Error', response.message || 'Failed to delete student');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderStudent = ({ item }) => (
     <StudentCard
       student={item}
       onPress={() => handleStudentPress(item)}
+      onLongPress={() => handleDeleteStudent(item)}
     />
   );
 
-  if (isLoading) {
+  const renderFooter = () => {
+    if (!isLoading || pagination.page === 1) return null;
+    return <LoadingSpinner />;
+  };
+
+  if (isLoading && pagination.page === 1) {
     return <LoadingSpinner />;
   }
 
@@ -127,6 +160,7 @@ const ManageStudentsScreen = ({ navigation }) => {
         <Searchbar
           placeholder="Search students by name or admission number"
           onChangeText={handleSearch}
+          onSubmitEditing={executeSearch}
           value={searchQuery}
           style={styles.searchBar}
         />
@@ -140,7 +174,21 @@ const ManageStudentsScreen = ({ navigation }) => {
             onPress={() => applyFilter('all')}
             style={styles.filterChip}
           >
-            All ({students.length})
+            All ({pagination.total})
+          </Chip>
+          <Chip
+            selected={selectedFilter === KENYA_GRADES.GRADE_1}
+            onPress={() => applyFilter(KENYA_GRADES.GRADE_1)}
+            style={styles.filterChip}
+          >
+            Grade 1
+          </Chip>
+          <Chip
+            selected={selectedFilter === KENYA_GRADES.GRADE_2}
+            onPress={() => applyFilter(KENYA_GRADES.GRADE_2)}
+            style={styles.filterChip}
+          >
+            Grade 2
           </Chip>
           <Chip
             selected={selectedFilter === KENYA_GRADES.GRADE_3}
@@ -174,7 +222,7 @@ const ManageStudentsScreen = ({ navigation }) => {
       </View>
 
       {/* Error Message */}
-      {error ? <ErrorMessage message={error} onRetry={fetchStudents} /> : null}
+      {error ? <ErrorMessage message={error} onRetry={() => fetchStudents(1, true)} /> : null}
 
       {/* Students List */}
       {filteredStudents.length > 0 ? (
@@ -186,6 +234,9 @@ const ManageStudentsScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
           }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
         />
       ) : (

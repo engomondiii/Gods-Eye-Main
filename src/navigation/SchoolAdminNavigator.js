@@ -2,15 +2,17 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text } from 'react-native';
+import { useUnreadCount } from '../components/common/NotificationBadge';
 
-// 🆕 School Admin Screens - Existing
+// School Admin Screens - Existing
 import SchoolAdminDashboardScreen from '../screens/schooladmin/SchoolAdminDashboardScreen';
 import SchoolTeachersManagementScreen from '../screens/schooladmin/SchoolTeachersManagementScreen';
 import SchoolStudentsOverviewScreen from '../screens/schooladmin/SchoolStudentsOverviewScreen';
 import SchoolReportsScreen from '../screens/schooladmin/SchoolReportsScreen';
 import SchoolSettingsScreen from '../screens/schooladmin/SchoolSettingsScreen';
 
-// 🆕 NEW - Management Screens
+// Management Screens
 import ManageTeachersScreen from '../screens/schooladmin/ManageTeachersScreen';
 import AddTeacherScreen from '../screens/schooladmin/AddTeacherScreen';
 import ManageStudentsScreen from '../screens/schooladmin/ManageStudentsScreen';
@@ -30,8 +32,12 @@ import { SCREENS } from '../utils/constants';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Dashboard Stack
+// ============================================================
+// DASHBOARD STACK
+// ============================================================
 const DashboardStack = () => {
+  const { unreadCount } = useUnreadCount();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -47,7 +53,36 @@ const DashboardStack = () => {
       <Stack.Screen 
         name={SCREENS.SCHOOL_ADMIN_DASHBOARD} 
         component={SchoolAdminDashboardScreen}
-        options={{ title: 'School Dashboard' }}
+        options={{ 
+          title: 'School Dashboard',
+          headerRight: () => (
+            <View style={{ marginRight: 15, position: 'relative' }}>
+              <MaterialCommunityIcons 
+                name="bell-outline" 
+                size={24} 
+                color="#fff"
+              />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  right: -6,
+                  top: -3,
+                  backgroundColor: '#F44336',
+                  borderRadius: 10,
+                  minWidth: 18,
+                  height: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
+        }}
       />
       <Stack.Screen 
         name={SCREENS.NOTIFICATIONS} 
@@ -58,7 +93,9 @@ const DashboardStack = () => {
   );
 };
 
-// Teachers Stack - 🆕 UPDATED with new management screens
+// ============================================================
+// TEACHERS STACK
+// ============================================================
 const TeachersStack = () => {
   return (
     <Stack.Navigator
@@ -72,27 +109,28 @@ const TeachersStack = () => {
         },
       }}
     >
-      {/* 🔧 FIXED - Set ManageTeachers as initial route */}
       <Stack.Screen 
         name={SCREENS.MANAGE_TEACHERS} 
         component={ManageTeachersScreen}
         options={{ title: 'Manage Teachers' }}
       />
       <Stack.Screen 
-        name={SCREENS.SCHOOL_TEACHERS_MANAGEMENT} 
-        component={SchoolTeachersManagementScreen}
-        options={{ title: 'Teachers Management' }}
-      />
-      <Stack.Screen 
         name={SCREENS.ADD_TEACHER} 
         component={AddTeacherScreen}
         options={{ title: 'Add Teacher' }}
+      />
+      <Stack.Screen 
+        name={SCREENS.SCHOOL_TEACHERS_MANAGEMENT} 
+        component={SchoolTeachersManagementScreen}
+        options={{ title: 'Teachers Management' }}
       />
     </Stack.Navigator>
   );
 };
 
-// Students Stack - 🆕 UPDATED with new management screens
+// ============================================================
+// STUDENTS STACK
+// ============================================================
 const StudentsStack = () => {
   return (
     <Stack.Navigator
@@ -106,16 +144,15 @@ const StudentsStack = () => {
         },
       }}
     >
-      {/* 🔧 FIXED - Set ManageStudents as initial route */}
       <Stack.Screen 
         name={SCREENS.MANAGE_STUDENTS} 
         component={ManageStudentsScreen}
         options={{ title: 'Manage Students' }}
       />
       <Stack.Screen 
-        name={SCREENS.SCHOOL_STUDENTS_OVERVIEW} 
-        component={SchoolStudentsOverviewScreen}
-        options={{ title: 'Students Overview' }}
+        name={SCREENS.ADD_STUDENT} 
+        component={AddStudentScreen}
+        options={{ title: 'Add Student' }}
       />
       <Stack.Screen 
         name={SCREENS.STUDENT_DETAIL} 
@@ -123,43 +160,27 @@ const StudentsStack = () => {
         options={{ title: 'Student Details' }}
       />
       <Stack.Screen 
-        name={SCREENS.ADD_STUDENT} 
-        component={AddStudentScreen}
-        options={{ title: 'Add Student' }}
-      />
-    </Stack.Navigator>
-  );
-};
-
-// 🆕 NEW - Guardians Stack
-const GuardiansStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: '#FF9800',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-      }}
-    >
-      <Stack.Screen 
         name={SCREENS.MANAGE_GUARDIANS} 
         component={ManageGuardiansScreen}
-        options={{ title: 'Guardians Management' }}
+        options={{ title: 'Link Guardian' }}
       />
       <Stack.Screen 
         name={SCREENS.ADD_GUARDIAN} 
         component={AddGuardianScreen}
         options={{ title: 'Add Guardian' }}
       />
+      <Stack.Screen 
+        name={SCREENS.SCHOOL_STUDENTS_OVERVIEW} 
+        component={SchoolStudentsOverviewScreen}
+        options={{ title: 'Students Overview' }}
+      />
     </Stack.Navigator>
   );
 };
 
-// Reports Stack
+// ============================================================
+// REPORTS STACK
+// ============================================================
 const ReportsStack = () => {
   return (
     <Stack.Navigator
@@ -182,7 +203,9 @@ const ReportsStack = () => {
   );
 };
 
-// 🔧 FIXED - Profile Stack with correct initial screen
+// ============================================================
+// PROFILE STACK
+// ============================================================
 const ProfileStack = () => {
   return (
     <Stack.Navigator
@@ -196,7 +219,6 @@ const ProfileStack = () => {
         },
       }}
     >
-      {/* 🔧 FIXED - School Admin Profile is now the FIRST/INITIAL screen */}
       <Stack.Screen 
         name={SCREENS.SCHOOL_ADMIN_PROFILE} 
         component={SchoolAdminProfileScreen}
@@ -206,6 +228,16 @@ const ProfileStack = () => {
         name={SCREENS.SCHOOL_SETTINGS} 
         component={SchoolSettingsScreen}
         options={{ title: 'School Settings' }}
+      />
+      <Stack.Screen 
+        name={SCREENS.MANAGE_GUARDIANS} 
+        component={ManageGuardiansScreen}
+        options={{ title: 'Manage Guardians' }}
+      />
+      <Stack.Screen 
+        name={SCREENS.ADD_GUARDIAN} 
+        component={AddGuardianScreen}
+        options={{ title: 'Add Guardian' }}
       />
       <Stack.Screen 
         name={SCREENS.PROFILE} 
@@ -221,8 +253,12 @@ const ProfileStack = () => {
   );
 };
 
-// Main School Admin Navigator with Bottom Tabs
+// ============================================================
+// MAIN SCHOOL ADMIN NAVIGATOR - 5 BOTTOM TABS
+// ============================================================
 const SchoolAdminNavigator = () => {
+  const { unreadCount } = useUnreadCount();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -243,6 +279,7 @@ const SchoolAdminNavigator = () => {
         },
       }}
     >
+      {/* TAB 1: DASHBOARD */}
       <Tab.Screen 
         name="DashboardTab" 
         component={DashboardStack}
@@ -251,8 +288,11 @@ const SchoolAdminNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
           ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
+
+      {/* TAB 2: TEACHERS */}
       <Tab.Screen 
         name="TeachersTab" 
         component={TeachersStack}
@@ -263,6 +303,8 @@ const SchoolAdminNavigator = () => {
           ),
         }}
       />
+
+      {/* TAB 3: STUDENTS */}
       <Tab.Screen 
         name="StudentsTab" 
         component={StudentsStack}
@@ -273,18 +315,20 @@ const SchoolAdminNavigator = () => {
           ),
         }}
       />
-      {/* 🆕 NEW - Guardians Tab */}
+
+      {/* TAB 4: REPORTS */}
       <Tab.Screen 
-        name="GuardiansTab" 
-        component={GuardiansStack}
+        name="ReportsTab" 
+        component={ReportsStack}
         options={{
-          tabBarLabel: 'Guardians',
+          tabBarLabel: 'Reports',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account-supervisor" size={size} color={color} />
+            <MaterialCommunityIcons name="chart-bar" size={size} color={color} />
           ),
         }}
       />
-      {/* 🔧 FIXED - Profile Tab now goes to ProfileStack (which starts with SchoolAdminProfile) */}
+
+      {/* TAB 5: PROFILE */}
       <Tab.Screen 
         name="ProfileTab" 
         component={ProfileStack}

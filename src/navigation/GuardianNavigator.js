@@ -1,11 +1,9 @@
-// ========================================
-// GOD'S EYE EDTECH - GUARDIAN NAVIGATOR
-// ========================================
-
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text } from 'react-native';
+import { useUnreadCount } from '../components/common/NotificationBadge';
 
 // Guardian Screens
 import GuardianDashboardScreen from '../screens/guardian/GuardianDashboardScreen';
@@ -29,10 +27,10 @@ import { SCREENS } from '../utils/constants';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// ============================================================
-// DASHBOARD STACK
-// ============================================================
+// Dashboard Stack
 const DashboardStack = () => {
+  const { unreadCount } = useUnreadCount();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -51,12 +49,31 @@ const DashboardStack = () => {
         options={{ 
           title: 'Dashboard',
           headerRight: () => (
-            <MaterialCommunityIcons 
-              name="bell-outline" 
-              size={24} 
-              color="#fff" 
-              style={{ marginRight: 15 }}
-            />
+            <View style={{ marginRight: 15, position: 'relative' }}>
+              <MaterialCommunityIcons 
+                name="bell-outline" 
+                size={24} 
+                color="#fff"
+              />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  right: -6,
+                  top: -3,
+                  backgroundColor: '#F44336',
+                  borderRadius: 10,
+                  minWidth: 18,
+                  height: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           ),
         }}
       />
@@ -69,9 +86,7 @@ const DashboardStack = () => {
   );
 };
 
-// ============================================================
-// MY STUDENTS STACK (WITH ATTENDANCE FEATURES)
-// ============================================================
+// My Students Stack (With Attendance Features)
 const StudentsStack = () => {
   return (
     <Stack.Navigator
@@ -105,7 +120,6 @@ const StudentsStack = () => {
           ),
         }}
       />
-      {/* Attendance Features */}
       <Stack.Screen 
         name={SCREENS.STUDENT_QR_CODE} 
         component={StudentQRCodeScreen}
@@ -145,9 +159,7 @@ const StudentsStack = () => {
   );
 };
 
-// ============================================================
-// APPROVALS STACK
-// ============================================================
+// Approvals Stack
 const ApprovalsStack = () => {
   return (
     <Stack.Navigator
@@ -175,9 +187,7 @@ const ApprovalsStack = () => {
   );
 };
 
-// ============================================================
-// PAYMENTS STACK
-// ============================================================
+// Payments Stack
 const PaymentsStack = () => {
   return (
     <Stack.Navigator
@@ -205,9 +215,7 @@ const PaymentsStack = () => {
   );
 };
 
-// ============================================================
-// PROFILE STACK
-// ============================================================
+// Profile Stack
 const ProfileStack = () => {
   return (
     <Stack.Navigator
@@ -235,10 +243,10 @@ const ProfileStack = () => {
   );
 };
 
-// ============================================================
-// MAIN GUARDIAN NAVIGATOR WITH BOTTOM TABS
-// ============================================================
+// Main Guardian Navigator with Bottom Tabs
 const GuardianNavigator = () => {
+  const { unreadCount } = useUnreadCount();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -267,6 +275,7 @@ const GuardianNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
           ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tab.Screen 
@@ -287,7 +296,6 @@ const GuardianNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="clipboard-check" size={size} color={color} />
           ),
-          tabBarBadge: null, // Can add badge count here for pending approvals
         }}
       />
       <Tab.Screen 

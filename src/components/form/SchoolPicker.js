@@ -1,5 +1,5 @@
 // ========================================
-// GOD'S EYE EDTECH - SCHOOL PICKER
+// GOD'S EYE EDTECH - SCHOOL PICKER (WITH VALIDATION)
 // ========================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Text, TextInput, Chip, Button } from 'react-native-paper';
+import { Text, TextInput, Chip, Button, HelperText } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as schoolService from '../../services/schoolService';
 
@@ -24,14 +24,15 @@ const SchoolPicker = ({
   countyId,
   value,
   onChange,
-  error = false,
+  error = null, // String error message
   disabled = false,
   label = 'School',
   placeholder = 'Type or select school...',
-  required = false,
-  helperText = '',
+  required = false, // NEW
+  helperText = '', // NEW
   approvedOnly = true,
   onAddNewSchool,
+  onBlur, // NEW
 }) => {
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -181,6 +182,9 @@ const SchoolPicker = ({
     // Delay to allow item selection
     setTimeout(() => {
       setShowSuggestions(false);
+      if (onBlur) {
+        onBlur();
+      }
     }, 200);
   };
 
@@ -242,7 +246,7 @@ const SchoolPicker = ({
         onChangeText={handleInputChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        error={error}
+        error={!!error}
         disabled={disabled || !countyId || isLoadingSchools}
         style={styles.input}
         placeholder={countyId ? placeholder : 'Select county first'}
@@ -342,20 +346,20 @@ const SchoolPicker = ({
       )}
 
       {/* Helper Text */}
-      <Text style={[styles.helperText, error && styles.helperTextError]}>
-        {error
-          ? 'School is required'
-          : helperText ||
-            (value
-              ? `Selected: ${value.name}${
-                  value.nemis_code ? ` (${value.nemis_code})` : ''
-                }`
-              : countyId
-              ? isLoadingSchools
-                ? 'Loading schools...'
-                : `Type to search from ${schools.length} schools`
-              : 'Please select a county first')}
-      </Text>
+      <HelperText 
+        type={error ? 'error' : 'info'} 
+        visible={!!(error || helperText || value || isLoadingSchools || !countyId)}
+      >
+        {error || helperText || (
+          value
+            ? `Selected: ${value.name}${value.nemis_code ? ` (${value.nemis_code})` : ''}`
+            : countyId
+            ? isLoadingSchools
+              ? 'Loading schools...'
+              : `Type to search from ${schools.length} schools`
+            : 'Please select a county first'
+        )}
+      </HelperText>
 
       {/* Add New School Button */}
       {countyId && !isLoadingSchools && (
@@ -483,14 +487,6 @@ const styles = StyleSheet.create({
     color: '#757575',
     textAlign: 'center',
     marginTop: 12,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#757575',
-    marginTop: 4,
-  },
-  helperTextError: {
-    color: '#F44336',
   },
   addButton: {
     marginTop: 8,

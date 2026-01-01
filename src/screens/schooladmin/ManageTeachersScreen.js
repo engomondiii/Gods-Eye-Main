@@ -1,10 +1,15 @@
+// ========================================
+// MANAGE TEACHERS SCREEN - FULLY INTEGRATED
+// Backend: GET /api/teachers/
+// ========================================
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   RefreshControl,
-  ScrollView,
+  Alert,
 } from 'react-native';
 import { Searchbar, FAB, Chip } from 'react-native-paper';
 import TeacherCard from '../../components/schooladmin/TeacherCard';
@@ -12,6 +17,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
 import { SCREENS } from '../../utils/constants';
+import * as schoolAdminService from '../../services/schoolAdminService';
 
 const ManageTeachersScreen = ({ navigation }) => {
   const [teachers, setTeachers] = useState([]);
@@ -21,61 +27,43 @@ const ManageTeachersScreen = ({ navigation }) => {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    page_size: 20,
+    total: 0,
+  });
 
-  // Fetch teachers
-  const fetchTeachers = async () => {
+  // Fetch teachers from API
+  const fetchTeachers = async (page = 1, resetData = false) => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await schoolAdminService.getTeachers();
       
-      // Mock data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await schoolAdminService.getTeachers({
+        page: page,
+        page_size: pagination.page_size,
+        search: searchQuery || null,
+        is_active: selectedFilter === 'all' ? null : selectedFilter === 'active',
+      });
       
-      const mockTeachers = [
-        {
-          id: 1,
-          first_name: 'Mary',
-          middle_name: 'Wanjiru',
-          last_name: 'Ochieng',
-          email: 'mary.ochieng@school.com',
-          phone: '+254734567890',
-          employee_number: 'EMP001',
-          subject_specialization: 'Mathematics',
-          classes_assigned: ['Grade 5 Red', 'Grade 6 Blue'],
-          is_active: true,
-          date_joined: '2023-01-15',
-        },
-        {
-          id: 2,
-          first_name: 'James',
-          middle_name: 'Kipchoge',
-          last_name: 'Kibet',
-          email: 'james.kibet@school.com',
-          phone: '+254745678901',
-          employee_number: 'EMP002',
-          subject_specialization: 'English',
-          classes_assigned: ['Grade 4 Red', 'Grade 5 Blue'],
-          is_active: true,
-          date_joined: '2023-03-20',
-        },
-        {
-          id: 3,
-          first_name: 'Grace',
-          middle_name: 'Akinyi',
-          last_name: 'Odhiambo',
-          email: 'grace.odhiambo@school.com',
-          phone: '+254756789012',
-          employee_number: 'EMP003',
-          subject_specialization: 'Science',
-          classes_assigned: ['Grade 6 Red'],
-          is_active: false,
-          date_joined: '2022-09-10',
-        },
-      ];
-      
-      setTeachers(mockTeachers);
-      applyFilter(selectedFilter, mockTeachers);
+      if (response.success) {
+        const newTeachers = response.data.results || [];
+        
+        if (resetData || page === 1) {
+          setTeachers(newTeachers);
+          setFilteredTeachers(newTeachers);
+        } else {
+          setTeachers(prev => [...prev, ...newTeachers]);
+          setFilteredTeachers(prev => [...prev, ...newTeachers]);
+        }
+        
+        setPagination({
+          page: page,
+          page_size: pagination.page_size,
+          total: response.data.count || 0,
+        });
+      } else {
+        setError(response.message || 'Failed to load teachers');
+      }
     } catch (err) {
       setError('Failed to load teachers. Please try again.');
       console.error('Fetch teachers error:', err);
@@ -86,74 +74,80 @@ const ManageTeachersScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    fetchTeachers();
-  }, []);
+    fetchTeachers(1, true);
+  }, [selectedFilter]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchTeachers();
-  }, []);
+    fetchTeachers(1, true);
+  }, [selectedFilter, searchQuery]);
 
   // Search functionality
   const handleSearch = (query) => {
     setSearchQuery(query);
-    
-    if (query.trim() === '') {
-      applyFilter(selectedFilter);
-      return;
+  };
+
+  // Execute search
+  const executeSearch = () => {
+    setIsLoading(true);
+    fetchTeachers(1, true);
+  };
+
+  // Load more data
+  const handleLoadMore = () => {
+    if (!isLoading && teachers.length < pagination.total) {
+      fetchTeachers(pagination.page + 1, false);
     }
-    
-    const filtered = teachers.filter((teacher) => {
-      const fullName = `${teacher.first_name} ${teacher.middle_name} ${teacher.last_name}`.toLowerCase();
-      const email = teacher.email.toLowerCase();
-      const employeeNumber = teacher.employee_number.toLowerCase();
-      const searchLower = query.toLowerCase();
-      
-      return (
-        fullName.includes(searchLower) ||
-        email.includes(searchLower) ||
-        employeeNumber.includes(searchLower)
-      );
-    });
-    
-    setFilteredTeachers(filtered);
   };
 
   // Filter functionality
-  const applyFilter = (filter, teachersList = teachers) => {
+  const applyFilter = (filter) => {
     setSelectedFilter(filter);
-    
-    let filtered = teachersList;
-    
-    if (filter === 'active') {
-      filtered = teachersList.filter(t => t.is_active);
-    } else if (filter === 'inactive') {
-      filtered = teachersList.filter(t => !t.is_active);
-    }
-    
-    // Apply search if active
-    if (searchQuery.trim() !== '') {
-      filtered = filtered.filter((teacher) => {
-        const fullName = `${teacher.first_name} ${teacher.middle_name} ${teacher.last_name}`.toLowerCase();
-        const email = teacher.email.toLowerCase();
-        const employeeNumber = teacher.employee_number.toLowerCase();
-        const searchLower = searchQuery.toLowerCase();
-        
-        return (
-          fullName.includes(searchLower) ||
-          email.includes(searchLower) ||
-          employeeNumber.includes(searchLower)
-        );
-      });
-    }
-    
-    setFilteredTeachers(filtered);
   };
 
   const handleTeacherPress = (teacher) => {
     // Navigate to teacher detail screen
-    // navigation.navigate(SCREENS.TEACHER_DETAIL, { teacherId: teacher.id });
-    console.log('Teacher pressed:', teacher);
+    Alert.alert(
+      teacher.first_name + ' ' + teacher.last_name,
+      `Employee: ${teacher.employee_number}\nSubject: ${teacher.subject_specialization}\n\nEmail: ${teacher.email}\nPhone: ${teacher.phone}`,
+      [
+        {
+          text: 'Edit',
+          onPress: () => {
+            Alert.alert('Edit Teacher', 'Edit functionality coming soon!');
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleDeleteTeacher(teacher),
+        },
+        { text: 'Close', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleDeleteTeacher = (teacher) => {
+    Alert.alert(
+      'Delete Teacher',
+      `Are you sure you want to delete ${teacher.first_name} ${teacher.last_name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const response = await schoolAdminService.deleteTeacher(teacher.id);
+            if (response.success) {
+              Alert.alert('Success', 'Teacher deleted successfully');
+              onRefresh();
+            } else {
+              Alert.alert('Error', response.message || 'Failed to delete teacher');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderTeacher = ({ item }) => (
@@ -163,7 +157,12 @@ const ManageTeachersScreen = ({ navigation }) => {
     />
   );
 
-  if (isLoading) {
+  const renderFooter = () => {
+    if (!isLoading || pagination.page === 1) return null;
+    return <LoadingSpinner />;
+  };
+
+  if (isLoading && pagination.page === 1) {
     return <LoadingSpinner />;
   }
 
@@ -174,6 +173,7 @@ const ManageTeachersScreen = ({ navigation }) => {
         <Searchbar
           placeholder="Search teachers by name, email, or ID"
           onChangeText={handleSearch}
+          onSubmitEditing={executeSearch}
           value={searchQuery}
           style={styles.searchBar}
         />
@@ -186,7 +186,7 @@ const ManageTeachersScreen = ({ navigation }) => {
           onPress={() => applyFilter('all')}
           style={styles.filterChip}
         >
-          All ({teachers.length})
+          All ({pagination.total})
         </Chip>
         <Chip
           selected={selectedFilter === 'active'}
@@ -205,7 +205,7 @@ const ManageTeachersScreen = ({ navigation }) => {
       </View>
 
       {/* Error Message */}
-      {error ? <ErrorMessage message={error} onRetry={fetchTeachers} /> : null}
+      {error ? <ErrorMessage message={error} onRetry={() => fetchTeachers(1, true)} /> : null}
 
       {/* Teachers List */}
       {filteredTeachers.length > 0 ? (
@@ -217,6 +217,9 @@ const ManageTeachersScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
           }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
         />
       ) : (

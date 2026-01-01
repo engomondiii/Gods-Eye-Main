@@ -3,7 +3,14 @@ import { View, StyleSheet } from 'react-native';
 import { HelperText } from 'react-native-paper';
 import CascadingDropdown from './CascadingDropdown';
 
-const CountryPicker = ({ value, onChange, error }) => {
+const CountryPicker = ({ 
+  value, 
+  onChange, 
+  error = null, // String error message
+  required = false, // NEW
+  helperText = '', // NEW
+  onBlur, // NEW
+}) => {
   const [countries, setCountries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,16 +44,18 @@ const CountryPicker = ({ value, onChange, error }) => {
   return (
     <View style={styles.container}>
       <CascadingDropdown
-        label="Country *"
+        label="Country"
         value={value}
         items={countries}
         onSelect={onChange}
         placeholder="Select country"
-        error={!!error}
+        error={error}
+        required={required}
+        helperText={helperText || (isLoading ? 'Loading countries...' : '')}
         disabled={isLoading}
+        onBlur={onBlur}
         icon="earth"
       />
-      {error && <HelperText type="error">{error}</HelperText>}
     </View>
   );
 };

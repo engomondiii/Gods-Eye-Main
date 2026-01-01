@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import * as storage from '../utils/storage';
+import { subscribeToNetworkChanges } from '../utils/networkHelper';
 
 export const AppContext = createContext();
 
@@ -7,6 +9,7 @@ export const AppProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
   const [appSettings, setAppSettings] = useState({
     pushNotifications: true,
     emailNotifications: false,
@@ -15,8 +18,13 @@ export const AppProvider = ({ children }) => {
     language: 'en',
   });
 
+  // ============================================================
+  // INITIALIZATION
+  // ============================================================
+
   useEffect(() => {
     loadAppSettings();
+    setupNetworkListener();
   }, []);
 
   const loadAppSettings = async () => {
@@ -30,6 +38,56 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // ============================================================
+  // NETWORK STATUS MONITORING
+  // ============================================================
+
+  const setupNetworkListener = () => {
+    const unsubscribe = subscribeToNetworkChanges((isConnected, state) => {
+      const wasOffline = isOffline;
+      
+      setIsOnline(isConnected);
+      setIsOffline(!isConnected);
+      
+      if (__DEV__) {
+        console.log('📡 Network status changed:', {
+          isConnected,
+          type: state?.type,
+          isInternetReachable: state?.isInternetReachable,
+        });
+      }
+      
+      // Show alert when going offline
+      if (!isConnected && !wasOffline) {
+        Alert.alert(
+          'Offline',
+          'No internet connection. Some features may be unavailable.',
+          [{ text: 'OK' }]
+        );
+      }
+      
+      // Show alert when coming back online
+      if (isConnected && wasOffline) {
+        Alert.alert(
+          'Back Online',
+          'Internet connection restored.',
+          [{ text: 'OK' }]
+        );
+      }
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  };
+
+  // ============================================================
+  // APP SETTINGS
+  // ============================================================
+
   const updateAppSettings = async (newSettings) => {
     try {
       const updatedSettings = { ...appSettings, ...newSettings };
@@ -41,6 +99,10 @@ export const AppProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
   };
+
+  // ============================================================
+  // NOTIFICATIONS
+  // ============================================================
 
   const addNotification = (notification) => {
     setNotifications((prev) => [notification, ...prev]);
@@ -80,21 +142,36 @@ export const AppProvider = ({ children }) => {
     setUnreadCount(0);
   };
 
+  // ============================================================
+  // NETWORK STATUS SETTERS
+  // ============================================================
+
   const setNetworkStatus = (status) => {
     setIsOnline(status);
+    setIsOffline(!status);
   };
 
+  // ============================================================
+  // CONTEXT VALUE
+  // ============================================================
+
   const value = {
+    // Network status
+    isOnline,
+    isOffline,
+    setNetworkStatus,
+    
+    // Notifications
     notifications,
     unreadCount,
-    isOnline,
-    appSettings,
     addNotification,
     markNotificationAsRead,
     markAllNotificationsAsRead,
     deleteNotification,
     clearAllNotifications,
-    setNetworkStatus,
+    
+    // App settings
+    appSettings,
     updateAppSettings,
   };
 

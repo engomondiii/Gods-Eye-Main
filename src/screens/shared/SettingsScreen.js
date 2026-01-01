@@ -1,3 +1,8 @@
+// ========================================
+// SETTINGS SCREEN - SHARED
+// Backend Integration: Notification Preferences API
+// ========================================
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -7,36 +12,115 @@ import {
   Text,
   Alert,
 } from 'react-native';
-import { Card, Title, Switch, Divider, Button } from 'react-native-paper';
+import { Card, Title, Switch, Divider, Button, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useBiometric } from '../../hooks/useBiometric';
+import * as notificationService from '../../services/notificationService';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const SettingsScreen = ({ navigation }) => {
   const { isSupported, isEnrolled, checkSupport, testAuthentication } = useBiometric();
   
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+  
   const [settings, setSettings] = useState({
-    pushNotifications: true,
-    emailNotifications: false,
-    smsNotifications: true,
     darkMode: false,
-    // ✨ NEW - Biometric Settings
-    biometricAuth: false,
-    attendanceNotifications: true,
-    qrCodeNotifications: true,
     autoSync: true,
+    biometricAuth: false,
   });
 
-  // ✨ NEW - Check biometric availability on mount
+  // Notification Preferences (from backend)
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    // Attendance
+    attendance_email: true,
+    attendance_sms: true,
+    attendance_push: true,
+    // Payment
+    payment_email: true,
+    payment_sms: true,
+    payment_push: true,
+    // General
+    general_email: true,
+    general_sms: false,
+    general_push: true,
+    // Academic
+    academic_email: true,
+    academic_sms: false,
+    academic_push: true,
+    // Emergency (always enabled)
+    emergency_email: true,
+    emergency_sms: true,
+    emergency_push: true,
+  });
+
   useEffect(() => {
     checkBiometricAvailability();
+    loadNotificationPreferences();
   }, []);
 
   const checkBiometricAvailability = async () => {
     await checkSupport();
   };
 
+  // Load notification preferences from backend
+  const loadNotificationPreferences = async () => {
+    try {
+      setIsLoadingPreferences(true);
+      const response = await notificationService.getMyPreferences();
+
+      if (response.success) {
+        setNotificationPreferences({
+          attendance_email: response.data.attendance_email,
+          attendance_sms: response.data.attendance_sms,
+          attendance_push: response.data.attendance_push,
+          payment_email: response.data.payment_email,
+          payment_sms: response.data.payment_sms,
+          payment_push: response.data.payment_push,
+          general_email: response.data.general_email,
+          general_sms: response.data.general_sms,
+          general_push: response.data.general_push,
+          academic_email: response.data.academic_email,
+          academic_sms: response.data.academic_sms,
+          academic_push: response.data.academic_push,
+          emergency_email: response.data.emergency_email,
+          emergency_sms: response.data.emergency_sms,
+          emergency_push: response.data.emergency_push,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load notification preferences:', error);
+      Alert.alert('Error', 'Failed to load notification preferences');
+    } finally {
+      setIsLoadingPreferences(false);
+    }
+  };
+
+  // Save notification preferences to backend
+  const saveNotificationPreferences = async (updatedPreferences) => {
+    try {
+      setIsSavingPreferences(true);
+      const response = await notificationService.updatePreferences(updatedPreferences);
+
+      if (response.success) {
+        setNotificationPreferences(response.data);
+        // Optional: Show success message
+        // Alert.alert('Success', 'Preferences updated successfully');
+      } else {
+        throw new Error(response.message || 'Failed to update preferences');
+      }
+    } catch (error) {
+      console.error('Failed to save notification preferences:', error);
+      Alert.alert('Error', 'Failed to save notification preferences');
+      // Revert changes on error
+      await loadNotificationPreferences();
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
+
   const handleToggle = (setting) => {
-    // ✨ NEW - Special handling for biometric auth
+    // Biometric auth toggle
     if (setting === 'biometricAuth') {
       if (!isSupported || !isEnrolled) {
         Alert.alert(
@@ -48,17 +132,36 @@ const SettingsScreen = ({ navigation }) => {
       }
       
       if (!settings.biometricAuth) {
-        // Enabling biometric - test first
         testBiometricBeforeEnable();
         return;
       }
     }
     
     setSettings({ ...settings, [setting]: !settings[setting] });
-    // TODO: Save settings to backend
+    // TODO: Save app settings to AsyncStorage
   };
 
-  // ✨ NEW - Test biometric before enabling
+  // Handle notification preference toggle
+  const handleNotificationToggle = (preference) => {
+    // Prevent disabling emergency notifications
+    if (preference.startsWith('emergency_')) {
+      Alert.alert(
+        'Emergency Notifications',
+        'Emergency notifications cannot be disabled for your safety.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    const updatedPreferences = {
+      ...notificationPreferences,
+      [preference]: !notificationPreferences[preference],
+    };
+
+    setNotificationPreferences(updatedPreferences);
+    saveNotificationPreferences(updatedPreferences);
+  };
+
   const testBiometricBeforeEnable = async () => {
     try {
       const result = await testAuthentication();
@@ -73,7 +176,7 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
-  const SettingItem = ({ icon, title, description, setting, switchValue }) => (
+  const SettingItem = ({ icon, title, description, setting, switchValue, onToggle }) => (
     <>
       <View style={styles.settingItem}>
         <View style={styles.settingInfo}>
@@ -88,8 +191,9 @@ const SettingsScreen = ({ navigation }) => {
         {switchValue !== undefined ? (
           <Switch
             value={switchValue}
-            onValueChange={() => handleToggle(setting)}
+            onValueChange={onToggle || (() => handleToggle(setting))}
             color="#6200EE"
+            disabled={isSavingPreferences}
           />
         ) : (
           <MaterialCommunityIcons name="chevron-right" size={24} color="#757575" />
@@ -97,6 +201,59 @@ const SettingsScreen = ({ navigation }) => {
       </View>
       <Divider />
     </>
+  );
+
+  const NotificationChannelSection = ({ type, title, icon, description }) => (
+    <View style={styles.channelSection}>
+      <View style={styles.channelHeader}>
+        <MaterialCommunityIcons name={icon} size={20} color="#6200EE" />
+        <Text style={styles.channelTitle}>{title}</Text>
+      </View>
+      {description && (
+        <Text style={styles.channelDescription}>{description}</Text>
+      )}
+      
+      <View style={styles.channelToggles}>
+        <View style={styles.channelToggle}>
+          <MaterialCommunityIcons name="email" size={18} color="#757575" />
+          <Text style={styles.channelToggleLabel}>Email</Text>
+          <Switch
+            value={notificationPreferences[`${type}_email`]}
+            onValueChange={() => handleNotificationToggle(`${type}_email`)}
+            color="#6200EE"
+            disabled={isSavingPreferences || type === 'emergency'}
+          />
+        </View>
+        
+        <View style={styles.channelToggle}>
+          <MaterialCommunityIcons name="message" size={18} color="#757575" />
+          <Text style={styles.channelToggleLabel}>SMS</Text>
+          <Switch
+            value={notificationPreferences[`${type}_sms`]}
+            onValueChange={() => handleNotificationToggle(`${type}_sms`)}
+            color="#6200EE"
+            disabled={isSavingPreferences || type === 'emergency'}
+          />
+        </View>
+        
+        <View style={styles.channelToggle}>
+          <MaterialCommunityIcons name="bell" size={18} color="#757575" />
+          <Text style={styles.channelToggleLabel}>Push</Text>
+          <Switch
+            value={notificationPreferences[`${type}_push`]}
+            onValueChange={() => handleNotificationToggle(`${type}_push`)}
+            color="#6200EE"
+            disabled={isSavingPreferences || type === 'emergency'}
+          />
+        </View>
+      </View>
+      
+      {type === 'emergency' && (
+        <Text style={styles.emergencyNote}>
+          ⚠️ Emergency notifications are always enabled for your safety
+        </Text>
+      )}
+    </View>
   );
 
   const ActionItem = ({ icon, title, onPress, color = '#212121' }) => (
@@ -110,57 +267,77 @@ const SettingsScreen = ({ navigation }) => {
     </>
   );
 
+  if (isLoadingPreferences) {
+    return <LoadingSpinner message="Loading preferences..." />;
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Notifications Settings */}
+      {/* Notification Preferences */}
       <Card style={styles.card}>
         <Card.Content>
-          <Title style={styles.sectionTitle}>Notifications</Title>
+          <View style={styles.sectionHeader}>
+            <Title style={styles.sectionTitle}>Notification Preferences</Title>
+            {isSavingPreferences && (
+              <ActivityIndicator size="small" color="#6200EE" />
+            )}
+          </View>
           
-          <SettingItem
-            icon="bell"
-            title="Push Notifications"
-            description="Receive push notifications on your device"
-            setting="pushNotifications"
-            switchValue={settings.pushNotifications}
-          />
-          
-          <SettingItem
-            icon="email"
-            title="Email Notifications"
-            description="Receive notifications via email"
-            setting="emailNotifications"
-            switchValue={settings.emailNotifications}
-          />
-          
-          <SettingItem
-            icon="message"
-            title="SMS Notifications"
-            description="Receive important updates via SMS"
-            setting="smsNotifications"
-            switchValue={settings.smsNotifications}
-          />
+          <Text style={styles.sectionDescription}>
+            Customize how you receive notifications for different types of events
+          </Text>
 
-          {/* ✨ NEW - Attendance Notifications */}
-          <SettingItem
-            icon="clipboard-check"
+          {/* Attendance Notifications */}
+          <NotificationChannelSection
+            type="attendance"
             title="Attendance Notifications"
-            description="Get notified about student attendance"
-            setting="attendanceNotifications"
-            switchValue={settings.attendanceNotifications}
+            icon="calendar-check"
+            description="Receive updates about student attendance, check-ins, and absences"
           />
 
-          <SettingItem
-            icon="qrcode"
-            title="QR Code Notifications"
-            description="Alerts when QR code is scanned"
-            setting="qrCodeNotifications"
-            switchValue={settings.qrCodeNotifications}
+          <Divider style={styles.sectionDivider} />
+
+          {/* Payment Notifications */}
+          <NotificationChannelSection
+            type="payment"
+            title="Payment Notifications"
+            icon="cash"
+            description="Get notified about payment requests, reminders, and confirmations"
+          />
+
+          <Divider style={styles.sectionDivider} />
+
+          {/* Academic Notifications */}
+          <NotificationChannelSection
+            type="academic"
+            title="Academic Notifications"
+            icon="school"
+            description="Updates about grades, assignments, and academic progress"
+          />
+
+          <Divider style={styles.sectionDivider} />
+
+          {/* General Notifications */}
+          <NotificationChannelSection
+            type="general"
+            title="General Notifications"
+            icon="bell"
+            description="General announcements and school updates"
+          />
+
+          <Divider style={styles.sectionDivider} />
+
+          {/* Emergency Notifications */}
+          <NotificationChannelSection
+            type="emergency"
+            title="Emergency Notifications"
+            icon="alert"
+            description="Critical alerts that require immediate attention"
           />
         </Card.Content>
       </Card>
 
-      {/* ✨ NEW - Security & Biometric Settings */}
+      {/* Security & Biometric Settings */}
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.sectionTitle}>Security & Biometric</Title>
@@ -309,7 +486,6 @@ const SettingsScreen = ({ navigation }) => {
                     text: 'Delete',
                     style: 'destructive',
                     onPress: () => {
-                      // TODO: Implement account deletion
                       Alert.alert('Deleted', 'Account deletion initiated.');
                     },
                   },
@@ -342,11 +518,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     elevation: 2,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#212121',
+  },
+  sectionDescription: {
+    fontSize: 13,
+    color: '#757575',
     marginBottom: 16,
+    lineHeight: 18,
+  },
+  sectionDivider: {
+    marginVertical: 16,
   },
   settingItem: {
     flexDirection: 'row',
@@ -382,7 +572,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
   },
-  // ✨ NEW - Biometric Status Styles
   biometricStatusContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -411,6 +600,49 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#757575',
     marginTop: 2,
+  },
+  // Notification Channel Styles
+  channelSection: {
+    marginBottom: 16,
+  },
+  channelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  channelTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#212121',
+    marginLeft: 8,
+  },
+  channelDescription: {
+    fontSize: 12,
+    color: '#757575',
+    marginBottom: 12,
+    lineHeight: 16,
+  },
+  channelToggles: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
+  },
+  channelToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  channelToggleLabel: {
+    fontSize: 14,
+    color: '#212121',
+    flex: 1,
+    marginLeft: 12,
+  },
+  emergencyNote: {
+    fontSize: 11,
+    color: '#F44336',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   appInfo: {
     alignItems: 'center',

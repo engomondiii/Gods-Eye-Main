@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { Menu, Button } from 'react-native-paper';
+import { View, StyleSheet } from 'react-native';
+import { Text, Menu, Button, HelperText } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const CascadingDropdown = ({
@@ -9,14 +9,23 @@ const CascadingDropdown = ({
   items = [],
   onSelect,
   placeholder = 'Select...',
-  error = false,
+  error = null, // String error message
   disabled = false,
+  required = false, // NEW
+  helperText = '', // NEW
+  onBlur, // NEW
   icon = 'menu-down',
 }) => {
   const [visible, setVisible] = useState(false);
 
   const openMenu = () => setVisible(true);
-  const closeMenu = () => setVisible(false);
+  
+  const closeMenu = () => {
+    setVisible(false);
+    if (onBlur) {
+      onBlur();
+    }
+  };
 
   const handleSelect = (item) => {
     onSelect(item);
@@ -25,7 +34,13 @@ const CascadingDropdown = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <Text style={styles.label}>
+          {label}
+          {required && <Text style={styles.required}> *</Text>}
+        </Text>
+      )}
+      
       <Menu
         visible={visible}
         onDismiss={closeMenu}
@@ -36,7 +51,7 @@ const CascadingDropdown = ({
             disabled={disabled}
             style={[
               styles.button,
-              error && styles.errorButton,
+              !!error && styles.errorButton,
               disabled && styles.disabledButton,
             ]}
             contentStyle={styles.buttonContent}
@@ -64,6 +79,14 @@ const CascadingDropdown = ({
           <Menu.Item title="No options available" disabled />
         )}
       </Menu>
+
+      {/* Helper Text */}
+      <HelperText 
+        type={error ? 'error' : 'info'} 
+        visible={!!(error || helperText || value)}
+      >
+        {error || helperText || (value ? `Selected: ${value.name}` : '')}
+      </HelperText>
     </View>
   );
 };
@@ -77,6 +100,9 @@ const styles = StyleSheet.create({
     color: '#212121',
     marginBottom: 8,
     fontWeight: '500',
+  },
+  required: {
+    color: '#F44336',
   },
   button: {
     borderColor: '#BDBDBD',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,43 +9,66 @@ import {
 import { Card, Title, List, Switch, Button, Divider, TextInput } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
-import theme from '../../styles/theme';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import * as schoolAdminService from '../../services/schoolAdminService';
 
 const SchoolSettingsScreen = ({ navigation }) => {
   const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   
-  // School Settings State
   const [settings, setSettings] = useState({
-    // General Settings
     schoolName: user?.school?.name || '',
     nemisCode: user?.school?.nemis_code || '',
     phoneNumber: user?.school?.phone || '',
     email: user?.school?.email || '',
     address: user?.school?.address || '',
-    
-    // Attendance Settings
     enableBiometric: true,
     enableQRCode: true,
     enableOTC: true,
     autoMarkAbsent: true,
-    attendanceGracePeriod: 15, // minutes
-    
-    // Payment Settings
+    attendanceGracePeriod: 15,
     requirePaymentApproval: true,
     autoSendReminders: true,
     reminderDaysBefore: 7,
-    
-    // Notification Settings
     enableSMS: false,
     enableEmail: true,
     enablePushNotifications: true,
-    
-    // Academic Settings
     currentTerm: 'term_1',
     academicYear: '2025',
   });
 
-  const [isSaving, setIsSaving] = useState(false);
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await schoolAdminService.getSchoolSettings(user.school.id);
+      if (response.success) {
+        setSettings({
+          ...settings,
+          enableBiometric: response.data.enable_biometric,
+          enableQRCode: response.data.enable_qr_code,
+          enableOTC: response.data.enable_otc,
+          autoMarkAbsent: response.data.auto_mark_absent,
+          attendanceGracePeriod: response.data.attendance_grace_period,
+          requirePaymentApproval: response.data.require_payment_approval,
+          autoSendReminders: response.data.auto_send_reminders,
+          reminderDaysBefore: response.data.reminder_days_before,
+          enableSMS: response.data.enable_sms,
+          enableEmail: response.data.enable_email,
+          enablePushNotifications: response.data.enable_push_notifications,
+          currentTerm: response.data.current_term,
+          academicYear: response.data.academic_year,
+        });
+      }
+    } catch (error) {
+      console.error('Fetch settings error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleToggle = (key) => {
     setSettings({ ...settings, [key]: !settings[key] });
@@ -55,13 +78,32 @@ const SchoolSettingsScreen = ({ navigation }) => {
     setIsSaving(true);
     
     try {
-      // TODO: Replace with actual API call
-      // await schoolAdminService.updateSchoolSettings(user.school.id, settings);
+      const settingsData = {
+        enable_biometric: settings.enableBiometric,
+        enable_qr_code: settings.enableQRCode,
+        enable_otc: settings.enableOTC,
+        auto_mark_absent: settings.autoMarkAbsent,
+        attendance_grace_period: settings.attendanceGracePeriod,
+        require_payment_approval: settings.requirePaymentApproval,
+        auto_send_reminders: settings.autoSendReminders,
+        reminder_days_before: settings.reminderDaysBefore,
+        enable_sms: settings.enableSMS,
+        enable_email: settings.enableEmail,
+        enable_push_notifications: settings.enablePushNotifications,
+        current_term: settings.currentTerm,
+        academic_year: settings.academicYear,
+      };
+
+      const response = await schoolAdminService.updateSchoolSettings(
+        user.school.id,
+        settingsData
+      );
       
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      Alert.alert('Success', 'School settings updated successfully!');
+      if (response.success) {
+        Alert.alert('Success', 'School settings updated successfully!');
+      } else {
+        Alert.alert('Error', response.message || 'Failed to update settings');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to update settings. Please try again.');
       console.error('Save settings error:', error);
@@ -70,9 +112,12 @@ const SchoolSettingsScreen = ({ navigation }) => {
     }
   };
 
+  if (isLoading) {
+    return <LoadingSpinner message="Loading settings..." />;
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* School Info Header */}
       <Card style={styles.headerCard}>
         <Card.Content>
           <View style={styles.headerContent}>
@@ -85,7 +130,6 @@ const SchoolSettingsScreen = ({ navigation }) => {
         </Card.Content>
       </Card>
 
-      {/* General Settings */}
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.cardTitle}>
@@ -139,7 +183,6 @@ const SchoolSettingsScreen = ({ navigation }) => {
         </Card.Content>
       </Card>
 
-      {/* Attendance Settings */}
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.cardTitle}>
@@ -212,7 +255,6 @@ const SchoolSettingsScreen = ({ navigation }) => {
         </Card.Content>
       </Card>
 
-      {/* Payment Settings */}
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.cardTitle}>
@@ -257,7 +299,6 @@ const SchoolSettingsScreen = ({ navigation }) => {
         </Card.Content>
       </Card>
 
-      {/* Notification Settings */}
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.cardTitle}>
@@ -307,7 +348,6 @@ const SchoolSettingsScreen = ({ navigation }) => {
         </Card.Content>
       </Card>
 
-      {/* Academic Settings */}
       <Card style={styles.card}>
         <Card.Content>
           <Title style={styles.cardTitle}>
@@ -334,7 +374,6 @@ const SchoolSettingsScreen = ({ navigation }) => {
         </Card.Content>
       </Card>
 
-      {/* Save Button */}
       <Button
         mode="contained"
         onPress={handleSaveSettings}

@@ -1,5 +1,5 @@
 // ========================================
-// GOD'S EYE EDTECH - COUNTY PICKER
+// GOD'S EYE EDTECH - COUNTY PICKER (WITH VALIDATION)
 // ========================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { Text, TextInput, Chip } from 'react-native-paper';
+import { Text, TextInput, Chip, HelperText } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as locationService from '../../services/locationService';
 
@@ -22,12 +22,13 @@ import * as locationService from '../../services/locationService';
 const CountyPicker = ({
   value,
   onChange,
-  error = false,
+  error = null, // Now accepts error message string
   disabled = false,
   label = 'County',
   placeholder = 'Type or select county...',
   required = false,
   helperText = '',
+  onBlur, // For validation on blur
 }) => {
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +52,7 @@ const CountyPicker = ({
       setIsLoadingCounties(true);
 
       if (__DEV__) {
-        console.log('📍 Fetching counties from backend...');
+        console.log('🗺️ Fetching counties from backend...');
       }
 
       const result = await locationService.getKenyaCounties();
@@ -181,6 +182,9 @@ const CountyPicker = ({
     // Delay to allow item selection
     setTimeout(() => {
       setShowSuggestions(false);
+      if (onBlur) {
+        onBlur();
+      }
     }, 200);
   };
 
@@ -219,7 +223,7 @@ const CountyPicker = ({
         onChangeText={handleInputChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        error={error}
+        error={!!error}
         disabled={disabled || isLoadingCounties}
         style={styles.input}
         placeholder={placeholder}
@@ -316,19 +320,18 @@ const CountyPicker = ({
         </View>
       )}
 
-      {/* Helper Text */}
-      <Text style={[styles.helperText, error && styles.helperTextError]}>
-        {error
-          ? 'County is required'
-          : helperText ||
-            (value
-              ? value.isCustom
-                ? `Custom entry: ${value.name}`
-                : `Selected: ${value.name}`
-              : isLoadingCounties
-              ? 'Loading counties...'
-              : `Type to search from ${counties.length} Kenya counties`)}
-      </Text>
+      {/* Error/Helper Text */}
+      <HelperText type={error ? 'error' : 'info'} visible={!!(error || helperText || value || isLoadingCounties)}>
+        {error ||
+          helperText ||
+          (value
+            ? value.isCustom
+              ? `Custom entry: ${value.name}`
+              : `Selected: ${value.name}`
+            : isLoadingCounties
+            ? 'Loading counties...'
+            : `Type to search from ${counties.length} Kenya counties`)}
+      </HelperText>
 
       {/* Custom Badge */}
       {value?.isCustom && (
@@ -453,14 +456,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 8,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#757575',
-    marginTop: 4,
-  },
-  helperTextError: {
-    color: '#F44336',
   },
   customBadge: {
     flexDirection: 'row',

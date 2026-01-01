@@ -1,3 +1,8 @@
+// ========================================
+// TEACHER DASHBOARD SCREEN
+// Backend Integration: GET /api/analytics/dashboard/metrics/
+// ========================================
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -6,61 +11,38 @@ import {
   RefreshControl,
   TouchableOpacity,
   Text,
+  Dimensions,
 } from 'react-native';
-import { Card, Title, Paragraph, Avatar, Badge } from 'react-native-paper';
+import { Card, Title, Paragraph, Badge } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../hooks/useAuth';
 import { SCREENS } from '../../utils/constants';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import * as analyticsService from '../../services/analyticsService';
+
+const screenWidth = Dimensions.get('window').width;
 
 const TeacherDashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [dashboardData, setDashboardData] = useState({
-    totalStudents: 0,
-    pendingApprovals: 0,
-    pendingPayments: 0,
-    recentActivities: [],
-  });
+  const [dashboardData, setDashboardData] = useState(null);
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
       setError('');
-      // TODO: Replace with actual API calls
-      // const response = await studentService.getDashboardStats();
       
-      // Mock data for development
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await analyticsService.getDashboardMetrics();
       
-      setDashboardData({
-        totalStudents: 45,
-        pendingApprovals: 3,
-        pendingPayments: 7,
-        recentActivities: [
-          {
-            id: 1,
-            type: 'student_added',
-            message: 'New student John Doe registered',
-            time: '2 hours ago',
-          },
-          {
-            id: 2,
-            type: 'approval_pending',
-            message: 'Guardian link request pending approval',
-            time: '5 hours ago',
-          },
-          {
-            id: 3,
-            type: 'payment_created',
-            message: 'Payment request created for Jane Smith',
-            time: '1 day ago',
-          },
-        ],
-      });
+      if (response.success) {
+        setDashboardData(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to load dashboard data');
+      }
     } catch (err) {
       setError('Failed to load dashboard data. Please try again.');
       console.error('Dashboard error:', err);
@@ -79,24 +61,24 @@ const TeacherDashboardScreen = ({ navigation }) => {
     fetchDashboardData();
   }, []);
 
-  // Quick action cards - FIXED NAVIGATION
+  // Quick action cards
   const quickActions = [
     {
       id: 1,
-      title: 'Add Student',
-      icon: 'account-plus',
+      title: 'Mark Attendance',
+      icon: 'clipboard-check',
       color: '#4CAF50',
-      onPress: () => navigation.navigate('StudentsTab', {
-        screen: SCREENS.CREATE_STUDENT,
+      onPress: () => navigation.navigate('AttendanceTab', {
+        screen: SCREENS.ATTENDANCE_DASHBOARD,
       }),
     },
     {
       id: 2,
-      title: 'Link Guardian',
-      icon: 'account-multiple-plus',
+      title: 'Add Student',
+      icon: 'account-plus',
       color: '#2196F3',
-      onPress: () => navigation.navigate('ApprovalsTab', {
-        screen: SCREENS.CREATE_GUARDIAN_LINK,
+      onPress: () => navigation.navigate('StudentsTab', {
+        screen: SCREENS.CREATE_STUDENT,
       }),
     },
     {
@@ -110,44 +92,43 @@ const TeacherDashboardScreen = ({ navigation }) => {
     },
     {
       id: 4,
-      title: 'View Students',
-      icon: 'account-group',
+      title: 'View Reports',
+      icon: 'chart-bar',
       color: '#9C27B0',
-      onPress: () => navigation.navigate('StudentsTab', {
-        screen: SCREENS.STUDENT_LIST,
+      onPress: () => navigation.navigate('AttendanceTab', {
+        screen: SCREENS.ATTENDANCE_HISTORY,
       }),
     },
   ];
 
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'student_added':
-        return 'account-plus';
-      case 'approval_pending':
-        return 'clock-alert';
-      case 'payment_created':
-        return 'cash';
-      default:
-        return 'information';
+  // Prepare attendance trend chart data
+  const getAttendanceChartData = () => {
+    if (!dashboardData?.attendance_trend) {
+      return null;
     }
-  };
 
-  const getActivityColor = (type) => {
-    switch (type) {
-      case 'student_added':
-        return '#4CAF50';
-      case 'approval_pending':
-        return '#FF9800';
-      case 'payment_created':
-        return '#2196F3';
-      default:
-        return '#757575';
-    }
+    const trend = dashboardData.attendance_trend;
+    
+    return {
+      labels: trend.map(item => {
+        const date = new Date(item.date);
+        return `${date.getDate()}/${date.getMonth() + 1}`;
+      }),
+      datasets: [
+        {
+          data: trend.map(item => item.rate),
+          color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+          strokeWidth: 2,
+        },
+      ],
+    };
   };
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
+
+  const chartData = getAttendanceChartData();
 
   return (
     <ScrollView
@@ -169,119 +150,195 @@ const TeacherDashboardScreen = ({ navigation }) => {
           onPress={() => navigation.navigate(SCREENS.NOTIFICATIONS)}
         >
           <MaterialCommunityIcons name="bell" size={28} color="#6200EE" />
-          {dashboardData.pendingApprovals > 0 && (
-            <Badge style={styles.notificationBadge}>
-              {dashboardData.pendingApprovals}
-            </Badge>
-          )}
         </TouchableOpacity>
       </View>
 
       {/* Error Message */}
       {error ? <ErrorMessage message={error} onRetry={fetchDashboardData} /> : null}
 
-      {/* Statistics Cards */}
-      <View style={styles.statsContainer}>
-        <Card style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
-          <Card.Content style={styles.statCardContent}>
-            <MaterialCommunityIcons
-              name="account-group"
-              size={32}
-              color="#2196F3"
-            />
-            <View style={styles.statTextContainer}>
-              <Title style={styles.statNumber}>{dashboardData.totalStudents}</Title>
-              <Paragraph style={styles.statLabel}>Total Students</Paragraph></View>
-          </Card.Content>
-        </Card>
-
-        <Card style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
-          <Card.Content style={styles.statCardContent}>
-            <MaterialCommunityIcons
-              name="clock-alert"
-              size={32}
-              color="#FF9800"
-            />
-            <View style={styles.statTextContainer}>
-              <Title style={styles.statNumber}>
-                {dashboardData.pendingApprovals}
-              </Title>
-              <Paragraph style={styles.statLabel}>Pending Approvals</Paragraph>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <Card style={[styles.statCard, { backgroundColor: '#F3E5F5' }]}>
-          <Card.Content style={styles.statCardContent}>
-            <MaterialCommunityIcons name="cash" size={32} color="#9C27B0" />
-            <View style={styles.statTextContainer}>
-              <Title style={styles.statNumber}>
-                {dashboardData.pendingPayments}
-              </Title>
-              <Paragraph style={styles.statLabel}>Pending Payments</Paragraph>
-            </View>
-          </Card.Content>
-        </Card>
-      </View>
-
-      {/* Quick Actions - FIXED */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActionsContainer}>
-          {quickActions.map((action) => (
-            <TouchableOpacity
-              key={action.id}
-              style={styles.quickActionCard}
-              onPress={action.onPress}
-            >
-              <View
-                style={[
-                  styles.quickActionIconContainer,
-                  { backgroundColor: action.color + '20' },
-                ]}
-              >
+      {dashboardData && (
+        <>
+          {/* Today's Attendance Stats */}
+          <Card style={styles.todayCard}>
+            <Card.Content>
+              <View style={styles.todayHeader}>
                 <MaterialCommunityIcons
-                  name={action.icon}
-                  size={28}
-                  color={action.color}
+                  name="calendar-today"
+                  size={24}
+                  color="#6200EE"
                 />
+                <Title style={styles.todayTitle}>Today's Attendance</Title>
               </View>
-              <Text style={styles.quickActionTitle}>{action.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
 
-      {/* Recent Activities */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Recent Activities</Text>
-        {dashboardData.recentActivities.length > 0 ? (
-          dashboardData.recentActivities.map((activity) => (
-            <Card key={activity.id} style={styles.activityCard}>
-              <Card.Content style={styles.activityCardContent}>
-                <View
-                  style={[
-                    styles.activityIconContainer,
-                    { backgroundColor: getActivityColor(activity.type) + '20' },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name={getActivityIcon(activity.type)}
-                    size={24}
-                    color={getActivityColor(activity.type)}
-                  />
+              <View style={styles.attendanceRateContainer}>
+                <Text style={styles.attendanceRateValue}>
+                  {dashboardData.today_attendance_rate.toFixed(1)}%
+                </Text>
+                <Text style={styles.attendanceRateLabel}>Attendance Rate</Text>
+              </View>
+
+              <View style={styles.attendanceStatsRow}>
+                <View style={styles.attendanceStat}>
+                  <View
+                    style={[styles.statIconContainer, { backgroundColor: '#4CAF5020' }]}
+                  >
+                    <MaterialCommunityIcons
+                      name="check-circle"
+                      size={24}
+                      color="#4CAF50"
+                    />
+                  </View>
+                  <Text style={styles.statValue}>{dashboardData.today_present}</Text>
+                  <Text style={styles.statLabel}>Present</Text>
                 </View>
-                <View style={styles.activityTextContainer}>
-                  <Text style={styles.activityMessage}>{activity.message}</Text>
-                  <Text style={styles.activityTime}>{activity.time}</Text>
+
+                <View style={styles.attendanceStat}>
+                  <View
+                    style={[styles.statIconContainer, { backgroundColor: '#F4433620' }]}
+                  >
+                    <MaterialCommunityIcons
+                      name="close-circle"
+                      size={24}
+                      color="#F44336"
+                    />
+                  </View>
+                  <Text style={styles.statValue}>{dashboardData.today_absent}</Text>
+                  <Text style={styles.statLabel}>Absent</Text>
+                </View>
+
+                <View style={styles.attendanceStat}>
+                  <View
+                    style={[styles.statIconContainer, { backgroundColor: '#FF980020' }]}
+                  >
+                    <MaterialCommunityIcons
+                      name="clock-alert"
+                      size={24}
+                      color="#FF9800"
+                    />
+                  </View>
+                  <Text style={styles.statValue}>{dashboardData.today_late}</Text>
+                  <Text style={styles.statLabel}>Late</Text>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Overview Stats */}
+          <View style={styles.statsContainer}>
+            <Card style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
+              <Card.Content style={styles.statCardContent}>
+                <MaterialCommunityIcons
+                  name="account-group"
+                  size={32}
+                  color="#2196F3"
+                />
+                <View style={styles.statTextContainer}>
+                  <Title style={styles.statNumber}>
+                    {dashboardData.total_students}
+                  </Title>
+                  <Paragraph style={styles.statLabel}>Total Students</Paragraph>
                 </View>
               </Card.Content>
             </Card>
-          ))
-        ) : (
-          <Text style={styles.noDataText}>No recent activities</Text>
-        )}
-      </View>
+
+            <Card style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
+              <Card.Content style={styles.statCardContent}>
+                <MaterialCommunityIcons
+                  name="chart-line"
+                  size={32}
+                  color="#4CAF50"
+                />
+                <View style={styles.statTextContainer}>
+                  <Title style={styles.statNumber}>
+                    {dashboardData.week_attendance_rate.toFixed(1)}%
+                  </Title>
+                  <Paragraph style={styles.statLabel}>Week Rate</Paragraph>
+                </View>
+              </Card.Content>
+            </Card>
+
+            <Card style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
+              <Card.Content style={styles.statCardContent}>
+                <MaterialCommunityIcons name="cash" size={32} color="#FF9800" />
+                <View style={styles.statTextContainer}>
+                  <Title style={styles.statNumber}>
+                    {analyticsService.formatCurrency(dashboardData.week_collected)}
+                  </Title>
+                  <Paragraph style={styles.statLabel}>Week Collection</Paragraph>
+                </View>
+              </Card.Content>
+            </Card>
+          </View>
+
+          {/* Attendance Trend Chart */}
+          {chartData && (
+            <Card style={styles.chartCard}>
+              <Card.Content>
+                <View style={styles.chartHeader}>
+                  <MaterialCommunityIcons
+                    name="chart-line"
+                    size={20}
+                    color="#6200EE"
+                  />
+                  <Title style={styles.chartTitle}>7-Day Attendance Trend</Title>
+                </View>
+
+                <LineChart
+                  data={chartData}
+                  width={screenWidth - 64}
+                  height={220}
+                  chartConfig={{
+                    backgroundColor: '#FFFFFF',
+                    backgroundGradientFrom: '#FFFFFF',
+                    backgroundGradientTo: '#FFFFFF',
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(98, 0, 238, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16,
+                    },
+                    propsForDots: {
+                      r: '4',
+                      strokeWidth: '2',
+                      stroke: '#6200EE',
+                    },
+                  }}
+                  bezier
+                  style={styles.chart}
+                />
+              </Card.Content>
+            </Card>
+          )}
+
+          {/* Quick Actions */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsContainer}>
+              {quickActions.map((action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  style={styles.quickActionCard}
+                  onPress={action.onPress}
+                >
+                  <View
+                    style={[
+                      styles.quickActionIconContainer,
+                      { backgroundColor: action.color + '20' },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={action.icon}
+                      size={28}
+                      color={action.color}
+                    />
+                  </View>
+                  <Text style={styles.quickActionTitle}>{action.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -312,14 +369,66 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#212121',
   },
-  notificationBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#F44336',
+  todayCard: {
+    marginBottom: 16,
+    elevation: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  todayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  todayTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+    color: '#212121',
+  },
+  attendanceRateContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    marginBottom: 16,
+  },
+  attendanceRateValue: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  attendanceRateLabel: {
+    fontSize: 14,
+    color: '#757575',
+    marginTop: 4,
+  },
+  attendanceStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  attendanceStat: {
+    alignItems: 'center',
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#212121',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#757575',
+    marginTop: 4,
   },
   statsContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   statCard: {
     marginBottom: 12,
@@ -333,14 +442,29 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   statNumber: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 0,
   },
-  statLabel: {
-    fontSize: 14,
-    color: '#757575',
-    marginTop: 0,
+  chartCard: {
+    marginBottom: 16,
+    elevation: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+    color: '#212121',
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
   },
   sectionContainer: {
     marginBottom: 24,
@@ -378,40 +502,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#212121',
     textAlign: 'center',
-  },
-  activityCard: {
-    marginBottom: 12,
-    elevation: 1,
-  },
-  activityCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  activityIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activityTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  activityMessage: {
-    fontSize: 14,
-    color: '#212121',
-    marginBottom: 4,
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#757575',
-  },
-  noDataText: {
-    fontSize: 14,
-    color: '#757575',
-    textAlign: 'center',
-    marginTop: 16,
   },
 });
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text, Menu, Button, TextInput, Chip } from 'react-native-paper';
+import { Text, Menu, Button, TextInput, Chip, HelperText } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import theme from '../../styles/theme';
 import { KENYA_COMMON_HOUSES, KENYA_HOUSE_COLORS } from '../../utils/constants';
@@ -10,7 +10,10 @@ const HousePicker = ({
   houseColor,
   onHouseChange, 
   onColorChange,
-  disabled = false 
+  disabled = false,
+  error = null, // String error message - NEW
+  helperText = '', // NEW
+  onBlur, // NEW
 }) => {
   const [houseMenuVisible, setHouseMenuVisible] = useState(false);
   const [colorMenuVisible, setColorMenuVisible] = useState(false);
@@ -18,10 +21,22 @@ const HousePicker = ({
   const [customHouseInput, setCustomHouseInput] = useState('');
 
   const openHouseMenu = () => setHouseMenuVisible(true);
-  const closeHouseMenu = () => setHouseMenuVisible(false);
+  
+  const closeHouseMenu = () => {
+    setHouseMenuVisible(false);
+    if (onBlur) {
+      onBlur();
+    }
+  };
   
   const openColorMenu = () => setColorMenuVisible(true);
-  const closeColorMenu = () => setColorMenuVisible(false);
+  
+  const closeColorMenu = () => {
+    setColorMenuVisible(false);
+    if (onBlur) {
+      onBlur();
+    }
+  };
 
   const handleHouseSelect = (house) => {
     if (house === 'custom') {
@@ -43,6 +58,9 @@ const HousePicker = ({
       onHouseChange(customHouseInput.trim());
       setCustomHouseInput('');
       setCustomHouseVisible(false);
+      if (onBlur) {
+        onBlur();
+      }
     }
   };
 
@@ -54,6 +72,9 @@ const HousePicker = ({
   const handleClearHouse = () => {
     onHouseChange('');
     onColorChange('');
+    if (onBlur) {
+      onBlur();
+    }
   };
 
   const getHouseDisplayValue = () => {
@@ -99,7 +120,10 @@ const HousePicker = ({
               mode="outlined"
               onPress={openHouseMenu}
               disabled={disabled}
-              style={styles.button}
+              style={[
+                styles.button,
+                !!error && styles.buttonError,
+              ]}
               contentStyle={styles.buttonContent}
               labelStyle={[
                 styles.buttonLabel,
@@ -109,7 +133,7 @@ const HousePicker = ({
                 <MaterialCommunityIcons
                   name="home-group"
                   size={20}
-                  color={theme.colors.text}
+                  color={error ? theme.colors.error : theme.colors.text}
                 />
               )}
             >
@@ -298,13 +322,19 @@ const HousePicker = ({
         </View>
       )}
 
-      <Text style={styles.helperText}>
-        {customHouseVisible 
-          ? 'Enter your school\'s custom house name' 
-          : houseName
-            ? 'House system is used for competitions and activities'
-            : 'Common in Kenyan secondary schools for sports and academic competitions'}
-      </Text>
+      {/* Helper Text */}
+      <HelperText 
+        type={error ? 'error' : 'info'} 
+        visible={!!(error || helperText || houseName || customHouseVisible)}
+      >
+        {error || helperText || (
+          customHouseVisible 
+            ? 'Enter your school\'s custom house name' 
+            : houseName
+              ? 'House system is used for competitions and activities'
+              : 'Common in Kenyan secondary schools for sports and academic competitions'
+        )}
+      </HelperText>
     </View>
   );
 };
@@ -337,6 +367,9 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.xs,
+  },
+  buttonError: {
+    borderColor: theme.colors.error,
   },
   buttonContent: {
     justifyContent: 'flex-start',
@@ -445,11 +478,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.xs,
     color: theme.colors.text,
     textAlign: 'center',
-  },
-  helperText: {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
   },
 });
 

@@ -69,7 +69,7 @@ api.interceptors.request.use(
 // ============================================================
 
 /**
- * Response interceptor to handle token refresh and errors
+ * Response interceptor to handle token refresh, errors, and retries
  */
 api.interceptors.response.use(
   (response) => {
@@ -95,6 +95,24 @@ api.interceptors.response.use(
         message: error.message,
         data: error.response?.data,
       });
+    }
+    
+    // Retry on network errors
+    if (!originalRequest._retry && error.message === 'Network Error') {
+      originalRequest._retry = true;
+      
+      if (__DEV__) {
+        console.log('🔄 Retrying request after network error...');
+      }
+      
+      try {
+        return await retryRequest(() => api(originalRequest), 2);
+      } catch (retryError) {
+        if (__DEV__) {
+          console.error('❌ Retry failed:', retryError);
+        }
+        return Promise.reject(retryError);
+      }
     }
     
     // Handle 401 Unauthorized - Token expired or invalid

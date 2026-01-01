@@ -2,6 +2,8 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text } from 'react-native';
+import { useUnreadCount } from '../components/common/NotificationBadge';
 
 // Admin Screens
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
@@ -22,6 +24,8 @@ const Stack = createStackNavigator();
 
 // Dashboard Stack
 const DashboardStack = () => {
+  const { unreadCount } = useUnreadCount();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -37,7 +41,36 @@ const DashboardStack = () => {
       <Stack.Screen 
         name={SCREENS.ADMIN_DASHBOARD} 
         component={AdminDashboardScreen}
-        options={{ title: 'Admin Dashboard' }}
+        options={{ 
+          title: 'Admin Dashboard',
+          headerRight: () => (
+            <View style={{ marginRight: 15, position: 'relative' }}>
+              <MaterialCommunityIcons 
+                name="bell-outline" 
+                size={24} 
+                color="#fff"
+              />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  right: -6,
+                  top: -3,
+                  backgroundColor: '#F44336',
+                  borderRadius: 10,
+                  minWidth: 18,
+                  height: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
+        }}
       />
       <Stack.Screen 
         name={SCREENS.NOTIFICATIONS} 
@@ -152,6 +185,8 @@ const ProfileStack = () => {
 
 // Main Admin Navigator with Bottom Tabs
 const AdminNavigator = () => {
+  const { unreadCount } = useUnreadCount();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -180,6 +215,7 @@ const AdminNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
           ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tab.Screen 
@@ -190,7 +226,6 @@ const AdminNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="school" size={size} color={color} />
           ),
-          tabBarBadge: null, // Can add badge count here for pending school approvals
         }}
       />
       <Tab.Screen 

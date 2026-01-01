@@ -1,3 +1,8 @@
+// ========================================
+// SCHOOL ADMIN DASHBOARD SCREEN
+// Backend Integration: GET /api/analytics/dashboard/metrics/
+// ========================================
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -6,84 +11,46 @@ import {
   RefreshControl,
   TouchableOpacity,
   Text,
+  Dimensions,
 } from 'react-native';
-import { Card, Title, Badge } from 'react-native-paper';
+import { Card, Title, Paragraph, Chip } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LineChart, BarChart } from 'react-native-chart-kit';
 import { useAuth } from '../../hooks/useAuth';
 import { SCREENS } from '../../utils/constants';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
-import StatCard from '../../components/admin/StatCard';
+import * as analyticsService from '../../services/analyticsService';
+
+const screenWidth = Dimensions.get('window').width;
 
 const SchoolAdminDashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [dashboardData, setDashboardData] = useState({
-    totalTeachers: 0,
-    totalStudents: 0,
-    totalGuardians: 0,
-    pendingApprovals: 0,
-    pendingPayments: 0,
-    todayAttendance: {
-      present: 0,
-      absent: 0,
-      late: 0,
-      percentage: 0,
-    },
-    recentActivities: [],
-  });
+  const [dashboardData, setDashboardData] = useState(null);
+  const [comparative, setComparative] = useState(null);
+  const [selectedPeriod, setSelectedPeriod] = useState('week');
 
-  // Fetch dashboard data for this specific school
+  // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
       setError('');
-      // TODO: Replace with actual API call
-      // const response = await schoolAdminService.getDashboardStats(user.school.id);
       
-      // Mock data for development
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Fetch metrics
+      const metricsResponse = await analyticsService.getDashboardMetrics();
       
-      setDashboardData({
-        totalTeachers: 25,
-        totalStudents: 450,
-        totalGuardians: 678,
-        pendingApprovals: 5,
-        pendingPayments: 12,
-        todayAttendance: {
-          present: 420,
-          absent: 18,
-          late: 12,
-          percentage: 93,
-        },
-        recentActivities: [
-          {
-            id: 1,
-            type: 'teacher_added',
-            message: 'New teacher registered: Mary Wanjiru',
-            time: '30 minutes ago',
-          },
-          {
-            id: 2,
-            type: 'student_enrolled',
-            message: 'New student enrolled: John Kamau Mwangi - Grade 5 Red',
-            time: '2 hours ago',
-          },
-          {
-            id: 3,
-            type: 'payment_received',
-            message: 'Payment received: KES 5,000 from Jane Odhiambo',
-            time: '3 hours ago',
-          },
-          {
-            id: 4,
-            type: 'attendance_alert',
-            message: 'Low attendance alert: Grade 3 Blue (75%)',
-            time: '5 hours ago',
-          },
-        ],
-      });
+      if (metricsResponse.success) {
+        setDashboardData(metricsResponse.data);
+      }
+      
+      // Fetch comparative analytics
+      const compareResponse = await analyticsService.getComparativeAnalytics(selectedPeriod);
+      
+      if (compareResponse.success) {
+        setComparative(compareResponse.data);
+      }
     } catch (err) {
       setError('Failed to load dashboard data. Please try again.');
       console.error('Dashboard error:', err);
@@ -95,177 +62,87 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [selectedPeriod]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchDashboardData();
-  }, []);
+  }, [selectedPeriod]);
 
-  // 🆕 UPDATED - School statistics data with proper navigation
-  const schoolStats = [
-    {
-      id: 1,
-      title: 'Total Students',
-      value: dashboardData.totalStudents,
-      icon: 'account-school',
-      color: '#2196F3',
-      bgColor: '#E3F2FD',
-      onPress: () => navigation.navigate('StudentsTab', {
-        screen: SCREENS.MANAGE_STUDENTS,
-      }),
-    },
-    {
-      id: 2,
-      title: 'Teachers',
-      value: dashboardData.totalTeachers,
-      icon: 'account-tie',
-      color: '#4CAF50',
-      bgColor: '#E8F5E9',
-      onPress: () => navigation.navigate('TeachersTab', {
-        screen: SCREENS.MANAGE_TEACHERS,
-      }),
-    },
-    {
-      id: 3,
-      title: 'Guardians',
-      value: dashboardData.totalGuardians,
-      icon: 'account-supervisor',
-      color: '#9C27B0',
-      bgColor: '#F3E5F5',
-      onPress: () => navigation.navigate('GuardiansTab', {
-        screen: SCREENS.MANAGE_GUARDIANS,
-      }),
-    },
-    {
-      id: 4,
-      title: 'Pending Approvals',
-      value: dashboardData.pendingApprovals,
-      icon: 'clock-alert',
-      color: '#FF9800',
-      bgColor: '#FFF3E0',
-      badge: dashboardData.pendingApprovals,
-    },
-    {
-      id: 5,
-      title: 'Pending Payments',
-      value: dashboardData.pendingPayments,
-      icon: 'cash-clock',
-      color: '#F44336',
-      bgColor: '#FFEBEE',
-      badge: dashboardData.pendingPayments,
-    },
-  ];
-
-  // 🆕 UPDATED - Quick action cards with proper navigation
+  // Quick action cards
   const quickActions = [
     {
       id: 1,
-      title: 'Add Teacher',
-      icon: 'account-plus',
+      title: 'Manage Teachers',
+      icon: 'account-tie',
       color: '#4CAF50',
-      onPress: () => navigation.navigate('TeachersTab', {
-        screen: SCREENS.ADD_TEACHER,
-      }),
+      onPress: () => navigation.navigate(SCREENS.TEACHERS_LIST),
     },
     {
       id: 2,
-      title: 'Add Student',
-      icon: 'account-school-outline',
+      title: 'View Reports',
+      icon: 'chart-bar',
       color: '#2196F3',
-      onPress: () => navigation.navigate('StudentsTab', {
-        screen: SCREENS.ADD_STUDENT,
-      }),
+      onPress: () => navigation.navigate(SCREENS.ATTENDANCE_HISTORY),
     },
     {
       id: 3,
-      title: 'Add Guardian',
-      icon: 'account-heart-outline',
-      color: '#9C27B0',
-      onPress: () => navigation.navigate('GuardiansTab', {
-        screen: SCREENS.ADD_GUARDIAN,
-      }),
+      title: 'Approve Links',
+      icon: 'shield-check',
+      color: '#FF9800',
+      onPress: () => navigation.navigate(SCREENS.GUARDIAN_LINK_REQUESTS),
     },
     {
       id: 4,
-      title: 'View Reports',
-      icon: 'chart-bar',
-      color: '#FF9800',
-      onPress: () => navigation.navigate('ReportsTab', {
-        screen: SCREENS.SCHOOL_REPORTS,
-      }),
-    },
-    {
-      id: 5,
-      title: 'Manage Teachers',
-      icon: 'account-tie',
-      color: '#00BCD4',
-      onPress: () => navigation.navigate('TeachersTab', {
-        screen: SCREENS.MANAGE_TEACHERS,
-      }),
-    },
-    {
-      id: 6,
-      title: 'Manage Students',
-      icon: 'account-group',
-      color: '#673AB7',
-      onPress: () => navigation.navigate('StudentsTab', {
-        screen: SCREENS.MANAGE_STUDENTS,
-      }),
-    },
-    {
-      id: 7,
-      title: 'Manage Guardians',
-      icon: 'account-supervisor',
-      color: '#E91E63',
-      onPress: () => navigation.navigate('GuardiansTab', {
-        screen: SCREENS.MANAGE_GUARDIANS,
-      }),
-    },
-    {
-      id: 8,
       title: 'School Settings',
       icon: 'cog',
-      color: '#607D8B',
-      onPress: () => navigation.navigate('ProfileTab', {
-        screen: SCREENS.SCHOOL_SETTINGS,
-      }),
+      color: '#9C27B0',
+      onPress: () => navigation.navigate(SCREENS.SETTINGS),
     },
   ];
 
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'teacher_added':
-        return 'account-plus';
-      case 'student_enrolled':
-        return 'account-school';
-      case 'payment_received':
-        return 'cash-check';
-      case 'attendance_alert':
-        return 'alert-circle';
-      default:
-        return 'information';
-    }
+  // Prepare attendance trend chart data
+  const getAttendanceChartData = () => {
+    if (!dashboardData?.attendance_trend) return null;
+
+    const trend = dashboardData.attendance_trend.slice(-7);
+    
+    return {
+      labels: trend.map(item => {
+        const date = new Date(item.date);
+        return `${date.getDate()}/${date.getMonth() + 1}`;
+      }),
+      datasets: [{
+        data: trend.map(item => item.rate),
+        color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+        strokeWidth: 2,
+      }],
+    };
   };
 
-  const getActivityColor = (type) => {
-    switch (type) {
-      case 'teacher_added':
-        return '#4CAF50';
-      case 'student_enrolled':
-        return '#2196F3';
-      case 'payment_received':
-        return '#00BCD4';
-      case 'attendance_alert':
-        return '#FF9800';
-      default:
-        return '#757575';
-    }
+  // Prepare payment trend chart data
+  const getPaymentChartData = () => {
+    if (!dashboardData?.payment_trend) return null;
+
+    const trend = dashboardData.payment_trend.slice(-7);
+    
+    return {
+      labels: trend.map(item => {
+        const date = new Date(item.date);
+        return `${date.getDate()}/${date.getMonth() + 1}`;
+      }),
+      datasets: [{
+        data: trend.map(item => item.collected / 1000), // Convert to thousands
+      }],
+    };
   };
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
+
+  const attendanceChartData = getAttendanceChartData();
+  const paymentChartData = getPaymentChartData();
 
   return (
     <ScrollView
@@ -278,209 +155,332 @@ const SchoolAdminDashboardScreen = ({ navigation }) => {
       {/* Welcome Section */}
       <View style={styles.welcomeSection}>
         <View style={styles.welcomeTextContainer}>
-          <Text style={styles.welcomeText}>School Admin Portal</Text>
-          <Text style={styles.schoolName}>
-            {user?.school?.name || 'Your School'}
-          </Text>
+          <Text style={styles.welcomeText}>School Overview</Text>
           <Text style={styles.adminName}>
-            Welcome, {user?.first_name || 'Admin'}!
+            {user?.school?.name || 'Dashboard'}
           </Text>
         </View>
         <TouchableOpacity
           onPress={() => navigation.navigate(SCREENS.NOTIFICATIONS)}
         >
-          <MaterialCommunityIcons name="bell" size={28} color="#FF9800" />
-          {dashboardData.pendingApprovals > 0 && (
-            <Badge style={styles.notificationBadge}>
-              {dashboardData.pendingApprovals}
-            </Badge>
-          )}
+          <MaterialCommunityIcons name="bell" size={28} color="#6200EE" />
         </TouchableOpacity>
       </View>
 
       {/* Error Message */}
       {error ? <ErrorMessage message={error} onRetry={fetchDashboardData} /> : null}
 
-      {/* Today's Attendance Summary */}
-      <Card style={styles.attendanceCard}>
-        <Card.Content>
-          <View style={styles.attendanceHeader}>
-            <MaterialCommunityIcons name="clipboard-check" size={32} color="#FF9800" />
-            <View style={styles.attendanceHeaderText}>
-              <Title style={styles.attendanceTitle}>Today's Attendance</Title>
-              <Text style={styles.attendanceDate}>
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </Text>
-            </View>
-          </View>
-          
-          <View style={styles.attendanceStats}>
-            <View style={styles.attendanceStat}>
-              <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
-              <Text style={styles.attendanceNumber}>{dashboardData.todayAttendance.present}</Text>
-              <Text style={styles.attendanceLabel}>Present</Text>
-            </View>
-            <View style={styles.attendanceStat}>
-              <MaterialCommunityIcons name="clock-alert" size={24} color="#FF9800" />
-              <Text style={styles.attendanceNumber}>{dashboardData.todayAttendance.late}</Text>
-              <Text style={styles.attendanceLabel}>Late</Text>
-            </View>
-            <View style={styles.attendanceStat}>
-              <MaterialCommunityIcons name="close-circle" size={24} color="#F44336" />
-              <Text style={styles.attendanceNumber}>{dashboardData.todayAttendance.absent}</Text>
-              <Text style={styles.attendanceLabel}>Absent</Text>
-            </View>
-          </View>
-          
-          <View style={styles.attendancePercentage}>
-            <Text style={styles.percentageText}>
-              {dashboardData.todayAttendance.percentage}% Attendance Rate
-            </Text>
-          </View>
-        </Card.Content>
-      </Card>
-
-      {/* School Statistics */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>School Overview</Text>
-        <View style={styles.statsGrid}>
-          {schoolStats.map((stat) => (
-            <StatCard key={stat.id} stat={stat} onPress={stat.onPress} />
-          ))}
-        </View>
-      </View>
-
-      {/* Quick Actions - 🆕 UPDATED with 4x2 grid */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActionsContainer}>
-          {quickActions.map((action) => (
-            <TouchableOpacity
-              key={action.id}
-              style={styles.quickActionCard}
-              onPress={action.onPress}
-            >
-              <View
-                style={[
-                  styles.quickActionIconContainer,
-                  { backgroundColor: action.color + '20' },
-                ]}
-              >
+      {dashboardData && (
+        <>
+          {/* Overview Cards */}
+          <View style={styles.overviewGrid}>
+            <Card style={[styles.overviewCard, { backgroundColor: '#E3F2FD' }]}>
+              <Card.Content style={styles.overviewContent}>
                 <MaterialCommunityIcons
-                  name={action.icon}
-                  size={24}
-                  color={action.color}
+                  name="account-group"
+                  size={32}
+                  color="#2196F3"
                 />
-              </View>
-              <Text style={styles.quickActionTitle}>{action.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Recent Activities */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Recent School Activities</Text>
-        {dashboardData.recentActivities.length > 0 ? (
-          dashboardData.recentActivities.map((activity) => (
-            <Card key={activity.id} style={styles.activityCard}>
-              <Card.Content style={styles.activityCardContent}>
-                <View
-                  style={[
-                    styles.activityIconContainer,
-                    { backgroundColor: getActivityColor(activity.type) + '20' },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name={getActivityIcon(activity.type)}
-                    size={24}
-                    color={getActivityColor(activity.type)}
-                  />
-                </View>
-                <View style={styles.activityTextContainer}>
-                  <Text style={styles.activityMessage}>{activity.message}</Text>
-                  <Text style={styles.activityTime}>{activity.time}</Text>
+                <View style={styles.overviewText}>
+                  <Title style={styles.overviewNumber}>
+                    {dashboardData.total_students}
+                  </Title>
+                  <Paragraph style={styles.overviewLabel}>Students</Paragraph>
                 </View>
               </Card.Content>
             </Card>
-          ))
-        ) : (
-          <Text style={styles.noDataText}>No recent activities</Text>
-        )}
-      </View>
 
-      {/* 🆕 NEW - Management Summary Section */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Management Summary</Text>
-        
-        <TouchableOpacity 
-          style={styles.managementCard}
-          onPress={() => navigation.navigate('TeachersTab', {
-            screen: SCREENS.MANAGE_TEACHERS,
-          })}
-        >
-          <View style={styles.managementCardLeft}>
-            <MaterialCommunityIcons name="account-tie" size={32} color="#4CAF50" />
-            <View style={styles.managementCardText}>
-              <Text style={styles.managementCardTitle}>Teachers</Text>
-              <Text style={styles.managementCardSubtitle}>
-                View and manage all teachers
-              </Text>
+            <Card style={[styles.overviewCard, { backgroundColor: '#E8F5E9' }]}>
+              <Card.Content style={styles.overviewContent}>
+                <MaterialCommunityIcons
+                  name="account-tie"
+                  size={32}
+                  color="#4CAF50"
+                />
+                <View style={styles.overviewText}>
+                  <Title style={styles.overviewNumber}>
+                    {dashboardData.total_teachers}
+                  </Title>
+                  <Paragraph style={styles.overviewLabel}>Teachers</Paragraph>
+                </View>
+              </Card.Content>
+            </Card>
+
+            <Card style={[styles.overviewCard, { backgroundColor: '#F3E5F5' }]}>
+              <Card.Content style={styles.overviewContent}>
+                <MaterialCommunityIcons
+                  name="account-supervisor"
+                  size={32}
+                  color="#9C27B0"
+                />
+                <View style={styles.overviewText}>
+                  <Title style={styles.overviewNumber}>
+                    {dashboardData.total_guardians}
+                  </Title>
+                  <Paragraph style={styles.overviewLabel}>Guardians</Paragraph>
+                </View>
+              </Card.Content>
+            </Card>
+          </View>
+
+          {/* Today's Performance */}
+          <Card style={styles.performanceCard}>
+            <Card.Content>
+              <Title style={styles.cardTitle}>Today's Performance</Title>
+              
+              <View style={styles.performanceRow}>
+                <View style={styles.performanceStat}>
+                  <Text style={styles.performanceLabel}>Attendance Rate</Text>
+                  <Text style={[
+                    styles.performanceValue,
+                    { color: analyticsService.getAttendanceRateColor(
+                      dashboardData.today_attendance_rate
+                    )}
+                  ]}>
+                    {dashboardData.today_attendance_rate.toFixed(1)}%
+                  </Text>
+                </View>
+                
+                <View style={styles.performanceDivider} />
+                
+                <View style={styles.performanceStat}>
+                  <Text style={styles.performanceLabel}>Present</Text>
+                  <Text style={styles.performanceValue}>
+                    {dashboardData.today_present}
+                  </Text>
+                </View>
+                
+                <View style={styles.performanceDivider} />
+                
+                <View style={styles.performanceStat}>
+                  <Text style={styles.performanceLabel}>Absent</Text>
+                  <Text style={[styles.performanceValue, { color: '#F44336' }]}>
+                    {dashboardData.today_absent}
+                  </Text>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Period Selector & Comparative Analytics */}
+          {comparative && (
+            <Card style={styles.comparativeCard}>
+              <Card.Content>
+                <View style={styles.cardHeader}>
+                  <Title style={styles.cardTitle}>Period Comparison</Title>
+                  <View style={styles.periodSelector}>
+                    {['week', 'month'].map(period => (
+                      <Chip
+                        key={period}
+                        selected={selectedPeriod === period}
+                        onPress={() => setSelectedPeriod(period)}
+                        style={styles.periodChip}
+                      >
+                        {period === 'week' ? 'Week' : 'Month'}
+                      </Chip>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.comparisonRow}>
+                  {/* Attendance Comparison */}
+                  <View style={styles.comparisonItem}>
+                    <Text style={styles.comparisonLabel}>Attendance</Text>
+                    <View style={styles.comparisonValues}>
+                      <Text style={styles.currentValue}>
+                        {comparative.current_period.attendance_rate.toFixed(1)}%
+                      </Text>
+                      <MaterialCommunityIcons
+                        name={analyticsService.getTrendIcon(
+                          comparative.comparison.attendance_trend
+                        )}
+                        size={20}
+                        color={analyticsService.getTrendColor(
+                          comparative.comparison.attendance_trend
+                        )}
+                      />
+                      <Text style={[
+                        styles.changeValue,
+                        { color: analyticsService.getTrendColor(
+                          comparative.comparison.attendance_trend
+                        )}
+                      ]}>
+                        {comparative.comparison.attendance_change > 0 ? '+' : ''}
+                        {comparative.comparison.attendance_change.toFixed(1)}%
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Payment Comparison */}
+                  <View style={styles.comparisonItem}>
+                    <Text style={styles.comparisonLabel}>Collection</Text>
+                    <View style={styles.comparisonValues}>
+                      <Text style={styles.currentValue}>
+                        {analyticsService.formatCurrency(
+                          comparative.current_period.total_collected
+                        )}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name={analyticsService.getTrendIcon(
+                          comparative.comparison.payment_trend
+                        )}
+                        size={20}
+                        color={analyticsService.getTrendColor(
+                          comparative.comparison.payment_trend
+                        )}
+                      />
+                      <Text style={[
+                        styles.changeValue,
+                        { color: analyticsService.getTrendColor(
+                          comparative.comparison.payment_trend
+                        )}
+                      ]}>
+                        {comparative.comparison.payment_change_percentage > 0 ? '+' : ''}
+                        {comparative.comparison.payment_change_percentage.toFixed(1)}%
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </Card.Content>
+            </Card>
+          )}
+
+          {/* Monthly Summary */}
+          <Card style={styles.summaryCard}>
+            <Card.Content>
+              <Title style={styles.cardTitle}>This Month</Title>
+              
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <MaterialCommunityIcons
+                    name="calendar-check"
+                    size={24}
+                    color="#4CAF50"
+                  />
+                  <View style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Attendance</Text>
+                    <Text style={styles.summaryValue}>
+                      {dashboardData.month_attendance_rate.toFixed(1)}%
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.summaryItem}>
+                  <MaterialCommunityIcons
+                    name="cash-check"
+                    size={24}
+                    color="#4CAF50"
+                  />
+                  <View style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Collected</Text>
+                    <Text style={styles.summaryValue}>
+                      {analyticsService.formatCurrency(dashboardData.month_collected)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.summaryItem}>
+                  <MaterialCommunityIcons
+                    name="cash-remove"
+                    size={24}
+                    color="#F44336"
+                  />
+                  <View style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Outstanding</Text>
+                    <Text style={styles.summaryValue}>
+                      {analyticsService.formatCurrency(dashboardData.month_outstanding)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Attendance Trend Chart */}
+          {attendanceChartData && (
+            <Card style={styles.chartCard}>
+              <Card.Content>
+                <Title style={styles.cardTitle}>Attendance Trend (7 Days)</Title>
+                <LineChart
+                  data={attendanceChartData}
+                  width={screenWidth - 64}
+                  height={220}
+                  chartConfig={{
+                    backgroundColor: '#FFFFFF',
+                    backgroundGradientFrom: '#FFFFFF',
+                    backgroundGradientTo: '#FFFFFF',
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: { borderRadius: 16 },
+                    propsForDots: {
+                      r: '4',
+                      strokeWidth: '2',
+                      stroke: '#4CAF50',
+                    },
+                  }}
+                  bezier
+                  style={styles.chart}
+                  formatYLabel={(value) => `${value}%`}
+                />
+              </Card.Content>
+            </Card>
+          )}
+
+          {/* Payment Trend Chart */}
+          {paymentChartData && (
+            <Card style={styles.chartCard}>
+              <Card.Content>
+                <Title style={styles.cardTitle}>Payment Trend (7 Days)</Title>
+                <BarChart
+                  data={paymentChartData}
+                  width={screenWidth - 64}
+                  height={220}
+                  chartConfig={{
+                    backgroundColor: '#FFFFFF',
+                    backgroundGradientFrom: '#FFFFFF',
+                    backgroundGradientTo: '#FFFFFF',
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: { borderRadius: 16 },
+                  }}
+                  style={styles.chart}
+                  formatYLabel={(value) => `${value}K`}
+                />
+              </Card.Content>
+            </Card>
+          )}
+
+          {/* Quick Actions */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsContainer}>
+              {quickActions.map((action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  style={styles.quickActionCard}
+                  onPress={action.onPress}
+                >
+                  <View
+                    style={[
+                      styles.quickActionIconContainer,
+                      { backgroundColor: action.color + '20' },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={action.icon}
+                      size={28}
+                      color={action.color}
+                    />
+                  </View>
+                  <Text style={styles.quickActionTitle}>{action.title}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
-          <View style={styles.managementCardRight}>
-            <Text style={styles.managementCardValue}>{dashboardData.totalTeachers}</Text>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#757575" />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.managementCard}
-          onPress={() => navigation.navigate('StudentsTab', {
-            screen: SCREENS.MANAGE_STUDENTS,
-          })}
-        >
-          <View style={styles.managementCardLeft}>
-            <MaterialCommunityIcons name="account-school" size={32} color="#2196F3" />
-            <View style={styles.managementCardText}>
-              <Text style={styles.managementCardTitle}>Students</Text>
-              <Text style={styles.managementCardSubtitle}>
-                View and manage all students
-              </Text>
-            </View>
-          </View>
-          <View style={styles.managementCardRight}>
-            <Text style={styles.managementCardValue}>{dashboardData.totalStudents}</Text>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#757575" />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.managementCard}
-          onPress={() => navigation.navigate('GuardiansTab', {
-            screen: SCREENS.MANAGE_GUARDIANS,
-          })}
-        >
-          <View style={styles.managementCardLeft}>
-            <MaterialCommunityIcons name="account-supervisor" size={32} color="#9C27B0" />
-            <View style={styles.managementCardText}>
-              <Text style={styles.managementCardTitle}>Guardians</Text>
-              <Text style={styles.managementCardSubtitle}>
-                View and manage all guardians
-              </Text>
-            </View>
-          </View>
-          <View style={styles.managementCardRight}>
-            <Text style={styles.managementCardValue}>{dashboardData.totalGuardians}</Text>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#757575" />
-          </View>
-        </TouchableOpacity>
-      </View>
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -492,7 +492,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 32,
   },
   welcomeSection: {
     flexDirection: 'row',
@@ -509,80 +508,153 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  schoolName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF9800',
-    marginTop: 4,
-  },
   adminName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#212121',
+  },
+  overviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  overviewCard: {
+    width: '31%',
+    marginBottom: 12,
+    elevation: 2,
+  },
+  overviewContent: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  overviewText: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  overviewNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 0,
+  },
+  overviewLabel: {
+    fontSize: 12,
+    color: '#757575',
+    marginTop: 0,
+  },
+  performanceCard: {
+    marginBottom: 16,
+    elevation: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  performanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  performanceStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  performanceLabel: {
+    fontSize: 12,
+    color: '#757575',
+    marginBottom: 8,
+  },
+  performanceValue: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#212121',
-    marginTop: 4,
   },
-  notificationBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#F44336',
+  performanceDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E0E0E0',
   },
-  attendanceCard: {
-    marginBottom: 24,
-    backgroundColor: '#FFFFFF',
+  comparativeCard: {
+    marginBottom: 16,
     elevation: 2,
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
   },
-  attendanceHeader: {
+  cardHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  attendanceHeaderText: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  attendanceTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#212121',
-    marginBottom: 4,
-  },
-  attendanceDate: {
-    fontSize: 12,
-    color: '#757575',
-  },
-  attendanceStats: {
+  periodSelector: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
   },
-  attendanceStat: {
-    alignItems: 'center',
+  periodChip: {
+    marginLeft: 8,
   },
-  attendanceNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#212121',
-    marginVertical: 8,
+  comparisonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  attendanceLabel: {
+  comparisonItem: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  comparisonLabel: {
     fontSize: 12,
     color: '#757575',
+    marginBottom: 8,
   },
-  attendancePercentage: {
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-    borderRadius: 8,
+  comparisonValues: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
   },
-  percentageText: {
+  currentValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF9800',
+    color: '#212121',
+    marginRight: 8,
+  },
+  changeValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  summaryCard: {
+    marginBottom: 16,
+    elevation: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryText: {
+    marginLeft: 8,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: '#757575',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#212121',
+  },
+  chartCard: {
+    marginBottom: 16,
+    elevation: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
   },
   sectionContainer: {
     marginBottom: 24,
@@ -593,12 +665,6 @@ const styles = StyleSheet.create({
     color: '#212121',
     marginBottom: 12,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  // 🆕 UPDATED - Quick Actions with better layout for 8 items
   quickActionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -608,99 +674,24 @@ const styles = StyleSheet.create({
     width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 12,
+    padding: 16,
     marginBottom: 12,
     alignItems: 'center',
     elevation: 2,
   },
   quickActionIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   quickActionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: '#212121',
     textAlign: 'center',
-  },
-  activityCard: {
-    marginBottom: 12,
-    elevation: 1,
-    borderRadius: 12,
-  },
-  activityCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  activityIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activityTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  activityMessage: {
-    fontSize: 14,
-    color: '#212121',
-    marginBottom: 4,
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#757575',
-  },
-  noDataText: {
-    fontSize: 14,
-    color: '#757575',
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  // 🆕 NEW - Management Summary Cards
-  managementCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  managementCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  managementCardText: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  managementCardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212121',
-    marginBottom: 4,
-  },
-  managementCardSubtitle: {
-    fontSize: 12,
-    color: '#757575',
-  },
-  managementCardRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  managementCardValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF9800',
-    marginRight: 8,
   },
 });
 

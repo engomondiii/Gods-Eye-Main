@@ -1,3 +1,8 @@
+// ========================================
+// ADD TEACHER SCREEN - FULLY INTEGRATED
+// Backend: POST /api/teachers/
+// ========================================
+
 import React, { useState } from 'react';
 import {
   View,
@@ -9,6 +14,7 @@ import {
 } from 'react-native';
 import { TextInput, Button, HelperText, Text, Switch } from 'react-native-paper';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import * as schoolAdminService from '../../services/schoolAdminService';
 
 const AddTeacherScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -90,22 +96,40 @@ const AddTeacherScreen = ({ navigation }) => {
             try {
               setIsLoading(true);
               
-              // TODO: Replace with actual API call
-              // await schoolAdminService.addTeacher(formData);
+              // Prepare data for API
+              const teacherData = {
+                user: {
+                  email: formData.email.trim(),
+                  first_name: formData.first_name.trim(),
+                  middle_name: formData.middle_name.trim(),
+                  last_name: formData.last_name.trim(),
+                  phone: formData.phone.trim(),
+                  password: 'ChangeMe123!', // Default password - teacher should change
+                },
+                employee_number: formData.employee_number.trim(),
+                subject_specialization: formData.subject_specialization.trim(),
+                is_active: formData.is_active,
+              };
               
-              // Mock API call
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              const response = await schoolAdminService.createTeacher(teacherData);
               
-              Alert.alert(
-                'Success',
-                'Teacher added successfully!',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack(),
-                  },
-                ]
-              );
+              if (response.success) {
+                Alert.alert(
+                  'Success',
+                  `Teacher added successfully!\n\nDefault password: ChangeMe123!\n\nThe teacher should change this password on first login.`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => navigation.goBack(),
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert(
+                  'Error',
+                  response.message || 'Failed to add teacher. Please try again.'
+                );
+              }
             } catch (error) {
               Alert.alert('Error', 'Failed to add teacher. Please try again.');
               console.error('Add teacher error:', error);
@@ -142,6 +166,7 @@ const AddTeacherScreen = ({ navigation }) => {
           onChangeText={(text) => updateField('first_name', text)}
           error={!!errors.first_name}
           style={styles.input}
+          autoCapitalize="words"
         />
         {errors.first_name && (
           <HelperText type="error">{errors.first_name}</HelperText>
@@ -154,6 +179,7 @@ const AddTeacherScreen = ({ navigation }) => {
           value={formData.middle_name}
           onChangeText={(text) => updateField('middle_name', text)}
           style={styles.input}
+          autoCapitalize="words"
         />
 
         {/* Last Name */}
@@ -164,6 +190,7 @@ const AddTeacherScreen = ({ navigation }) => {
           onChangeText={(text) => updateField('last_name', text)}
           error={!!errors.last_name}
           style={styles.input}
+          autoCapitalize="words"
         />
         {errors.last_name && (
           <HelperText type="error">{errors.last_name}</HelperText>
@@ -250,6 +277,12 @@ const AddTeacherScreen = ({ navigation }) => {
           />
         </View>
 
+        <View style={styles.infoBox}>
+          <Text style={styles.infoBoxText}>
+            ℹ️ A default password "ChangeMe123!" will be assigned. The teacher should change this on first login.
+          </Text>
+        </View>
+
         {/* Submit Button */}
         <Button
           mode="contained"
@@ -319,6 +352,17 @@ const styles = StyleSheet.create({
   switchDescription: {
     fontSize: 13,
     color: '#757575',
+  },
+  infoBox: {
+    backgroundColor: '#E3F2FD',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  infoBoxText: {
+    fontSize: 13,
+    color: '#1976D2',
+    lineHeight: 18,
   },
   submitButton: {
     marginTop: 24,
