@@ -173,7 +173,7 @@ const ManualAttendanceScreen = ({ navigation, route }) => {
               
               // Prepare data for bulk marking
               const studentsData = selectedStudents.map(studentId => ({
-                student_id: studentId,
+                student: studentId,
                 status: attendanceStatus,
                 notes: notes.trim(),
               }));
@@ -261,6 +261,49 @@ const ManualAttendanceScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
+<Button
+  mode="contained"
+  icon="check-all"
+  style={styles.allPresentButton}
+  onPress={async () => {
+    try {
+      setIsSubmitting(true);
+
+      // Create attendance list
+      const attendanceList = filteredStudents.map((student) => ({
+        student: student.id,
+        status: 'present',
+      }));
+
+      // Send to Django
+      const response = await attendanceService.bulkMarkAttendance(
+        attendanceList
+      );
+
+      if (response.success) {
+        Alert.alert(
+          'Success',
+          `${attendanceList.length} students marked present`
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          response.message || 'Failed to mark attendance'
+        );
+      }
+
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.message || 'Something went wrong'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }}
+>
+  All Present
+</Button>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>

@@ -37,7 +37,7 @@ import {
   validatePaymentRequestCreation,
 } from '../../utils/validators';
 import * as paymentService from '../../services/paymentService';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 const CreatePaymentRequestScreen = ({ route, navigation }) => {
   const { user } = useAuth();

@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "God's Eye EdTech",
-    "slug": "gods-eye-edtech",
+    "name": "Smartschool.EdTech",
+    "slug": "smart-school",
     "version": "1.0.0",
+    "scheme": "smartschool",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,13 +18,13 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.godseye.edtech",
+      "bundleIdentifier": "com.smartschool.edtech",
       "infoPlist": {
-        "NSCameraUsageDescription": "God's Eye needs camera access for face recognition and QR code scanning for student attendance verification.",
-        "NSMicrophoneUsageDescription": "God's Eye may need microphone access for video features.",
-        "NSPhotoLibraryUsageDescription": "God's Eye needs access to your photo library to save QR codes and student photos.",
-        "NSPhotoLibraryAddUsageDescription": "God's Eye needs permission to save QR codes to your photo library.",
-        "NSFaceIDUsageDescription": "God's Eye uses Face ID for secure biometric authentication and student attendance verification."
+        "NSCameraUsageDescription": "Smart School needs camera access for face recognition and QR code scanning for student attendance verification.",
+        "NSMicrophoneUsageDescription": "Smart School may need microphone access for video features.",
+        "NSPhotoLibraryUsageDescription": "Smart School needs access to your photo library to save QR codes and student photos.",
+        "NSPhotoLibraryAddUsageDescription": "Smart School needs permission to save QR codes to your photo library.",
+        "NSFaceIDUsageDescription": "Smart School uses Face ID for secure biometric authentication and student attendance verification."
       }
     },
     "android": {
@@ -31,7 +32,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#6200EE"
       },
-      "package": "com.godseye.edtech",
+      "package": "com.smartschool.edtech",
       "versionCode": 1,
       "permissions": [
         "android.permission.INTERNET",
@@ -67,9 +68,6 @@
       "expo-sharing"
     ],
     "extra": {
-      "eas": {
-        "projectId": "26f92d33-b590-493f-ab5d-83f4fb3914d3"
-      },
       "apiBaseUrl": "http://192.168.1.100:8000/api",
       "environment": "development",
       "enableBiometrics": true,
@@ -85,7 +83,11 @@
         "autoMarkAbsentTime": "16:00",
         "gracePeriodMinutes": 15,
         "enableGeoLocation": false
+      },
+      "eas": {
+        "projectId": "0b3b41ff-01f3-4fea-affb-305ddd296e24"
       }
-    }
+    },
+    "owner": "nairuchiml"
   }
 }

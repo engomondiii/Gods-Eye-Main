@@ -182,12 +182,7 @@ api.interceptors.response.use(
 // ERROR HANDLER
 // ============================================================
 
-/**
- * Parse API error and return user-friendly message
- * @param {Error} error - Axios error object
- * @returns {Object} Formatted error object
- */
-export const handleApiError = (error) => {
+const handleApiError = (error) => {
   // Network error (no response from server)
   if (!error.response) {
     return {
@@ -196,10 +191,9 @@ export const handleApiError = (error) => {
       originalError: error,
     };
   }
-  
+
   const { status, data } = error.response;
-  
-  // Handle different status codes
+
   switch (status) {
     case 400:
       return {
@@ -208,40 +202,38 @@ export const handleApiError = (error) => {
         errors: data?.errors || data,
         status,
       };
-      
+
     case 401:
       return {
         message: data?.detail || API_ERRORS.UNAUTHORIZED,
         type: 'unauthorized',
         status,
       };
-      
+
     case 403:
       return {
         message: data?.detail || API_ERRORS.FORBIDDEN,
         type: 'forbidden',
         status,
       };
-      
+
     case 404:
       return {
-        message: data?.detail || API_ERRORS.NOT_FOUND,
+        message: API_ERRORS.NOT_FOUND,
         type: 'not_found',
         status,
       };
-      
+
     case 500:
-    case 502:
-    case 503:
       return {
         message: API_ERRORS.SERVER_ERROR,
         type: 'server',
         status,
       };
-      
+
     default:
       return {
-        message: data?.detail || data?.error || API_ERRORS.UNKNOWN_ERROR,
+        message: API_ERRORS.UNKNOWN_ERROR,
         type: 'unknown',
         status,
       };
@@ -462,19 +454,3 @@ export const upload = async (url, data, onProgress) => {
 // EXPORTS
 // ============================================================
 
-export default api;
-
-export {
-  // Error handling
-  handleApiError,
-  retryRequest,
-  
-  // Request helpers
-  get,
-  post,
-  put,
-  patch,
-  del,
-  upload,
-  createFormData,
-};

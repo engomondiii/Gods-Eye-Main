@@ -1,7 +1,7 @@
 // ========================================
 // GOD'S EYE EDTECH - APP NAVIGATOR
 // ========================================
-
+import TestAttendanceScreen from '../screens/TestAttendanceScreen';
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -132,7 +132,10 @@ const AppNavigator = () => {
   // ============================================================
   // RENDER
   // ============================================================
-
+<Stack.Screen 
+  name="TestAttendance" 
+  component={TestAttendanceScreen} 
+/>
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
