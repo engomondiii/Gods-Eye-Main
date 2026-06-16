@@ -93,7 +93,7 @@ export const login = async (username, password) => {
   } catch (error) {
     console.error('❌ Login error:', error);
 
-    const errorData = handleApiError(error);
+    const errorData = normalizeError(error);
 
     return {
       success: false,
@@ -143,7 +143,7 @@ export const logout = async (refreshToken) => {
     return {
       success: true,
       message: 'Logged out locally',
-      error: handleApiError(error),
+      error: normalizeError(error),
     };
   }
 };
@@ -191,7 +191,7 @@ export const refreshToken = async (refreshToken) => {
     return {
       success: false,
       message: 'Failed to refresh token. Please login again.',
-      error: handleApiError(error),
+      error: normalizeError(error),
     };
   }
 };
@@ -228,7 +228,7 @@ export const getCurrentUser = async () => {
     return {
       success: false,
       message: 'Failed to fetch user data',
-      error: handleApiError(error),
+      error: normalizeError(error),
     };
   }
 };
@@ -281,7 +281,7 @@ export const register = async (userData) => {
   } catch (error) {
     console.error('❌ Registration error:', error);
 
-    const errorData = handleApiError(error);
+    const errorData = normalizeError(error);
 
     return {
       success: false,
@@ -319,7 +319,7 @@ export const verifyToken = async (token) => {
     return {
       success: false,
       message: 'Invalid token',
-      error: handleApiError(error),
+      error: normalizeError(error),
     };
   }
 };
@@ -359,7 +359,7 @@ export const changePassword = async (oldPassword, newPassword) => {
   } catch (error) {
     console.error('❌ Change password error:', error);
 
-    const errorData = handleApiError(error);
+    const errorData = normalizeError(error);
 
     return {
       success: false,
@@ -402,7 +402,7 @@ export const resetPassword = async (email) => {
   } catch (error) {
     console.error('❌ Reset password error:', error);
 
-    const errorData = handleApiError(error);
+    const errorData = normalizeError(error);
 
     return {
       success: false,
@@ -447,7 +447,7 @@ export const resetPasswordConfirm = async (token, newPassword) => {
   } catch (error) {
     console.error('❌ Reset password confirm error:', error);
 
-    const errorData = handleApiError(error);
+    const errorData = normalizeError(error);
 
     return {
       success: false,
@@ -484,7 +484,7 @@ export const updateProfile = async (profileData) => {
   } catch (error) {
     console.error('❌ Update profile error:', error);
 
-    const errorData = handleApiError(error);
+    const errorData = normalizeError(error);
 
     return {
       success: false,
