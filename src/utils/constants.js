@@ -9,11 +9,14 @@ import { Platform } from 'react-native';
 // ============================================================
 
 // ⚠️ IMPORTANT: This is your backend URL
-// Use your machine IP if running on a physical device.
-// If you are running on an Android emulator, 10.241.61.202 should still work
-// if the emulator has network access to your host machine.
+// For Android emulator builds, use the Android host loopback
+// `10.0.2.2` instead of the machine IP.
+// For physical devices and iOS simulators, use the machine IP.
 const BACKEND_BASE = 'http://10.241.61.202:8000';
-export const API_BASE_URL = `${BACKEND_BASE}/api`;
+export const API_BASE_URL =
+  Platform.OS === 'android'
+    ? 'http://10.0.2.2:8000/api'
+    : `${BACKEND_BASE}/api`;
 
 // Full API Endpoints
 export const API_ENDPOINTS = {
