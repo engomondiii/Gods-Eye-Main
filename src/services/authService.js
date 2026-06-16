@@ -7,9 +7,6 @@ import { API_ENDPOINTS } from '../utils/constants';
 import * as storage from '../utils/storage';
 
 const normalizeError = (error) => {
-  if (error && typeof error.message === 'string') {
-    return error;
-  }
   return handleApiError(error);
 };
 
