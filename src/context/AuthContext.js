@@ -38,6 +38,25 @@ export const AuthProvider = ({ children }) => {
   /**
    * Listen for auth:logout event (triggered by api.js on token refresh failure)
    */
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      if (__DEV__) {
+        console.log('🔔 AuthContext received auth:logout event');
+      }
+      logout();
+    };
+
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('auth:logout', handleLogoutEvent);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined' && window.removeEventListener) {
+        window.removeEventListener('auth:logout', handleLogoutEvent);
+      }
+    };
+  }, []);
+
   // ============================================================
   // AUTH STATUS CHECK
   // ============================================================

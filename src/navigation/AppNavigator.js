@@ -5,7 +5,7 @@ import TestAttendanceScreen from '../screens/TestAttendanceScreen';
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import { useAuth } from '../hooks/useAuth';
 import AuthNavigator from './AuthNavigator';
@@ -27,16 +27,6 @@ const AppNavigator = () => {
   // ============================================================
   // INITIALIZATION
   // ============================================================
-
-  /**
-   * Check authentication status on app mount
-   */
-  useEffect(() => {
-    if (__DEV__) {
-      console.log('🧭 AppNavigator mounted - checking auth status');
-    }
-    checkAuthStatus();
-  }, []);
 
   /**
    * Log navigation state changes for debugging
@@ -132,10 +122,6 @@ const AppNavigator = () => {
   // ============================================================
   // RENDER
   // ============================================================
-<Stack.Screen 
-  name="TestAttendance" 
-  component={TestAttendanceScreen} 
-/>
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>

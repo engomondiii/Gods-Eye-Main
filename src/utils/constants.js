@@ -31,7 +31,7 @@ export const API_BASE_URL = 'http://10.241.61.202:8000/api';
 // Full API Endpoints
 export const API_ENDPOINTS = {
   BASE: API_BASE_URL,
-};
+  
   // Authentication
   AUTH: {
     BASE: `${API_BASE_URL}/auth`,

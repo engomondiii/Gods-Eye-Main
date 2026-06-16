@@ -160,7 +160,11 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed - clear auth data and reject
         console.error('❌ Token refresh failed:', refreshError);
-        
+
+        if (__DEV__) {
+          console.log('🔔 api.js: dispatching auth:logout event due to refresh failure');
+        }
+
         // Clear all auth data
         await storage.clearAuthData();
         
