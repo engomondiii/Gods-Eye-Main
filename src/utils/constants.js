@@ -14,13 +14,13 @@ import { Platform } from 'react-native';
 // For Physical Device: use your machine's IP (e.g., 192.168.0.107:8000)
 const getApiBaseUrl = () => {
   // Development backend URL
-  const BACKEND_BASE = 'http://192.168.0.107:8000';
+  const BACKEND_BASE = 'http://10.241.61.202:8000/';
   
   // Android emulator needs special IP
   if (Platform.OS === 'android') {
     // If running on Android emulator, use 10.0.2.2
     // If running on physical Android device, replace with your machine's IP
-    return `http://192.168.0.107:8000/api`;
+    return `http://10.241.61.202:8000/api`;
   }
   
   // iOS simulator and physical iOS devices can use 192.168.0.107
@@ -28,7 +28,7 @@ const getApiBaseUrl = () => {
 };
 
 // API Base URL
-export const API_BASE_URL = 'http://192.168.0.103:8000/api';// Full API Endpoints
+export const API_BASE_URL = http://10.241.61.202:8000/api';// Full API Endpoints
 export const API_ENDPOINTS = {
   // Base
   BASE: API_BASE_URL,
