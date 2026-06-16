@@ -2,7 +2,7 @@
 // GOD'S EYE EDTECH - AUTHENTICATION CONTEXT
 // ========================================
 
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as authService from '../services/authService';
 import * as storage from '../utils/storage';
 import { USER_ROLES } from '../utils/constants';
@@ -38,23 +38,6 @@ export const AuthProvider = ({ children }) => {
   /**
    * Listen for auth:logout event (triggered by api.js on token refresh failure)
    */
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const handleLogoutEvent = () => {
-        if (__DEV__) {
-          console.log('🚪 Logout event received - clearing auth state');
-        }
-        logout();
-      };
-
-      window.addEventListener('auth:logout', handleLogoutEvent);
-
-      return () => {
-        window.removeEventListener('auth:logout', handleLogoutEvent);
-      };
-    }
-  }, []);
-
   // ============================================================
   // AUTH STATUS CHECK
   // ============================================================
@@ -455,5 +438,9 @@ export const AuthProvider = ({ children }) => {
 // ============================================================
 // EXPORTS
 // ============================================================
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
 
 export default AuthContext;
