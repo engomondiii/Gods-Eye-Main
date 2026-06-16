@@ -221,6 +221,11 @@ export const AuthProvider = ({ children }) => {
           role: getUserRole(result.user),
           hasSchool: !!result.user.school_data,
         });
+        console.log('✅ AuthContext state after login:', {
+          isAuthenticated: true,
+          user: result.user.username,
+          role: getUserRole(result.user),
+        });
       }
 
       return {

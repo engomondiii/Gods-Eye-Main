@@ -69,14 +69,24 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
 
+    if (__DEV__) {
+      console.log('🔐 LoginScreen: attempting login', { username: username.trim() });
+    }
+
     try {
       const result = await login(username.trim(), password);
       
+      if (__DEV__) {
+        console.log('🔐 LoginScreen: login result', result);
+      }
+
       if (!result.success) {
         setErrors({
           ...errors,
           general: result.message || 'Login failed. Please check your credentials.',
         });
+      } else if (__DEV__) {
+        console.log('✅ LoginScreen: login succeeded, waiting for AuthNavigator update');
       }
       // If login is successful, AppNavigator will automatically redirect
       // to the appropriate role-based navigator
