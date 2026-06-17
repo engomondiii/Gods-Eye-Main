@@ -1,37 +1,38 @@
 // ========================================
-// GOD'S EYE EDTECH - MANUAL ATTENDANCE SCREEN
+// SMARTSCHOOL MVP - MANUAL ATTENDANCE SCREEN (OPTIMIZED)
+// Mark individual student attendance + trigger SMS notifications
 // ========================================
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
-  Alert,
   FlatList,
+  Alert,
+  Dimensions,
+  RefreshControl,
 } from 'react-native';
 import {
   Text,
   Searchbar,
   Button,
-  Checkbox,
-  TextInput,
-  SegmentedButtons,
   Card,
   Chip,
   IconButton,
+  Checkbox,
   Portal,
   Modal,
+  ActivityIndicator,
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import DatePicker from '../../components/form/DatePicker';
+import { useApi } from '../../hooks/useApi';
+import { useAuth } from '../../hooks/useAuth';
+import theme from '../../styles/theme';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import EmptyState from '../../components/common/EmptyState';
-import theme from '../../styles/theme';
-import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_LABELS, ATTENDANCE_STATUS_COLORS } from '../../utils/constants';
-import * as attendanceService from '../../services/attendanceService';
-import * as studentService from '../../services/studentService';
+
+const { width } = Dimensions.get('window');
 
 const ManualAttendanceScreen = ({ navigation, route }) => {
   // Get params (if navigating from student detail)

@@ -158,7 +158,8 @@ const SchoolReportsScreen = ({ navigation }) => {
   // Get date range based on period
   const getDateRange = () => {
     const now = new Date();
-    let start, end;
+    let 
+    start, end;
 
     switch (reportPeriod) {
       case 'this_week':

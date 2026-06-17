@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 import { useUnreadCount } from '../components/common/NotificationBadge';
 
 // Teacher Screens
@@ -10,18 +10,12 @@ import TeacherDashboardScreen from '../screens/teacher/TeacherDashboardScreen';
 import StudentListScreen from '../screens/teacher/StudentListScreen';
 import StudentDetailScreen from '../screens/teacher/StudentDetailScreen';
 import CreateStudentScreen from '../screens/teacher/CreateStudentScreen';
-import GuardianLinkRequestsScreen from '../screens/teacher/GuardianLinkRequestsScreen';
-import CreateGuardianLinkScreen from '../screens/teacher/CreateGuardianLinkScreen';
-import CreatePaymentRequestScreen from '../screens/teacher/CreatePaymentRequestScreen';
-import PaymentsListScreen from '../screens/teacher/PaymentsListScreen';
+import ClassSelectionScreen from '../screens/teacher/ClassSelectionScreen';
 
 // Attendance Screens
-import AttendanceDashboardScreen from '../screens/attendance/AttendanceDashboardScreen';
-import CheckInScreen from '../screens/attendance/CheckInScreen';
-import AttendanceHistoryScreen from '../screens/attendance/AttendanceHistoryScreen';
 import ManualAttendanceScreen from '../screens/attendance/ManualAttendanceScreen';
-import StudentQRCodeScreen from '../screens/attendance/StudentQRCodeScreen';
-import BiometricSetupScreen from '../screens/attendance/BiometricSetupScreen';
+import AttendanceSummaryScreen from '../screens/attendance/AttendanceSummaryScreen';
+import AttendanceReportsScreen from '../screens/attendance/AttendanceReportsScreen';
 
 // Shared Screens
 import NotificationsScreen from '../screens/shared/NotificationsScreen';
@@ -29,11 +23,14 @@ import ProfileScreen from '../screens/shared/ProfileScreen';
 import SettingsScreen from '../screens/shared/SettingsScreen';
 
 import { SCREENS } from '../utils/constants';
+import theme from '../styles/theme';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Dashboard Stack
+// ============================================================
+// DASHBOARD STACK
+// ============================================================
 const DashboardStack = () => {
   const { unreadCount } = useUnreadCount();
 
@@ -41,7 +38,7 @@ const DashboardStack = () => {
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#6200EE',
+          backgroundColor: theme.colors.primary,
         },
         headerTintColor: '#fff',
         headerTitleStyle: {
@@ -67,7 +64,7 @@ const DashboardStack = () => {
                   position: 'absolute',
                   right: -6,
                   top: -3,
-                  backgroundColor: '#F44336',
+                  backgroundColor: theme.colors.error,
                   borderRadius: 10,
                   minWidth: 18,
                   height: 18,
@@ -93,13 +90,15 @@ const DashboardStack = () => {
   );
 };
 
-// Students Stack
+// ============================================================
+// STUDENTS STACK
+// ============================================================
 const StudentsStack = () => {
   return (
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#6200EE',
+          backgroundColor: theme.colors.primary,
         },
         headerTintColor: '#fff',
         headerTitleStyle: {
@@ -122,17 +121,9 @@ const StudentsStack = () => {
         component={CreateStudentScreen}
         options={{ title: 'Add New Student' }}
       />
-      <Stack.Screen 
-        name={SCREENS.STUDENT_QR_CODE} 
-        component={StudentQRCodeScreen}
-        options={{ title: 'Student QR Code' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.BIOMETRIC_SETUP} 
-        component={BiometricSetupScreen}
-        options={{ title: 'Biometric Setup' }}
-      />
-      <Stack.Screen 
+    </Stack.Navigator>
+  );
+};
         name={SCREENS.ATTENDANCE_HISTORY} 
         component={AttendanceHistoryScreen}
         options={{ title: 'Attendance History' }}
@@ -141,13 +132,15 @@ const StudentsStack = () => {
   );
 };
 
-// Attendance Stack
+// ============================================================
+// ATTENDANCE STACK - MVP FOCUSED
+// ============================================================
 const AttendanceStack = () => {
   return (
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#6200EE',
+          backgroundColor: theme.colors.primary,
         },
         headerTintColor: '#fff',
         headerTitleStyle: {
@@ -155,128 +148,56 @@ const AttendanceStack = () => {
         },
       }}
     >
+      {/* CLASS SELECTION - Primary screen for marking attendance */}
       <Stack.Screen 
-        name={SCREENS.ATTENDANCE_DASHBOARD} 
-        component={AttendanceDashboardScreen}
+        name="ClassSelection"
+        component={ClassSelectionScreen}
         options={{ 
-          title: 'Attendance',
-          headerRight: () => (
-            <MaterialCommunityIcons 
-              name="qrcode-scan" 
-              size={24} 
-              color="#fff" 
-              style={{ marginRight: 15 }}
-            />
-          ),
+          title: 'Mark Attendance',
+          headerLeft: () => null,
         }}
       />
+      
+      {/* MANUAL ATTENDANCE - Individual student marking */}
       <Stack.Screen 
-        name={SCREENS.CHECK_IN} 
-        component={CheckInScreen}
-        options={{ title: 'Check In/Out' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.ATTENDANCE_HISTORY} 
-        component={AttendanceHistoryScreen}
-        options={{ title: 'Attendance History' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.MANUAL_ATTENDANCE} 
+        name="ManualAttendance"
         component={ManualAttendanceScreen}
-        options={{ title: 'Manual Attendance' }}
+        options={({ route }) => ({
+          title: route.params?.className || 'Mark Attendance',
+          headerBackTitle: 'Back',
+        })}
       />
+      
+      {/* ATTENDANCE SUMMARY - View today's records */}
       <Stack.Screen 
-        name={SCREENS.STUDENT_QR_CODE} 
-        component={StudentQRCodeScreen}
-        options={{ title: 'Student QR Code' }}
+        name="AttendanceSummary"
+        component={AttendanceSummaryScreen}
+        options={({ route }) => ({
+          title: 'Today\'s Attendance',
+          headerBackTitle: 'Back',
+        })}
       />
+      
+      {/* ATTENDANCE REPORTS - View historical reports */}
       <Stack.Screen 
-        name={SCREENS.BIOMETRIC_SETUP} 
-        component={BiometricSetupScreen}
-        options={{ title: 'Biometric Setup' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.STUDENT_DETAIL} 
-        component={StudentDetailScreen}
-        options={{ title: 'Student Details' }}
+        name="AttendanceReports"
+        component={AttendanceReportsScreen}
+        options={{
+          title: 'Attendance Reports',
+          headerBackTitle: 'Back',
+        }}
       />
     </Stack.Navigator>
   );
 };
 
-// Approvals Stack
-const ApprovalsStack = () => {
+// Settings Stack
+const SettingsStack = () => {
   return (
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#6200EE',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-      }}
-    >
-      <Stack.Screen 
-        name={SCREENS.GUARDIAN_LINK_REQUESTS} 
-        component={GuardianLinkRequestsScreen}
-        options={{ title: 'Guardian Approvals' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.CREATE_GUARDIAN_LINK} 
-        component={CreateGuardianLinkScreen}
-        options={{ title: 'Link Guardian' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.STUDENT_DETAIL} 
-        component={StudentDetailScreen}
-        options={{ title: 'Student Details' }}
-      />
-    </Stack.Navigator>
-  );
-};
-
-// Payments Stack
-const PaymentsStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: '#6200EE',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-      }}
-    >
-      <Stack.Screen 
-        name={SCREENS.PAYMENTS_LIST} 
-        component={PaymentsListScreen}
-        options={{ title: 'Payments' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.CREATE_PAYMENT_REQUEST} 
-        component={CreatePaymentRequestScreen}
-        options={{ title: 'Create Payment Request' }}
-      />
-      <Stack.Screen 
-        name={SCREENS.STUDENT_DETAIL} 
-        component={StudentDetailScreen}
-        options={{ title: 'Student Details' }}
-      />
-    </Stack.Navigator>
-  );
-};
-
-// Profile Stack
-const ProfileStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: '#6200EE',
+          backgroundColor: theme.colors.primary,
         },
         headerTintColor: '#fff',
         headerTitleStyle: {
@@ -298,7 +219,10 @@ const ProfileStack = () => {
   );
 };
 
-// Main Teacher Navigator with Bottom Tabs
+// ============================================================
+// MAIN TEACHER NAVIGATOR - MVP VERSION
+// ============================================================
+
 const TeacherNavigator = () => {
   const { unreadCount } = useUnreadCount();
 
@@ -306,12 +230,12 @@ const TeacherNavigator = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#6200EE',
-        tabBarInactiveTintColor: '#757575',
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: theme.colors.surface,
           borderTopWidth: 1,
-          borderTopColor: '#E0E0E0',
+          borderTopColor: theme.colors.outlineVariant,
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
@@ -322,6 +246,19 @@ const TeacherNavigator = () => {
         },
       }}
     >
+      {/* ATTENDANCE - Primary MVP Focus */}
+      <Tab.Screen 
+        name="AttendanceTab" 
+        component={AttendanceStack}
+        options={{
+          tabBarLabel: 'Attendance',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="clipboard-check" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* DASHBOARD */}
       <Tab.Screen 
         name="DashboardTab" 
         component={DashboardStack}
@@ -333,6 +270,8 @@ const TeacherNavigator = () => {
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
+
+      {/* STUDENTS */}
       <Tab.Screen 
         name="StudentsTab" 
         component={StudentsStack}
@@ -343,39 +282,11 @@ const TeacherNavigator = () => {
           ),
         }}
       />
+
+      {/* SETTINGS/PROFILE */}
       <Tab.Screen 
-        name="AttendanceTab" 
-        component={AttendanceStack}
-        options={{
-          tabBarLabel: 'Attendance',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="clipboard-check" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen 
-        name="ApprovalsTab" 
-        component={ApprovalsStack}
-        options={{
-          tabBarLabel: 'Approvals',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="check-circle" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen 
-        name="PaymentsTab" 
-        component={PaymentsStack}
-        options={{
-          tabBarLabel: 'Payments',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cash-multiple" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen 
-        name="ProfileTab" 
-        component={ProfileStack}
+        name="SettingsTab" 
+        component={SettingsStack}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (

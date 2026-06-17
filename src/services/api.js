@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import * as storage from '../utils/storage';
 import { API_BASE_URL, API_CONFIG, API_ERRORS } from '../utils/constants';
+import { USE_MOCK_API, routeApiCall, logApiConfiguration } from '../utils/apiConfig';
 
 // ============================================================
 // AXIOS INSTANCE CONFIGURATION
@@ -24,16 +25,49 @@ const api = axios.create({
   },
 });
 
+// Log API configuration on app start
+if (__DEV__) {
+  logApiConfiguration();
+}
+
 // ============================================================
 // REQUEST INTERCEPTOR
 // ============================================================
 
 /**
- * Request interceptor to add JWT token to all requests
+ * Request interceptor to add JWT token to all requests and route to mock API if needed
  */
 api.interceptors.request.use(
   async (config) => {
     try {
+      // ============================================================
+      // MOCK API ROUTING (if enabled)
+      // ============================================================
+      if (USE_MOCK_API) {
+        const mockResponse = await routeApiCall(
+          config.method,
+          config.url,
+          config.data,
+          config.headers
+        );
+
+        if (mockResponse) {
+          // Return a mock adapter that will skip real HTTP call
+          config.adapter = async () => ({
+            data: mockResponse,
+            status: mockResponse.success ? 200 : 400,
+            statusText: mockResponse.success ? 'OK' : 'Bad Request',
+            headers: config.headers,
+            config,
+          });
+          return config;
+        }
+      }
+
+      // ============================================================
+      // REGULAR REQUEST HANDLING (for real API)
+      // ============================================================
+      
       // Get token from secure storage
       const token = await storage.getToken();
       
