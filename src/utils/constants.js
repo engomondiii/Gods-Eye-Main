@@ -12,7 +12,7 @@ import { Platform } from 'react-native';
 // For Android emulator builds, use the Android host loopback
 // `10.0.2.2` instead of the machine IP.
 // For physical devices and iOS simulators, use the machine IP.
-const BACKEND_BASE = 'http://10.241.61.202:8000';
+const BACKEND_BASE = 'http://192.168.0.123:8000';
 export const API_BASE_URL =
   Platform.OS === 'android'
     ? 'http://10.0.2.2:8000/api'
