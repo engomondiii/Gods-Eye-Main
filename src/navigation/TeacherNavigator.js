@@ -124,13 +124,6 @@ const StudentsStack = () => {
     </Stack.Navigator>
   );
 };
-        name={SCREENS.ATTENDANCE_HISTORY} 
-        component={AttendanceHistoryScreen}
-        options={{ title: 'Attendance History' }}
-      />
-    </Stack.Navigator>
-  );
-};
 
 // ============================================================
 // ATTENDANCE STACK - MVP FOCUSED
